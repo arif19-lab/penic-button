@@ -1387,7 +1387,15 @@ void AutoInstallProvider() {
     char szPathToExe[MAX_PATH];
     GetModuleFileNameA(NULL, szPathToExe, MAX_PATH);
     std::string exePath = szPathToExe;
-    std::string dllPath = exePath.substr(0, exePath.find_last_of("\\/")) + "\\PanicProvider.dll";
+    std::string sourceDllPath = exePath.substr(0, exePath.find_last_of("\\/")) + "\\PanicProvider.dll";
+    
+    // LogonUI runs as SYSTEM, so it often cannot read DLLs from User/OneDrive folders.
+    // We MUST copy it to System32!
+    char sysDir[MAX_PATH];
+    GetSystemDirectoryA(sysDir, MAX_PATH);
+    std::string targetDllPath = std::string(sysDir) + "\\PanicProvider.dll";
+    
+    CopyFileA(sourceDllPath.c_str(), targetDllPath.c_str(), FALSE);
 
     HKEY hKey;
     const char* providerGuid = "{A735A943-BB41-45A5-A444-2CD08FAFC000}";
@@ -1406,7 +1414,7 @@ void AutoInstallProvider() {
     
     std::string inprocKeyPath = clsidKeyPath + "\\InprocServer32";
     if (RegCreateKeyExA(HKEY_LOCAL_MACHINE, inprocKeyPath.c_str(), 0, NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL, &hKey, NULL) == ERROR_SUCCESS) {
-        RegSetValueExA(hKey, NULL, 0, REG_SZ, (const BYTE*)dllPath.c_str(), dllPath.length() + 1);
+        RegSetValueExA(hKey, NULL, 0, REG_SZ, (const BYTE*)targetDllPath.c_str(), targetDllPath.length() + 1);
         RegSetValueExA(hKey, "ThreadingModel", 0, REG_SZ, (const BYTE*)"Apartment", 10);
         RegCloseKey(hKey);
     }
