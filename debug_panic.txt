@@ -1,0 +1,4 @@
+break WinMain
+run
+bt
+continue

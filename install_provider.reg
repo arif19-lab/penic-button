@@ -1,0 +1,11 @@
+Windows Registry Editor Version 5.00
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\Credential Providers\{A735A943-BB41-45A5-A444-2CD08FAFC000}]
+@="Panic Credential Provider"
+
+[HKEY_CLASSES_ROOT\CLSID\{A735A943-BB41-45A5-A444-2CD08FAFC000}]
+@="Panic Credential Provider"
+
+[HKEY_CLASSES_ROOT\CLSID\{A735A943-BB41-45A5-A444-2CD08FAFC000}\InprocServer32]
+@="C:\\Users\\Imran\\OneDrive\\AppData\\Desktop\\panic-button\\PanicProvider.dll"
+"ThreadingModel"="Apartment"
