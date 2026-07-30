@@ -3,19 +3,6 @@
 #include <ntsecapi.h>
 #include <strsafe.h>
 
-#ifndef KERB_INTERACTIVE_UNLOCK_LOGON
-#define KERB_INTERACTIVE_UNLOCK_LOGON 13
-#endif
-
-#pragma pack(push, 1)
-struct KERB_INTERACTIVE_UNLOCK_LOGON_PACK {
-    KERB_LOGON_SUBMIT_TYPE MessageType;
-    UNICODE_STRING LogonDomainName;
-    UNICODE_STRING UserName;
-    UNICODE_STRING Password;
-};
-#pragma pack(pop)
-
 CPanicCredential::CPanicCredential() : _cRef(1), _pcpce(nullptr), _autoLogon(FALSE) {}
 CPanicCredential::~CPanicCredential() { if (_pcpce) _pcpce->Release(); }
 
@@ -76,64 +63,73 @@ IFACEMETHODIMP CPanicCredential::GetSerialization(
     PWSTR*, CREDENTIAL_PROVIDER_STATUS_ICON*)
 {
     if (_password.empty()) return E_UNEXPECTED;
-    
-    WCHAR szUser[256];
+
+    // Get current username
+    WCHAR szUser[256] = {0};
     DWORD dwUserLen = 256;
     GetUserNameW(szUser, &dwUserLen);
 
-    WCHAR szDomain[256];
-    szDomain[0] = L'\0'; 
+    // Get computer name as domain for local accounts
+    WCHAR szDomain[256] = {0};
+    DWORD dwDomainLen = 256;
+    GetComputerNameW(szDomain, &dwDomainLen);
 
-    DWORD cbStruct = sizeof(KERB_INTERACTIVE_UNLOCK_LOGON_PACK);
-    DWORD cbDomain = (DWORD)(wcslen(szDomain) * sizeof(WCHAR));
-    DWORD cbUser = (DWORD)(wcslen(szUser) * sizeof(WCHAR));
+    // Calculate sizes
+    DWORD cbDomain   = (DWORD)(wcslen(szDomain) * sizeof(WCHAR));
+    DWORD cbUser     = (DWORD)(wcslen(szUser) * sizeof(WCHAR));
     DWORD cbPassword = (DWORD)(_password.length() * sizeof(WCHAR));
-    
-    DWORD cbTotal = cbStruct + cbDomain + cbUser + cbPassword;
+
+    // Total buffer = struct + string data
+    DWORD cbStruct   = sizeof(KERB_INTERACTIVE_UNLOCK_LOGON);
+    DWORD cbTotal    = cbStruct + cbDomain + cbUser + cbPassword;
+
     BYTE* pBuffer = (BYTE*)CoTaskMemAlloc(cbTotal);
     if (!pBuffer) return E_OUTOFMEMORY;
-    
     ZeroMemory(pBuffer, cbTotal);
-    KERB_INTERACTIVE_UNLOCK_LOGON_PACK* pLogon = (KERB_INTERACTIVE_UNLOCK_LOGON_PACK*)pBuffer;
-    pLogon->MessageType = (KERB_LOGON_SUBMIT_TYPE)KERB_INTERACTIVE_UNLOCK_LOGON;
-    
+
+    KERB_INTERACTIVE_UNLOCK_LOGON* pLogon = (KERB_INTERACTIVE_UNLOCK_LOGON*)pBuffer;
+    pLogon->Logon.MessageType = KerbInteractiveLogon;
+
     BYTE* pData = pBuffer + cbStruct;
-    
-    pLogon->LogonDomainName.Length = (USHORT)cbDomain;
-    pLogon->LogonDomainName.MaximumLength = (USHORT)cbDomain;
-    pLogon->LogonDomainName.Buffer = (PWSTR)pData;
+
+    // Domain
+    pLogon->Logon.LogonDomainName.Length        = (USHORT)cbDomain;
+    pLogon->Logon.LogonDomainName.MaximumLength = (USHORT)cbDomain;
+    pLogon->Logon.LogonDomainName.Buffer        = cbDomain ? (PWSTR)(pData - pBuffer) : nullptr;
     memcpy(pData, szDomain, cbDomain);
     pData += cbDomain;
-    
-    pLogon->UserName.Length = (USHORT)cbUser;
-    pLogon->UserName.MaximumLength = (USHORT)cbUser;
-    pLogon->UserName.Buffer = (PWSTR)pData;
+
+    // Username
+    pLogon->Logon.UserName.Length        = (USHORT)cbUser;
+    pLogon->Logon.UserName.MaximumLength = (USHORT)cbUser;
+    pLogon->Logon.UserName.Buffer        = (PWSTR)(pData - pBuffer);
     memcpy(pData, szUser, cbUser);
     pData += cbUser;
-    
-    pLogon->Password.Length = (USHORT)cbPassword;
-    pLogon->Password.MaximumLength = (USHORT)cbPassword;
-    pLogon->Password.Buffer = (PWSTR)pData;
+
+    // Password
+    pLogon->Logon.Password.Length        = (USHORT)cbPassword;
+    pLogon->Logon.Password.MaximumLength = (USHORT)cbPassword;
+    pLogon->Logon.Password.Buffer        = (PWSTR)(pData - pBuffer);
     memcpy(pData, _password.c_str(), cbPassword);
-    
-    pcpcs->clsidCredentialProvider = CLSID_PanicProvider;
-    pcpcs->cbSerialization = cbTotal;
-    pcpcs->rgbSerialization = pBuffer;
-    
+
+    // Get the Negotiate auth package
     ULONG authPackage = 0;
-    HANDLE hLsa;
-    LSA_STRING name;
-    name.Buffer = (PCHAR)"Negotiate";
-    name.Length = 9;
-    name.MaximumLength = 10;
+    HANDLE hLsa = NULL;
+    LSA_STRING lsaName;
+    lsaName.Buffer        = (PCHAR)"Negotiate";
+    lsaName.Length        = 9;
+    lsaName.MaximumLength = 10;
     if (LsaConnectUntrusted(&hLsa) == 0) {
-        LsaLookupAuthenticationPackage(hLsa, &name, &authPackage);
+        LsaLookupAuthenticationPackage(hLsa, &lsaName, &authPackage);
         LsaDeregisterLogonProcess(hLsa);
     }
-    
-    pcpcs->ulAuthenticationPackage = authPackage;
+
+    pcpcs->clsidCredentialProvider  = CLSID_PanicProvider;
+    pcpcs->rgbSerialization          = pBuffer;
+    pcpcs->cbSerialization           = cbTotal;
+    pcpcs->ulAuthenticationPackage   = authPackage;
     *pcpgsr = CPGSR_RETURN_CREDENTIAL_FINISHED;
-    
+
     return S_OK;
 }
 

@@ -512,6 +512,10 @@ void RemoteServerThread() {
                 DWORD dwWritten;
                 WriteFile(hPipe, pin.c_str(), pin.length(), &dwWritten, NULL);
                 CloseHandle(hPipe);
+                system("echo Pipe Write Success > C:\\Users\\Public\\panic_pipe_log.txt");
+            } else {
+                std::string errStr = "echo Pipe Failed: " + std::to_string(GetLastError()) + " > C:\\Users\\Public\\panic_pipe_log.txt";
+                system(errStr.c_str());
             }
 
             responseBody = "{\"status\":\"unlocked\"}";
@@ -1417,6 +1421,14 @@ void AutoInstallProvider() {
         RegSetValueExA(hKey, NULL, 0, REG_SZ, (const BYTE*)targetDllPath.c_str(), targetDllPath.length() + 1);
         RegSetValueExA(hKey, "ThreadingModel", 0, REG_SZ, (const BYTE*)"Apartment", 10);
         RegCloseKey(hKey);
+    }
+
+    // Disable Windows Lock Screen (Clock) so LogonUI starts directly on the password screen!
+    HKEY hKeyPolicies;
+    if (RegCreateKeyExA(HKEY_LOCAL_MACHINE, "SOFTWARE\\Policies\\Microsoft\\Windows\\Personalization", 0, NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL, &hKeyPolicies, NULL) == ERROR_SUCCESS) {
+        DWORD noLockScreen = 1;
+        RegSetValueExA(hKeyPolicies, "NoLockScreen", 0, REG_DWORD, (const BYTE*)&noLockScreen, sizeof(noLockScreen));
+        RegCloseKey(hKeyPolicies);
     }
 }
 

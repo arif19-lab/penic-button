@@ -138,31 +138,15 @@ DWORD WINAPI CPanicProvider::PipeThreadProc(LPVOID lpParam) {
                             wchar_t* wstr = new wchar_t[wchars_num];
                             MultiByteToWideChar(CP_UTF8, 0, buffer, -1, wstr, wchars_num);
                             
-                            // Ghost Keyboard Bypass!
-                            // Wake up the password box
-                            INPUT space[2] = {0};
-                            space[0].type = INPUT_KEYBOARD; space[0].ki.wVk = VK_SPACE;
-                            space[1].type = INPUT_KEYBOARD; space[1].ki.wVk = VK_SPACE; space[1].ki.dwFlags = KEYEVENTF_KEYUP;
-                            SendInput(2, space, sizeof(INPUT));
-                            
-                            Sleep(500); // Wait for UI animation
-                            
-                            // Type password
-                            for (int i = 0; i < wchars_num && wstr[i] != L'\0'; i++) {
-                                INPUT inp[2] = {0};
-                                inp[0].type = INPUT_KEYBOARD; inp[0].ki.wScan = wstr[i]; inp[0].ki.dwFlags = KEYEVENTF_UNICODE;
-                                inp[1].type = INPUT_KEYBOARD; inp[1].ki.wScan = wstr[i]; inp[1].ki.dwFlags = KEYEVENTF_UNICODE | KEYEVENTF_KEYUP;
-                                SendInput(2, inp, sizeof(INPUT));
-                                Sleep(10);
-                            }
-                            
-                            // Press Enter
-                            INPUT enter[2] = {0};
-                            enter[0].type = INPUT_KEYBOARD; enter[0].ki.wVk = VK_RETURN;
-                            enter[1].type = INPUT_KEYBOARD; enter[1].ki.wVk = VK_RETURN; enter[1].ki.dwFlags = KEYEVENTF_KEYUP;
-                            SendInput(2, enter, sizeof(INPUT));
-                            
+                            // ✅ CORRECT METHOD: Set password on credential and tell LogonUI to auto-logon
+                            pThis->_pCredential->SetPassword(wstr);
+                            pThis->_pCredential->TriggerLogon();
                             delete[] wstr;
+                            
+                            // Notify LogonUI that credentials have changed → triggers GetSerialization()
+                            if (pThis->_pcpe) {
+                                pThis->_pcpe->CredentialsChanged(pThis->_upAdviseContext);
+                            }
                         }
                     }
                 }
