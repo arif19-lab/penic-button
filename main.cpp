@@ -971,9 +971,8 @@ void ProcessClient(SOCKET clientSocket) {
                     SendInput(2, clicks, sizeof(INPUT));
                 }
             }
-            std::string res = "HTTP/1.1 200 OK\r\nConnection: close\r\n\r\nOK";
+            std::string res = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 2\r\nAccess-Control-Allow-Origin: *\r\nConnection: keep-alive\r\n\r\nOK";
             send(clientSocket, res.c_str(), (int)res.size(), 0);
-            shutdown(clientSocket, SD_SEND);
             closesocket(clientSocket);
             return;
 
@@ -1023,9 +1022,8 @@ void ProcessClient(SOCKET clientSocket) {
                 SendInput(1, &click, sizeof(INPUT));
             }
 
-            std::string res = "HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\nConnection: close\r\n\r\nOK";
+            std::string res = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 2\r\nAccess-Control-Allow-Origin: *\r\nConnection: keep-alive\r\n\r\nOK";
             send(clientSocket, res.c_str(), (int)res.size(), 0);
-            shutdown(clientSocket, SD_SEND);
             closesocket(clientSocket);
             return;
 
