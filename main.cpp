@@ -915,6 +915,9 @@ void ProcessClient(SOCKET clientSocket) {
                 } else if (decodedText == "{ESC}") {
                     keybd_event(VK_ESCAPE, 0, 0, 0);
                     keybd_event(VK_ESCAPE, 0, KEYEVENTF_KEYUP, 0);
+                } else if (decodedText == "{TAB}") {
+                    keybd_event(VK_TAB, 0, 0, 0);
+                    keybd_event(VK_TAB, 0, KEYEVENTF_KEYUP, 0);
                 } else {
                     for (char c : decodedText) {
                         INPUT input[2] = {0};
@@ -1447,21 +1450,22 @@ void ProcessClient(SOCKET clientSocket) {
     </div>
   </div>
 
-  <!-- ⌨️ REMOTE KEYBOARD CONTROL BAR -->
+  <!-- ⌨️ REAL-TIME LIVE KEYBOARD CONTROL BAR -->
   <div style="background:var(--panel-bg); border:1px solid rgba(0,240,255,0.3); border-radius:10px; padding:12px; margin-bottom:14px; display:flex; flex-direction:column; gap:10px;">
-    <div style="font-family:'Share Tech Mono',monospace; font-size:11px; color:var(--neon-cyan); letter-spacing:1px;">
-      <span>⌨️ REMOTE KEYBOARD TYPING</span>
+    <div style="display:flex; align-items:center; justify-content:space-between;">
+      <span style="font-family:'Share Tech Mono',monospace; font-size:11px; color:var(--neon-cyan); letter-spacing:1px;">⌨️ LIVE REAL-TIME KEYBOARD TYPING</span>
+      <span style="font-family:'Share Tech Mono',monospace; font-size:10px; color:var(--neon-green);">● NO-SEND INSTANT</span>
     </div>
 
     <div style="display:flex; gap:8px;">
-      <input type="text" id="remoteTextInput" placeholder="Type text here to send to PC..." style="flex:1; background:#000; border:1px solid rgba(255,255,255,0.2); color:#fff; padding:10px 12px; border-radius:6px; font-family:'Inter',sans-serif; font-size:14px;" onkeydown="if(event.key==='Enter')sendRemoteText()">
-      <button class="play-btn" style="background:var(--neon-cyan); color:#000; box-shadow:0 0 10px rgba(0,240,255,0.4);" onclick="sendRemoteText()">SEND ↵</button>
+      <input type="text" id="remoteTextInput" placeholder="⚡ Tap here to type live on PC..." style="flex:1; background:#000; border:1.5px solid var(--neon-cyan); color:#fff; padding:12px 14px; border-radius:8px; font-family:'Inter',sans-serif; font-size:14px; outline:none; box-shadow:0 0 10px rgba(0,240,255,0.2);" oninput="handleLiveTyping(event)" onkeydown="handleLiveKeydown(event)">
     </div>
 
     <div style="display:flex; gap:6px;">
       <button class="fs-btn" style="flex:1; font-size:10px; padding:8px;" onclick="sendSpecialKey('{ENTER}')">ENTER ↵</button>
       <button class="fs-btn" style="flex:1; font-size:10px; padding:8px;" onclick="sendSpecialKey('{BACKSPACE}')">BACKSPACE ⌫</button>
       <button class="fs-btn" style="flex:1; font-size:10px; padding:8px;" onclick="sendSpecialKey('{ESC}')">ESC ⎋</button>
+      <button class="fs-btn" style="flex:1; font-size:10px; padding:8px;" onclick="sendSpecialKey('{TAB}')">TAB ⇥</button>
     </div>
   </div>
 
@@ -1838,13 +1842,33 @@ function setClickMode(mode) {
     }
 }
 
-function sendRemoteText() {
-    var input = document.getElementById("remoteTextInput");
-    var text = input.value;
-    if (text) {
-        vibratePhone(30);
-        fetch("/api/type?key=" + KEY + "&text=" + encodeURIComponent(text), { keepalive: true });
-        input.value = "";
+function handleLiveTyping(e) {
+    var val = e.target.value;
+    if (val && val.length > 0) {
+        vibratePhone(20);
+        fetch("/api/type?key=" + KEY + "&text=" + encodeURIComponent(val), { keepalive: true }).catch(function(){});
+        e.target.value = "";
+    }
+}
+
+function handleLiveKeydown(e) {
+    if (e.key === "Backspace") {
+        vibratePhone(20);
+        fetch("/api/type?key=" + KEY + "&text={BACKSPACE}", { keepalive: true }).catch(function(){});
+        e.target.value = "";
+    } else if (e.key === "Enter") {
+        vibratePhone(20);
+        fetch("/api/type?key=" + KEY + "&text={ENTER}", { keepalive: true }).catch(function(){});
+        e.target.value = "";
+    } else if (e.key === "Escape") {
+        vibratePhone(20);
+        fetch("/api/type?key=" + KEY + "&text={ESC}", { keepalive: true }).catch(function(){});
+        e.target.value = "";
+    } else if (e.key === "Tab") {
+        e.preventDefault();
+        vibratePhone(20);
+        fetch("/api/type?key=" + KEY + "&text={TAB}", { keepalive: true }).catch(function(){});
+        e.target.value = "";
     }
 }
 
