@@ -2106,6 +2106,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                     break;
                 case IDM_EXIT:
                     DestroyWindow(hwnd);
+                    ExitProcess(0);
                     break;
             }
             break;
@@ -2113,6 +2114,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         case WM_DESTROY:
             Shell_NotifyIcon(NIM_DELETE, &nid);
             PostQuitMessage(0);
+            ExitProcess(0);
             break;
 
         default:
