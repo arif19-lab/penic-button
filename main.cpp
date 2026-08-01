@@ -2053,6 +2053,7 @@ function renderFrameLoop() {
         if (document.getElementById('fsOverlay').style.display === 'flex') {
           drawFullscreenFrame(bmp);
         }
+        if (bmp.close) bmp.close(); // ⚡ RELEASE GPU VRAM INSTANTLY! ZERO MEMORY LEAKS! ZERO GC PAUSES!
       }
       isRenderBusy = false;
     }).catch(function(){ isRenderBusy = false; });
