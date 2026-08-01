@@ -613,17 +613,32 @@ void ProcessClient(SOCKET clientSocket) {
                 BitBlt(hDC, 0, 0, w, h, hScreen, 0, 0, SRCCOPY);
 
                 // Draw Hardware Mouse Cursor onto Captured Frame
+                POINT pt;
+                GetCursorPos(&pt);
                 CURSORINFO cursorInfo = { 0 };
                 cursorInfo.cbSize = sizeof(CURSORINFO);
-                if (GetCursorInfo(&cursorInfo) && (cursorInfo.flags & CURSOR_SHOWING)) {
+                bool drawn = false;
+                if (GetCursorInfo(&cursorInfo) && (cursorInfo.flags & CURSOR_SHOWING) && cursorInfo.hCursor) {
                     ICONINFO iconInfo = { 0 };
                     if (GetIconInfo(cursorInfo.hCursor, &iconInfo)) {
                         int cx = cursorInfo.ptScreenPos.x - iconInfo.xHotspot;
                         int cy = cursorInfo.ptScreenPos.y - iconInfo.yHotspot;
-                        DrawIconEx(hDC, cx, cy, cursorInfo.hCursor, 0, 0, 0, NULL, DI_NORMAL | DI_DEFAULTSIZE);
+                        drawn = DrawIconEx(hDC, cx, cy, cursorInfo.hCursor, 0, 0, 0, NULL, DI_NORMAL | DI_DEFAULTSIZE);
                         if (iconInfo.hbmMask) DeleteObject(iconInfo.hbmMask);
                         if (iconInfo.hbmColor) DeleteObject(iconInfo.hbmColor);
                     }
+                }
+                // Fallback: If Windows suppresses cursor icon, draw a high-contrast glowing neon pointer at (pt.x, pt.y)
+                if (!drawn) {
+                    HBRUSH redBrush = CreateSolidBrush(RGB(255, 0, 85));
+                    HPEN cyanPen = CreatePen(PS_SOLID, 2, RGB(0, 240, 255));
+                    HGDIOBJ oldBrush = SelectObject(hDC, redBrush);
+                    HGDIOBJ oldPen = SelectObject(hDC, cyanPen);
+                    Ellipse(hDC, pt.x - 8, pt.y - 8, pt.x + 8, pt.y + 8);
+                    SelectObject(hDC, oldBrush);
+                    SelectObject(hDC, oldPen);
+                    DeleteObject(redBrush);
+                    DeleteObject(cyanPen);
                 }
 
                 std::vector<char> imgBuffer;
@@ -709,17 +724,31 @@ void ProcessClient(SOCKET clientSocket) {
                     BitBlt(hDC, 0, 0, targetW, targetH, hScreen, 0, 0, SRCCOPY);
 
                     // Draw Hardware Mouse Cursor onto Captured Frame
+                    POINT pt;
+                    GetCursorPos(&pt);
                     CURSORINFO cursorInfo = { 0 };
                     cursorInfo.cbSize = sizeof(CURSORINFO);
-                    if (GetCursorInfo(&cursorInfo) && (cursorInfo.flags & CURSOR_SHOWING)) {
+                    bool drawn = false;
+                    if (GetCursorInfo(&cursorInfo) && (cursorInfo.flags & CURSOR_SHOWING) && cursorInfo.hCursor) {
                         ICONINFO iconInfo = { 0 };
                         if (GetIconInfo(cursorInfo.hCursor, &iconInfo)) {
                             int cx = cursorInfo.ptScreenPos.x - iconInfo.xHotspot;
                             int cy = cursorInfo.ptScreenPos.y - iconInfo.yHotspot;
-                            DrawIconEx(hDC, cx, cy, cursorInfo.hCursor, 0, 0, 0, NULL, DI_NORMAL | DI_DEFAULTSIZE);
+                            drawn = DrawIconEx(hDC, cx, cy, cursorInfo.hCursor, 0, 0, 0, NULL, DI_NORMAL | DI_DEFAULTSIZE);
                             if (iconInfo.hbmMask) DeleteObject(iconInfo.hbmMask);
                             if (iconInfo.hbmColor) DeleteObject(iconInfo.hbmColor);
                         }
+                    }
+                    if (!drawn) {
+                        HBRUSH redBrush = CreateSolidBrush(RGB(255, 0, 85));
+                        HPEN cyanPen = CreatePen(PS_SOLID, 2, RGB(0, 240, 255));
+                        HGDIOBJ oldBrush = SelectObject(hDC, redBrush);
+                        HGDIOBJ oldPen = SelectObject(hDC, cyanPen);
+                        Ellipse(hDC, pt.x - 8, pt.y - 8, pt.x + 8, pt.y + 8);
+                        SelectObject(hDC, oldBrush);
+                        SelectObject(hDC, oldPen);
+                        DeleteObject(redBrush);
+                        DeleteObject(cyanPen);
                     }
 
                     std::vector<char> jpegBuffer;
