@@ -2119,6 +2119,7 @@ function toggleStream(){
 }
 
 function getStatus(){
+  if (isStreaming) return; // ⚡ SUPPRESS HTTP POLLING DURING LIVE STREAMING TO ELIMINATE PERIODIC 2-SEC STALLS!
   fetch("/api/status?key=" + KEY, { cache: "no-store", keepalive: true, headers: { "Bypass-Tunnel-Reminder": "true" } })
     .then(function(res){ return res.json(); })
     .then(function(d){
