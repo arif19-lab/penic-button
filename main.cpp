@@ -1459,11 +1459,12 @@ void ProcessClient(SOCKET clientSocket) {
   <div style="background:var(--panel-bg); border:1px solid rgba(0,240,255,0.3); border-radius:10px; padding:12px; margin-bottom:14px; display:flex; flex-direction:column; gap:10px;">
     <div style="display:flex; align-items:center; justify-content:space-between;">
       <span style="font-family:'Share Tech Mono',monospace; font-size:11px; color:var(--neon-cyan); letter-spacing:1px;">⌨️ LIVE REAL-TIME KEYBOARD TYPING</span>
-      <span style="font-family:'Share Tech Mono',monospace; font-size:10px; color:var(--neon-green);">● NO-SEND INSTANT</span>
+      <span style="font-family:'Share Tech Mono',monospace; font-size:10px; color:var(--neon-green);">● REAL-TIME SYNC</span>
     </div>
 
     <div style="display:flex; gap:8px;">
-      <input type="text" id="remoteTextInput" placeholder="⚡ Tap here to type live on PC..." style="flex:1; background:#000; border:1.5px solid var(--neon-cyan); color:#fff; padding:12px 14px; border-radius:8px; font-family:'Inter',sans-serif; font-size:14px; outline:none; box-shadow:0 0 10px rgba(0,240,255,0.2);" oninput="handleLiveTyping(event)" onkeydown="handleLiveKeydown(event)">
+      <input type="text" id="remoteTextInput" placeholder="⌨️ Tap to type live on PC..." style="flex:1; background:#000; border:1.5px solid var(--neon-cyan); color:#fff; padding:12px 14px; border-radius:8px; font-family:'Inter',sans-serif; font-size:14px; outline:none; box-shadow:0 0 10px rgba(0,240,255,0.2);" oninput="handleLiveInput(event)" onkeydown="handleLiveKeydown(event)">
+      <button class="fs-btn" style="padding:12px 14px; font-size:11px; color:#ff4444; border-color:rgba(255,68,68,0.4);" onclick="clearLiveInput()">✖ CLEAR</button>
     </div>
 
     <div style="display:flex; gap:6px;">
@@ -1848,53 +1849,51 @@ function setClickMode(mode) {
     }
 }
 
-function initLiveKeyboard() {
+var prevTypedValue = "";
+
+function handleLiveInput(e) {
+    var curVal = e.target.value;
+    var diff = curVal.length - prevTypedValue.length;
+
+    if (diff > 0) {
+        // Text added or pasted: Send newly added character(s) to PC
+        var addedText = curVal.substring(prevTypedValue.length);
+        if (addedText) {
+            vibratePhone(15);
+            fetch("/api/type?key=" + KEY + "&text=" + encodeURIComponent(addedText), { keepalive: true }).catch(function(){});
+        }
+    } else if (diff < 0) {
+        // Backspace hit on mobile soft keyboard: Send Backspace to PC for each deleted char
+        var count = Math.abs(diff);
+        for (var i = 0; i < count; i++) {
+            vibratePhone(15);
+            fetch("/api/type?key=" + KEY + "&text={BACKSPACE}", { keepalive: true }).catch(function(){});
+        }
+    }
+    prevTypedValue = curVal;
+}
+
+function handleLiveKeydown(e) {
+    if (e.key === "Enter") {
+        vibratePhone(20);
+        fetch("/api/type?key=" + KEY + "&text={ENTER}", { keepalive: true }).catch(function(){});
+        clearLiveInput();
+    } else if (e.key === "Escape") {
+        vibratePhone(20);
+        fetch("/api/type?key=" + KEY + "&text={ESC}", { keepalive: true }).catch(function(){});
+    } else if (e.key === "Tab") {
+        e.preventDefault();
+        vibratePhone(20);
+        fetch("/api/type?key=" + KEY + "&text={TAB}", { keepalive: true }).catch(function(){});
+    }
+}
+
+function clearLiveInput() {
     var input = document.getElementById("remoteTextInput");
-    if (!input || input.dataset.bound) return;
-    input.dataset.bound = "true";
-
-    // 📱 Native Mobile Soft-Keyboard Backspace & Enter Interceptor
-    input.addEventListener("beforeinput", function(e) {
-        if (e.inputType === "deleteContentBackward") {
-            vibratePhone(15);
-            fetch("/api/type?key=" + KEY + "&text={BACKSPACE}", { keepalive: true }).catch(function(){});
-        } else if (e.inputType === "insertLineBreak") {
-            vibratePhone(15);
-            fetch("/api/type?key=" + KEY + "&text={ENTER}", { keepalive: true }).catch(function(){});
-        }
-    });
-
-    // ⚡ Native Mobile Character, Symbol, Emoji, Space & Paste Typed Stream
-    input.addEventListener("input", function(e) {
-        var val = e.target.value;
-        if (val && val.length > 0) {
-            vibratePhone(15);
-            fetch("/api/type?key=" + KEY + "&text=" + encodeURIComponent(val), { keepalive: true }).catch(function(){});
-            e.target.value = "";
-        }
-    });
-
-    // ⌨️ Hardware & Physical Key Fallback Listener
-    input.addEventListener("keydown", function(e) {
-        if (e.key === "Backspace") {
-            vibratePhone(15);
-            fetch("/api/type?key=" + KEY + "&text={BACKSPACE}", { keepalive: true }).catch(function(){});
-            e.target.value = "";
-        } else if (e.key === "Enter") {
-            vibratePhone(15);
-            fetch("/api/type?key=" + KEY + "&text={ENTER}", { keepalive: true }).catch(function(){});
-            e.target.value = "";
-        } else if (e.key === "Escape") {
-            vibratePhone(15);
-            fetch("/api/type?key=" + KEY + "&text={ESC}", { keepalive: true }).catch(function(){});
-            e.target.value = "";
-        } else if (e.key === "Tab") {
-            e.preventDefault();
-            vibratePhone(15);
-            fetch("/api/type?key=" + KEY + "&text={TAB}", { keepalive: true }).catch(function(){});
-            e.target.value = "";
-        }
-    });
+    if (input) {
+        input.value = "";
+        prevTypedValue = "";
+    }
 }
 
 function sendSpecialKey(keyStr) {
