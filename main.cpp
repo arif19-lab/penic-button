@@ -257,6 +257,9 @@ bool CaptureDXGIFrame(HDC hTargetDC, int targetW, int targetH) {
     bool success = false;
     if (g_stagingTexture) {
         g_d3dContext->CopyResource(g_stagingTexture, desktopTexture);
+        desktopTexture->Release();
+        g_dxgiDuplication->ReleaseFrame(); // ⚡ Release DXGI frame immediately (Sunshine Open-Source Optimization)
+
         D3D11_MAPPED_SUBRESOURCE mapped;
         if (SUCCEEDED(g_d3dContext->Map(g_stagingTexture, 0, D3D11_MAP_READ, 0, &mapped))) {
             BITMAPINFO bmi = { 0 };
@@ -278,6 +281,7 @@ bool CaptureDXGIFrame(HDC hTargetDC, int targetW, int targetH) {
             g_d3dContext->Unmap(g_stagingTexture, 0);
             success = true;
         }
+        return success;
     }
 
     desktopTexture->Release();
