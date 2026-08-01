@@ -918,6 +918,14 @@ void ProcessClient(SOCKET clientSocket) {
                 } else if (decodedText == "{TAB}") {
                     keybd_event(VK_TAB, 0, 0, 0);
                     keybd_event(VK_TAB, 0, KEYEVENTF_KEYUP, 0);
+                } else if (decodedText == "{CLEAR}") {
+                    keybd_event(VK_CONTROL, 0, 0, 0);
+                    keybd_event('A', 0, 0, 0);
+                    keybd_event('A', 0, KEYEVENTF_KEYUP, 0);
+                    keybd_event(VK_CONTROL, 0, KEYEVENTF_KEYUP, 0);
+                    Sleep(10);
+                    keybd_event(VK_BACK, 0, 0, 0);
+                    keybd_event(VK_BACK, 0, KEYEVENTF_KEYUP, 0);
                 } else {
                     int wlen = MultiByteToWideChar(CP_UTF8, 0, decodedText.c_str(), -1, NULL, 0);
                     if (wlen > 1) {
@@ -1891,8 +1899,11 @@ function handleLiveKeydown(e) {
 function clearLiveInput() {
     var input = document.getElementById("remoteTextInput");
     if (input) {
+        vibratePhone(30);
+        fetch("/api/type?key=" + KEY + "&text={CLEAR}", { keepalive: true }).catch(function(){});
         input.value = "";
         prevTypedValue = "";
+        input.focus();
     }
 }
 
