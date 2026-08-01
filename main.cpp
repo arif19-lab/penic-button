@@ -957,7 +957,7 @@ void ProcessClient(SOCKET clientSocket) {
                 encoderParameters.Parameter[0].Guid = EncoderQuality;
                 encoderParameters.Parameter[0].Type = EncoderParameterValueTypeLong;
                 encoderParameters.Parameter[0].NumberOfValues = 1;
-                ULONG quality = 75;
+                ULONG quality = 70; // ⚡ 70% Quality: ~7KB per frame (3 Mbps Wi-Fi bandwidth)
                 encoderParameters.Parameter[0].Value = &quality;
 
                 while (true) {
@@ -1031,7 +1031,7 @@ void ProcessClient(SOCKET clientSocket) {
                     SendUDPDatagramFrame(jpegBuffer); // ⚡ Dispatch Real-time UDP Datagram Packet!
                     if (!SendWebSocketBinaryFrame(clientSocket, jpegBuffer)) break;
 
-                    Sleep(16); // 60 FPS GPU Canvas Sync
+                    Sleep(22); // ⚡ 45 FPS Wi-Fi Sweet Spot (Zero Wi-Fi Socket Congestion)
                 }
             }
             closesocket(clientSocket);
