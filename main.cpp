@@ -933,7 +933,7 @@ void ProcessClient(SOCKET clientSocket) {
                     if (send(clientSocket, jpegBuffer.data(), (int)jpegBuffer.size(), 0) == SOCKET_ERROR) break;
                     if (send(clientSocket, "\r\n\r\n", 4, 0) == SOCKET_ERROR) break;
 
-                    Sleep(25); // ~40 FPS Ultra-Smooth Zero-Lag Stream
+                    Sleep(16); // ⚡ 60 FPS True Hardware Refresh Sync!
                 }
             }
             closesocket(clientSocket);
