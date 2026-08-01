@@ -1973,6 +1973,41 @@ function drawFullscreenFrame(bmp) {
     }
 }
 
+var isStreaming = false;
+var wsStream = null;
+var latestFrameBlob = null;
+var isRenderBusy = false;
+var renderRafId = null;
+
+function renderFrameLoop() {
+  if (!isStreaming) return;
+
+  if (latestFrameBlob && !isRenderBusy) {
+    isRenderBusy = true;
+    var blobToRender = latestFrameBlob;
+    latestFrameBlob = null; // Drop all intermediate queued frames, keeping strictly ZERO latency!
+
+    createImageBitmap(blobToRender).then(function(bmp) {
+      var liveCanvas = document.getElementById("liveCanvas");
+      if (liveCanvas) {
+        if (liveCanvas.width !== bmp.width || liveCanvas.height !== bmp.height) {
+          liveCanvas.width = bmp.width;
+          liveCanvas.height = bmp.height;
+        }
+        var ctx = liveCanvas.getContext("2d", { alpha: false, desynchronized: true });
+        ctx.drawImage(bmp, 0, 0);
+
+        if (document.getElementById('fsOverlay').style.display === 'flex') {
+          drawFullscreenFrame(bmp);
+        }
+      }
+      isRenderBusy = false;
+    }).catch(function(){ isRenderBusy = false; });
+  }
+
+  renderRafId = requestAnimationFrame(renderFrameLoop);
+}
+
 function toggleStream(){
   isStreaming = !isStreaming;
   var liveCanvas = document.getElementById("liveCanvas");
@@ -1990,18 +2025,7 @@ function toggleStream(){
 
     wsStream.onmessage = function(e) {
       if (e.data instanceof Blob) {
-        createImageBitmap(e.data).then(function(bmp) {
-          if (liveCanvas.width !== bmp.width || liveCanvas.height !== bmp.height) {
-            liveCanvas.width = bmp.width;
-            liveCanvas.height = bmp.height;
-          }
-          var ctx = liveCanvas.getContext("2d", { alpha: false, desynchronized: true });
-          ctx.drawImage(bmp, 0, 0);
-
-          if (document.getElementById('fsOverlay').style.display === 'flex') {
-            drawFullscreenFrame(bmp);
-          }
-        }).catch(function(){});
+        latestFrameBlob = e.data; // Store latest frame, overwrite stale buffered frames!
       }
     };
 
@@ -2012,8 +2036,13 @@ function toggleStream(){
         }, 1000);
       }
     };
+
+    renderFrameLoop();
   } else {
     if (wsStream) { wsStream.close(); wsStream = null; }
+    if (renderRafId) { cancelAnimationFrame(renderRafId); renderRafId = null; }
+    latestFrameBlob = null;
+    isRenderBusy = false;
     holder.style.display = "block";
     liveCanvas.style.display = "none";
     btn.textContent = "▶ START MONITOR";
