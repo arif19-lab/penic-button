@@ -564,6 +564,17 @@ void ProcessClient(SOCKET clientSocket) {
             closesocket(clientSocket);
             return;
 
+        } else if (request.find("GET /sleep") != std::string::npos) {
+            // 🌙 Sleep PC remotely!
+            responseBody = "{\"status\":\"sleeping\"}";
+            std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n\r\n" + responseBody;
+            send(clientSocket, res.c_str(), (int)res.size(), 0);
+            shutdown(clientSocket, SD_SEND);
+            closesocket(clientSocket);
+            Sleep(500);
+            system("rundll32.exe powrprof.dll,SetSuspendState 0,1,0");
+            return;
+
         } else if (request.find("GET /shutdown") != std::string::npos) {
             // ⏻ Shutdown PC remotely!
             system("shutdown /s /t 10 /c \"Remote shutdown initiated.\"");
@@ -1475,6 +1486,10 @@ void ProcessClient(SOCKET clientSocket) {
       🔓 UNLOCK WORKSTATION
     </button>
     
+    <button class="btn-huge btn-secondary" style="color:var(--neon-cyan); border-color:var(--neon-cyan);" onclick="sleepPC()">
+      🌙 SLEEP WORKSTATION
+    </button>
+
     <button class="btn-huge btn-danger-sub" onclick="if(confirm('Shutdown PC?'))shutdownPC()">
       ⏻ SHUTDOWN PC
     </button>
@@ -1758,6 +1773,7 @@ function submitUnlock(){
     closeUnlockModal();
   }
 }
+function sleepPC(){ vibratePhone(50); fetch("/sleep?key=" + KEY, { keepalive: true, headers: { "Bypass-Tunnel-Reminder": "true" } }); }
 function shutdownPC(){ vibratePhone(100); fetch("/shutdown?key=" + KEY, { keepalive: true, headers: { "Bypass-Tunnel-Reminder": "true" } }); }
 
 getStatus();
