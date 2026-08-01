@@ -2062,6 +2062,17 @@ function renderFrameLoop() {
   renderRafId = requestAnimationFrame(renderFrameLoop);
 }
 
+// ⚡ OPEN-SOURCE INDUSTRIAL STANDARD: Zero-Backlog HTML5 Buffer Catchup Loop (Jump to Live Head)
+setInterval(function() {
+  var vid = document.getElementById('remoteVideo');
+  if (vid && vid.buffered && vid.buffered.length > 0) {
+    var end = vid.buffered.end(vid.buffered.length - 1);
+    if (end - vid.currentTime > 0.15) {
+      vid.currentTime = end - 0.02; // ⚡ Instant jump to live head! Zero backlog delay!
+    }
+  }
+}, 500);
+
 function toggleStream(){
   isStreaming = !isStreaming;
   var liveCanvas = document.getElementById("liveCanvas");
