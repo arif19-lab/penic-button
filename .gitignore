@@ -1,3 +1,5 @@
 cloudflared.exe
 *.o
+*.log
+PanicButton_*.exe
 .vscode/

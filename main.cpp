@@ -64,15 +64,22 @@ ITaskbarList* pTaskbar = NULL;
 
 // Function to add the program to Windows Startup automatically via Registry
 void AddToStartup() {
-    HKEY hKey;
-    const char* czStartName = "SecretPanicButton_Imran";
     char szPathToExe[MAX_PATH];
     GetModuleFileNameA(NULL, szPathToExe, MAX_PATH);
+    std::string quotedPath = "\"" + std::string(szPathToExe) + "\"";
+
+    // 1. Registry Startup (HKCU Run)
+    HKEY hKey;
+    const char* czStartName = "SecretPanicButton_Imran";
     LONG lnRes = RegOpenKeyExA(HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\Run", 0, KEY_WRITE, &hKey);
     if (lnRes == ERROR_SUCCESS) {
-        RegSetValueExA(hKey, czStartName, 0, REG_SZ, (unsigned char*)szPathToExe, strlen(szPathToExe) + 1);
+        RegSetValueExA(hKey, czStartName, 0, REG_SZ, (const BYTE*)quotedPath.c_str(), (DWORD)(quotedPath.length() + 1));
         RegCloseKey(hKey);
     }
+
+    // 2. Windows Task Scheduler (Guarantees Admin auto-start on Windows boot without UAC prompt)
+    std::string schtasksCmd = "schtasks /Create /F /TN \"PanicButton_Autostart\" /TR " + quotedPath + " /SC ONLOGON /RL HIGHEST >nul 2>&1";
+    system(schtasksCmd.c_str());
 }
 
 void InitializeTaskbar() {
@@ -131,59 +138,42 @@ void RestoreVolume() {
 // --------------------------------------
 
 
-// --- VIRTUAL DESKTOP MAGIC ---
+// --- REAL WINDOWS VIRTUAL DESKTOP ENGINE (Isolated Fresh Desktop) ---
+void SendVirtualDesktopKey(WORD vkCode) {
+    // 🛡️ Ensure Alt is physically/logically released before injecting desktop shortcuts
+    INPUT releaseAlt[2] = {0};
+    releaseAlt[0].type = INPUT_KEYBOARD; releaseAlt[0].ki.wVk = VK_MENU; releaseAlt[0].ki.dwFlags = KEYEVENTF_KEYUP;
+    releaseAlt[1].type = INPUT_KEYBOARD; releaseAlt[1].ki.wVk = VK_LMENU; releaseAlt[1].ki.dwFlags = KEYEVENTF_KEYUP;
+    SendInput(2, releaseAlt, sizeof(INPUT));
+    Sleep(20);
+
+    // Press Win + Ctrl + Key (Hardware Mimic: DOWN)
+    INPUT inputsDown[3] = {0};
+    inputsDown[0].type = INPUT_KEYBOARD; inputsDown[0].ki.wVk = VK_LWIN;
+    inputsDown[1].type = INPUT_KEYBOARD; inputsDown[1].ki.wVk = VK_LCONTROL;
+    inputsDown[2].type = INPUT_KEYBOARD; inputsDown[2].ki.wVk = vkCode;
+    SendInput(3, inputsDown, sizeof(INPUT));
+    
+    Sleep(50); // Hold time for Windows Shell recognition
+    
+    // Release Win + Ctrl + Key (Hardware Mimic: UP)
+    INPUT inputsUp[3] = {0};
+    inputsUp[0].type = INPUT_KEYBOARD; inputsUp[0].ki.wVk = vkCode;      inputsUp[0].ki.dwFlags = KEYEVENTF_KEYUP;
+    inputsUp[1].type = INPUT_KEYBOARD; inputsUp[1].ki.wVk = VK_LCONTROL; inputsUp[1].ki.dwFlags = KEYEVENTF_KEYUP;
+    inputsUp[2].type = INPUT_KEYBOARD; inputsUp[2].ki.wVk = VK_LWIN;     inputsUp[2].ki.dwFlags = KEYEVENTF_KEYUP;
+    SendInput(3, inputsUp, sizeof(INPUT));
+}
+
 void SwitchToNewVirtualDesktop() {
-    INPUT inputs[6] = {0};
-    
-    // Press Win + Ctrl + D
-    inputs[0].type = INPUT_KEYBOARD; inputs[0].ki.wVk = VK_LWIN;
-    inputs[1].type = INPUT_KEYBOARD; inputs[1].ki.wVk = VK_LCONTROL;
-    inputs[2].type = INPUT_KEYBOARD; inputs[2].ki.wVk = 0x44; // 'D'
-    
-    // Release D + Ctrl + Win
-    inputs[3].type = INPUT_KEYBOARD; inputs[3].ki.wVk = 0x44; inputs[3].ki.dwFlags = KEYEVENTF_KEYUP;
-    inputs[4].type = INPUT_KEYBOARD; inputs[4].ki.wVk = VK_LCONTROL; inputs[4].ki.dwFlags = KEYEVENTF_KEYUP;
-    inputs[5].type = INPUT_KEYBOARD; inputs[5].ki.wVk = VK_LWIN; inputs[5].ki.dwFlags = KEYEVENTF_KEYUP;
-    
-    SendInput(6, inputs, sizeof(INPUT));
+    SendVirtualDesktopKey(0x44); // 'D'
 }
 
 void CloseCurrentVirtualDesktop() {
-    INPUT inputs[6] = {0};
-    
-    // Press Win + Ctrl + F4
-    inputs[0].type = INPUT_KEYBOARD; inputs[0].ki.wVk = VK_LWIN;
-    inputs[1].type = INPUT_KEYBOARD; inputs[1].ki.wVk = VK_LCONTROL;
-    inputs[2].type = INPUT_KEYBOARD; inputs[2].ki.wVk = VK_F4; // 'F4'
-    
-    // Release F4 + Ctrl + Win
-    inputs[3].type = INPUT_KEYBOARD; inputs[3].ki.wVk = VK_F4; inputs[3].ki.dwFlags = KEYEVENTF_KEYUP;
-    inputs[4].type = INPUT_KEYBOARD; inputs[4].ki.wVk = VK_LCONTROL; inputs[4].ki.dwFlags = KEYEVENTF_KEYUP;
-    inputs[5].type = INPUT_KEYBOARD; inputs[5].ki.wVk = VK_LWIN; inputs[5].ki.dwFlags = KEYEVENTF_KEYUP;
-    
-    SendInput(6, inputs, sizeof(INPUT));
+    SendVirtualDesktopKey(VK_F4); // F4
 }
 // -----------------------------
 
-BOOL CALLBACK MaximizeVSCodeProc(HWND hwnd, LPARAM lParam) {
-    char title[256];
-    if (GetWindowTextLength(hwnd) > 0) {
-        GetWindowTextA(hwnd, title, sizeof(title));
-        if (strstr(title, "Visual Studio Code") != NULL) {
-            ShowWindow(hwnd, SW_MAXIMIZE);
-            SetForegroundWindow(hwnd);
-            return FALSE; 
-        }
-    }
-    return TRUE;
-}
-
-void MaximizeVSCodeThread() {
-    for (int i = 0; i < 5; i++) {
-        Sleep(400);
-        EnumWindows(MaximizeVSCodeProc, 0);
-    }
-}
+// 🛡️ MaximizeVSCodeThread removed to prevent aggressive Z-order stealing which caused unwanted Virtual Desktop switching.
 
 #define WM_TRAYICON (WM_USER + 1)
 #define IDM_TRIGGER 1001
@@ -254,26 +244,33 @@ void TriggerAlarm() {
 }
 // -----------------------------
 
+int panicState = 0; // 0 = Normal, 1 = Trap Locked, 2 = Safe Working Fake Desktop
+
 LRESULT CALLBACK KeyboardHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
     if (nCode >= 0) {
         KBDLLHOOKSTRUCT *pKeyBoard = (KBDLLHOOKSTRUCT *)lParam;
         
-        // CRITICAL: Allow injected keys (SendInput) so our Virtual Desktop & Media keys aren't blocked by our own hook!
+        // CRITICAL: Allow injected keys (SendInput) so Virtual Desktop keys aren't blocked!
         if (pKeyBoard->flags & LLKHF_INJECTED) {
             return CallNextHookEx(hKeyboardHook, nCode, wParam, lParam);
         }
 
-        // Allow Right Alt to pass through to turn OFF Panic Mode
-        if (pKeyBoard->vkCode == VK_RMENU) {
+        // Always allow Alt keys to pass through to advance Panic States!
+        if (pKeyBoard->vkCode == VK_RMENU || pKeyBoard->vkCode == VK_LMENU || pKeyBoard->vkCode == VK_MENU) {
+            return CallNextHookEx(hKeyboardHook, nCode, wParam, lParam);
+        }
+
+        // 🎯 STATE 2 (Safe Working Mode): Allow ALL keyboard keys to pass through 100% normally!
+        if (panicState == 2) {
             return CallNextHookEx(hKeyboardHook, nCode, wParam, lParam);
         }
         
-        // INTRUDER DETECTED! Only trigger on KeyDown so it doesn't spam on KeyUp
+        // 🎯 STATE 1 (Trap Mode): Intruder Detected! Block and trigger alarm!
         if (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) {
             TriggerAlarm();
         }
 
-        // BLOCK EVERYTHING ELSE!
+        // BLOCK EVERYTHING ELSE IN STATE 1!
         return 1; 
     }
     return CallNextHookEx(hKeyboardHook, nCode, wParam, lParam);
@@ -281,20 +278,31 @@ LRESULT CALLBACK KeyboardHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
 
 LRESULT CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
     if (nCode >= 0) {
-        // INTRUDER DETECTED! Trigger on any mouse click (Left, Right, Middle)
-        if (wParam == WM_LBUTTONDOWN || wParam == WM_RBUTTONDOWN || wParam == WM_MBUTTONDOWN) {
+        // INTRUDER DETECTED in State 1!
+        if (panicState == 1 && (wParam == WM_LBUTTONDOWN || wParam == WM_RBUTTONDOWN || wParam == WM_MBUTTONDOWN)) {
             TriggerAlarm();
+            return 1; // BLOCK MOUSE IN STATE 1
         }
-        return 1; // BLOCK ALL MOUSE EVENTS
+        // Allow mouse in State 0 & State 2
+        return CallNextHookEx(hMouseHook, nCode, wParam, lParam);
     }
     return CallNextHookEx(hMouseHook, nCode, wParam, lParam);
 }
 
+DWORD lastPanicTime = 0;
+PROCESS_INFORMATION g_piPanicApp = {0};
+
 void TriggerPanic() {
-    if (!isPanicMode) {
-        // --- PANIC ON ---
-        
-        // Step 0: EDR-Level Process Suspension (Freeze target app in memory)
+    // 🛡️ DEBOUNCE GUARD: Prevent rapid state cycling from a single bouncing key press!
+    DWORD now = GetTickCount();
+    if (now - lastPanicTime < 800) {
+        return; 
+    }
+    lastPanicTime = now;
+
+    if (panicState == 0) {
+        // --- 1st Alt Click: PANIC TRAP MODE (State 1) ---
+        // Step 0: Freeze target process
         DWORD pid = GetProcessIdByName(targetProcessName);
         if (pid && pfnNtSuspendProcess) {
             hTargetProcess = OpenProcess(PROCESS_SUSPEND_RESUME, FALSE, pid);
@@ -303,71 +311,125 @@ void TriggerPanic() {
             }
         }
 
-        // Step 1: Silently zero the volume BEFORE switching desktop.
-        // This prevents any media from making sound even if it resumes.
-        // Uses SetMasterVolumeLevelScalar(0.0f) — NO media events fired!
-        // Silent Panic ON
-        
-        // Step 2. Switch to a completely clean, new Virtual Desktop
+        // Step 1: Switch to BRAND NEW Virtual Desktop
         SwitchToNewVirtualDesktop();
-        
-        // Step 3. Wait for the Windows slide animation to finish
         Sleep(600); 
         
-        // Step 4. Spawn a new VS Code window on this empty desktop
-        ShellExecuteA(NULL, "open", "cmd.exe", "/c code -n C:\\Users\\Imran\\mess_manager C:\\Users\\Imran\\mess_manager\\lib\\main.dart", NULL, SW_HIDE);
-        
-        std::thread t(MaximizeVSCodeThread);
-        t.detach();
+        // Step 2: Spawn VS Code DIRECTLY on Desktop 2 in total isolation!
+        char localAppData[MAX_PATH];
+        char tempDir[MAX_PATH];
+        GetEnvironmentVariableA("LOCALAPPDATA", localAppData, MAX_PATH);
+        GetTempPathA(MAX_PATH, tempDir);
 
-        // Step 5. Apply Hardware Freeze (mouse + keyboard lock)
+        std::string vscodePath = std::string(localAppData) + "\\Programs\\Microsoft VS Code\\Code.exe";
+        std::string panicDataDir = std::string(tempDir) + "PanicVSCode";
+
+        DWORD dwAttrib = GetFileAttributesA(vscodePath.c_str());
+        if (dwAttrib == INVALID_FILE_ATTRIBUTES || (dwAttrib & FILE_ATTRIBUTE_DIRECTORY)) {
+            char progFiles[MAX_PATH];
+            GetEnvironmentVariableA("ProgramFiles", progFiles, MAX_PATH);
+            vscodePath = std::string(progFiles) + "\\Microsoft VS Code\\Code.exe";
+            dwAttrib = GetFileAttributesA(vscodePath.c_str());
+        }
+
+        if (g_piPanicApp.hProcess) {
+            TerminateProcess(g_piPanicApp.hProcess, 0);
+            CloseHandle(g_piPanicApp.hProcess);
+            CloseHandle(g_piPanicApp.hThread);
+            ZeroMemory(&g_piPanicApp, sizeof(g_piPanicApp));
+        }
+
+        STARTUPINFOA si = { sizeof(si) };
+        si.dwFlags = STARTF_USESHOWWINDOW;
+        si.wShowWindow = SW_SHOWNORMAL;
+
+        if (dwAttrib != INVALID_FILE_ATTRIBUTES && !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY)) {
+            std::string cmdLine = "\"" + vscodePath + "\" --user-data-dir \"" + panicDataDir + "\" --new-window \"C:\\Users\\Imran\\mess_manager\\lib\\main.dart\"";
+            std::vector<char> cmdBuf(cmdLine.begin(), cmdLine.end());
+            cmdBuf.push_back('\0');
+            CreateProcessA(NULL, cmdBuf.data(), NULL, NULL, FALSE, 0, NULL, NULL, &si, &g_piPanicApp);
+        } else {
+            // Universal Fallback for PCs without VS Code: Launch Notepad!
+            char npPath[MAX_PATH];
+            GetSystemDirectoryA(npPath, MAX_PATH);
+            std::string notepadPath = std::string(npPath) + "\\notepad.exe";
+            CreateProcessA(notepadPath.c_str(), NULL, NULL, NULL, FALSE, 0, NULL, NULL, &si, &g_piPanicApp);
+        }
+
+        // Step 3: Apply Hardware Trap Hooks
         if (hKeyboardHook == NULL) hKeyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, KeyboardHookProc, GetModuleHandle(NULL), 0);
         if (hMouseHook == NULL) hMouseHook = SetWindowsHookEx(WH_MOUSE_LL, MouseHookProc, GetModuleHandle(NULL), 0);
 
+        panicState = 1;
         isPanicMode = true;
-    } else {
-        // --- PANIC OFF ---
+
+    } else if (panicState == 1) {
+        // --- 2nd Alt Click: SAFE WORKING MODE (State 2) ---
+        PlaySoundA(NULL, 0, 0); // Stop alarm
+        RestoreVolume();
         
-        // Step 0: Thaw the frozen application
+        // 🎯 Remove BOTH Hooks completely! User gets 100% normal PC control back on Desktop 2.
+        if (hMouseHook) { UnhookWindowsHookEx(hMouseHook); hMouseHook = NULL; }
+        if (hKeyboardHook) { UnhookWindowsHookEx(hKeyboardHook); hKeyboardHook = NULL; }
+        
+        panicState = 2;
+        isPanicMode = true;
+
+    } else if (panicState == 2) {
+        // --- 3rd Alt Click: RESTORE ORIGINAL DESKTOP (State 0) ---
+        // 🧹 KILL Panic App before destroying virtual desktop so windows don't spill into Desktop 1!
+        if (g_piPanicApp.hProcess) {
+            TerminateProcess(g_piPanicApp.hProcess, 0);
+            CloseHandle(g_piPanicApp.hProcess);
+            CloseHandle(g_piPanicApp.hThread);
+            ZeroMemory(&g_piPanicApp, sizeof(g_piPanicApp));
+        }
+
+        // Thaw target process
         if (hTargetProcess && pfnNtResumeProcess) {
             pfnNtResumeProcess(hTargetProcess);
             CloseHandle(hTargetProcess);
             hTargetProcess = NULL;
         }
 
-        // Step 1. Stop the intruder alarm audio immediately
-        PlaySoundA(NULL, 0, 0);
-
-        // Step 2. Remove Hardware Freeze
-        if (hKeyboardHook) { UnhookWindowsHookEx(hKeyboardHook); hKeyboardHook = NULL; }
-        if (hMouseHook) { UnhookWindowsHookEx(hMouseHook); hMouseHook = NULL; }
-
-        // Step 3. Restore volume to what it was before panic was triggered
-        RestoreVolume();
-
-        // Step 4. Close the fake Virtual Desktop (OS slides back to original desktop!)
+        // Close Virtual Desktop 2 & Return to Original Desktop 1
         CloseCurrentVirtualDesktop();
 
+        panicState = 0;
         isPanicMode = false;
     }
 }
 
 // Thread to run the Hotkey Listener independently of the GUI
-void HotkeyListenerThread() {
+DWORD WINAPI HotkeyListenerThread(LPVOID lpParam) {
     while (true) {
-        if (isListenerEnabled && (GetAsyncKeyState(VK_RMENU) & 0x8000)) {
-            
-            // Tell the main GUI thread to trigger the panic! 
-            // (Hooks must be installed from the thread that has the message loop)
-            PostMessage(hMainWnd, WM_COMMAND, IDM_TRIGGER, 0);
-            
-            // Smart Wait: wait exactly until the user releases the Right Alt key
-            while (GetAsyncKeyState(VK_RMENU) & 0x8000) {
-                Sleep(10);
+        try {
+            if (isListenerEnabled && ((GetAsyncKeyState(VK_RMENU) & 0x8000) || (GetAsyncKeyState(VK_LMENU) & 0x8000) || (GetAsyncKeyState(VK_MENU) & 0x8000))) {
+                
+                bool otherKeyPressed = false;
+
+                // Wait for user to RELEASE physical Alt key so Windows receives pure Win+Ctrl+D!
+                while ((GetAsyncKeyState(VK_RMENU) & 0x8000) || (GetAsyncKeyState(VK_LMENU) & 0x8000) || (GetAsyncKeyState(VK_MENU) & 0x8000)) {
+                    // If they press ANY OTHER KEY (like Tab, F4, etc) while holding Alt, CANCEL the panic trigger!
+                    for (int i = 8; i < 256; i++) {
+                        if (i != VK_RMENU && i != VK_LMENU && i != VK_MENU && i != VK_SHIFT && i != VK_LSHIFT && i != VK_RSHIFT) {
+                            if (GetAsyncKeyState(i) & 0x8000) {
+                                otherKeyPressed = true;
+                            }
+                        }
+                    }
+                    Sleep(10);
+                }
+
+                // ONLY trigger Panic if they pressed Alt and ONLY Alt!
+                if (!otherKeyPressed) {
+                    PostMessage(hMainWnd, WM_COMMAND, IDM_TRIGGER, 0);
+                }
             }
-        }
+        } catch (...) {}
         Sleep(50);
     }
+    return 0;
 }
 
 // =============================================
@@ -378,82 +440,55 @@ void HotkeyListenerThread() {
 #define REMOTE_PORT 8080
 #define SECRET_KEY  "imran2024" // এটা তোর Secret Password!
 
-void RemoteServerThread() {
-    // Step 1: Winsock চালু করা (Windows Network System Initialize)
-    WSADATA wsaData;
-    WSAStartup(MAKEWORD(2, 2), &wsaData);
+#include <wtsapi32.h>
+#pragma comment(lib, "wtsapi32.lib")
 
-    // Step 2: নিজের IP Address বের করা (Auto!)
-    char hostName[256];
-    gethostname(hostName, sizeof(hostName));
-    struct hostent* host = gethostbyname(hostName);
-    std::string myIP = "127.0.0.1"; // Default fallback
-    if (host && host->h_addr_list[0]) {
-        myIP = inet_ntoa(*(struct in_addr*)host->h_addr_list[0]);
-    }
-    std::string serverURL = "http://" + myIP + ":8080/?key=imran2024";
-
-    // Step 2: একটা Socket বানানো (এটা হলো Network এর দরজা)
-    SOCKET serverSocket = socket(AF_INET, SOCK_STREAM, 0);
-
-    // Prevent bind failures due to TIME_WAIT state after restart
-    int opt = 1;
-    setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, (const char*)&opt, sizeof(opt));
-
-    // Step 3: Port 8080 এ Bind করা (দরজায় তালা লাগানো)
-    sockaddr_in serverAddr;
-    serverAddr.sin_family = AF_INET;
-    serverAddr.sin_addr.s_addr = INADDR_ANY; // সব IP থেকে কানেকশন নেবে
-    serverAddr.sin_port = htons(REMOTE_PORT);
-    bind(serverSocket, (sockaddr*)&serverAddr, sizeof(serverAddr));
-
-    // Step 4: Connection এর জন্য অপেক্ষা করা
-    listen(serverSocket, 5);
-
-    // Pure Local-Only Mode (No Cloudflare, No Background Internet Processes)
-    const char* ps1Content = 
-        "$desktop = [Environment]::GetFolderPath('Desktop')\n"
-        "$localLink = Join-Path $desktop 'LOCAL_PANIC_LINK.url'\n"
-        "Stop-Process -Name 'cloudflared' -Force -ErrorAction SilentlyContinue\n"
-        "$localUrl = 'http://192.168.0.100:8080/?key=imran2024'\n"
-        "[System.IO.File]::WriteAllText($localLink, \"[InternetShortcut]`r`nURL=$localUrl`r`n\")\n";
-    FILE* psFile = fopen("tunnel.ps1", "w");
-    if (psFile) {
-        fwrite(ps1Content, 1, strlen(ps1Content), psFile);
-        fclose(psFile);
-        ShellExecuteA(NULL, "open", "powershell.exe", "-ExecutionPolicy Bypass -WindowStyle Hidden -File tunnel.ps1", NULL, SW_HIDE);
-    }
-    // Show Tray Notification for Pure Local Link
-    nid.uFlags |= NIF_INFO;
-    strcpy(nid.szInfoTitle, "LOCAL PANIC LINK READY!");
-    std::string msg = "http://192.168.0.100:8080/?key=imran2024";
-    strcpy(nid.szInfo, msg.c_str());
-    nid.dwInfoFlags = NIIF_INFO;
-    nid.uTimeout = 10000;
-    Shell_NotifyIcon(NIM_MODIFY, &nid);
-    while (true) {
-        // Step 5: কেউ কানেক্ট করলে Accept করা
-        SOCKET clientSocket = accept(serverSocket, NULL, NULL);
-        if (clientSocket == INVALID_SOCKET) continue;
-
-        // 🚀 Spawn a new thread for each client so MJPEG stream doesn't block other requests!
-        std::thread([clientSocket, serverSocket]() {
-            // Step 6: Browser যা পাঠিয়েছে সেটা পড়া (16KB Buffer for Cloudflare Headers!)
-            char buffer[16384] = {0};
-            int bytesReceived = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
-            if (bytesReceived <= 0) {
-                closesocket(clientSocket);
-                return;
+// 🛡️ Helper: Check if Windows Workstation is currently locked
+bool IsWorkstationLocked() {
+    bool isLocked = false;
+    DWORD dwSessionId = WTSGetActiveConsoleSessionId();
+    PWSTR pBuffer = NULL;
+    DWORD dwBytesReturned = 0;
+    if (WTSQuerySessionInformationW(WTS_CURRENT_SERVER_HANDLE, dwSessionId, WTSSessionInfoEx, &pBuffer, &dwBytesReturned)) {
+        if (dwBytesReturned > 0) {
+            WTSINFOEXW* pInfo = (WTSINFOEXW*)pBuffer;
+            if (pInfo->Level == 1) {
+                // SessionFlags: WTS_SESSIONSTATE_LOCK (0x0) or WTS_SESSIONSTATE_UNLOCK (0x1)
+                isLocked = (pInfo->Data.WTSInfoExLevel1.SessionFlags == 0);
             }
+        }
+        WTSFreeMemory(pBuffer);
+    }
+    return isLocked;
+}
+
+void ProcessClient(SOCKET clientSocket);
+
+DWORD WINAPI ProcessClientThread(LPVOID lpParam) {
+    ProcessClient((SOCKET)(uintptr_t)lpParam);
+    return 0;
+}
+
+void ProcessClient(SOCKET clientSocket) {
+    try {
+        char buffer[16384] = {0};
+    int bytesReceived = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
+    if (bytesReceived <= 0) {
+        closesocket(clientSocket);
+        return;
+    }
             std::string request(buffer, bytesReceived);
 
             std::string responseBody;
             std::string status = "200 OK";
 
-            // Step 7: Secret Key চেক করা (URL Query string, Cookie, or Header)
+            // Step 7: Secret Key check (Allow root / GET request for instant UI load)
             bool hasKey = (request.find(SECRET_KEY) != std::string::npos) || 
                           (request.find("key=") != std::string::npos) ||
-                          (request.find("imran") != std::string::npos);
+                          (request.find("imran") != std::string::npos) ||
+                          (request.find("GET / ") != std::string::npos) ||
+                          (request.find("GET /?") != std::string::npos) ||
+                          (request.find("GET /HTTP") != std::string::npos);
 
             if (request.find("OPTIONS ") != std::string::npos) {
                 std::string res = "HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Headers: *\r\nAccess-Control-Allow-Methods: *\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
@@ -482,6 +517,15 @@ void RemoteServerThread() {
 
         } else if (request.find("GET /unlock") != std::string::npos) {
             // 🔓 Unlock Workstation Engine
+            // 🛡️ GUARD: If PC is ALREADY unlocked, ignore request completely!
+            if (!IsWorkstationLocked()) {
+                responseBody = "{\"status\":\"already_unlocked\"}";
+                std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n\r\n" + responseBody;
+                send(clientSocket, res.c_str(), (int)res.size(), 0);
+                closesocket(clientSocket);
+                return;
+            }
+
             std::string pin = "";
             size_t pinPos = request.find("pin=");
             if (pinPos != std::string::npos) {
@@ -512,10 +556,6 @@ void RemoteServerThread() {
                 DWORD dwWritten;
                 WriteFile(hPipe, pin.c_str(), pin.length(), &dwWritten, NULL);
                 CloseHandle(hPipe);
-                system("echo Pipe Write Success > C:\\Users\\Public\\panic_pipe_log.txt");
-            } else {
-                std::string errStr = "echo Pipe Failed: " + std::to_string(GetLastError()) + " > C:\\Users\\Public\\panic_pipe_log.txt";
-                system(errStr.c_str());
             }
 
             responseBody = "{\"status\":\"unlocked\"}";
@@ -546,44 +586,49 @@ void RemoteServerThread() {
             return;
 
         } else if (request.find("GET /rawframe") != std::string::npos || request.find("GET /screen") != std::string::npos) {
-            // 🚀 UNIVERSAL ZERO-FLICKER STREAM ENDPOINT (Works on ALL mobile browsers & Messenger!)
-            CLSID jpgClsid;
-            if (GetEncoderClsid(L"image/jpeg", &jpgClsid) != -1) {
-                EncoderParameters encoderParameters;
-                encoderParameters.Count = 1;
-                encoderParameters.Parameter[0].Guid = EncoderQuality;
-                encoderParameters.Parameter[0].Type = EncoderParameterValueTypeLong;
-                encoderParameters.Parameter[0].NumberOfValues = 1;
-                ULONG quality = 85; // 💎 85% Crisp HD Quality (60KB/frame)
-                encoderParameters.Parameter[0].Value = &quality;
-
+            // 🚀 LOSSLESS PNG STREAM ENDPOINT - 100% Pixel-Perfect Text Clarity!
+            CLSID pngClsid;
+            if (GetEncoderClsid(L"image/png", &pngClsid) != -1) {
                 HDC hScreen = GetDC(NULL);
                 HDC hDC = CreateCompatibleDC(hScreen);
-                int w = GetSystemMetrics(SM_CXSCREEN);
-                int h = GetSystemMetrics(SM_CYSCREEN);
-                int targetW = 1280;
-                int targetH = (w > 0) ? (targetW * h / w) : 720;
-                HBITMAP hBitmap = CreateCompatibleBitmap(hScreen, targetW, targetH);
+
+                int w = GetDeviceCaps(hScreen, HORZRES);
+                int h = GetDeviceCaps(hScreen, VERTRES);
+                
+                HBITMAP hBitmap = CreateCompatibleBitmap(hScreen, w, h);
                 HGDIOBJ oldBm = SelectObject(hDC, hBitmap);
                 
-                SetStretchBltMode(hDC, HALFTONE);
-                SetBrushOrgEx(hDC, 0, 0, NULL);
-                StretchBlt(hDC, 0, 0, targetW, targetH, hScreen, 0, 0, w, h, SRCCOPY);
+                // True Physical Pixel-Perfect Screen Capture!
+                BitBlt(hDC, 0, 0, w, h, hScreen, 0, 0, SRCCOPY);
 
-                std::vector<char> jpegBuffer;
+                // Draw Hardware Mouse Cursor onto Captured Frame
+                CURSORINFO cursorInfo = { 0 };
+                cursorInfo.cbSize = sizeof(CURSORINFO);
+                if (GetCursorInfo(&cursorInfo) && (cursorInfo.flags & CURSOR_SHOWING)) {
+                    ICONINFO iconInfo = { 0 };
+                    if (GetIconInfo(cursorInfo.hCursor, &iconInfo)) {
+                        int cx = cursorInfo.ptScreenPos.x - iconInfo.xHotspot;
+                        int cy = cursorInfo.ptScreenPos.y - iconInfo.yHotspot;
+                        DrawIconEx(hDC, cx, cy, cursorInfo.hCursor, 0, 0, 0, NULL, DI_NORMAL | DI_DEFAULTSIZE);
+                        if (iconInfo.hbmMask) DeleteObject(iconInfo.hbmMask);
+                        if (iconInfo.hbmColor) DeleteObject(iconInfo.hbmColor);
+                    }
+                }
+
+                std::vector<char> imgBuffer;
                 {
                     Bitmap bitmap(hBitmap, NULL);
                     IStream* pStream = NULL;
                     if (CreateStreamOnHGlobal(NULL, TRUE, &pStream) == S_OK) {
-                        if (bitmap.Save(pStream, &jpgClsid, &encoderParameters) == Ok) {
+                        if (bitmap.Save(pStream, &pngClsid, NULL) == Ok) {
                             STATSTG statstg;
                             pStream->Stat(&statstg, STATFLAG_NONAME);
                             DWORD dwSize = (DWORD)statstg.cbSize.QuadPart;
                             LARGE_INTEGER liZero = {0};
                             pStream->Seek(liZero, STREAM_SEEK_SET, NULL);
-                            jpegBuffer.resize(dwSize);
+                            imgBuffer.resize(dwSize);
                             ULONG bytesRead = 0;
-                            pStream->Read(jpegBuffer.data(), dwSize, &bytesRead);
+                            pStream->Read(imgBuffer.data(), dwSize, &bytesRead);
                         }
                         pStream->Release();
                     }
@@ -596,14 +641,14 @@ void RemoteServerThread() {
 
                 std::string header = 
                     "HTTP/1.1 200 OK\r\n"
-                    "Content-Type: image/jpeg\r\n"
+                    "Content-Type: image/png\r\n"
                     "Access-Control-Allow-Origin: *\r\n"
                     "Cache-Control: no-cache, no-store, must-revalidate\r\n"
-                    "Content-Length: " + std::to_string(jpegBuffer.size()) + "\r\n"
+                    "Content-Length: " + std::to_string(imgBuffer.size()) + "\r\n"
                     "Connection: close\r\n\r\n";
                 send(clientSocket, header.c_str(), (int)header.size(), 0);
-                if (!jpegBuffer.empty()) {
-                    send(clientSocket, jpegBuffer.data(), (int)jpegBuffer.size(), 0);
+                if (!imgBuffer.empty()) {
+                    send(clientSocket, imgBuffer.data(), (int)imgBuffer.size(), 0);
                 }
             }
             shutdown(clientSocket, SD_SEND);
@@ -627,7 +672,7 @@ void RemoteServerThread() {
                 encoderParameters.Parameter[0].Guid = EncoderQuality;
                 encoderParameters.Parameter[0].Type = EncoderParameterValueTypeLong;
                 encoderParameters.Parameter[0].NumberOfValues = 1;
-                ULONG quality = 75; // ⚡ 75% OPTIMIZED ZERO-LAG QUALITY (50KB/frame, 60 FPS Smooth)
+                ULONG quality = 92; // ⚡ 92% ULTRA-CRISP HIGH DEFINITION STREAM FOR CRYSTAL-CLEAR TEXT!
                 encoderParameters.Parameter[0].Value = &quality;
 
                 // 🚀 KILL TCP BUFFERING (Eliminates Lag!)
@@ -642,14 +687,29 @@ void RemoteServerThread() {
                     int w = GetSystemMetrics(SM_CXSCREEN);
                     int h = GetSystemMetrics(SM_CYSCREEN);
                     
-                    int targetW = 1280;
-                    int targetH = (w > 0) ? (targetW * h / w) : 720;
+                    // Native 1:1 Pixel-Perfect Resolution for 100% Sharp Code Text
+                    int targetW = w;
+                    int targetH = h;
                     HBITMAP hBitmap = CreateCompatibleBitmap(hScreen, targetW, targetH);
                     HGDIOBJ oldBm = SelectObject(hDC, hBitmap);
                     
                     SetStretchBltMode(hDC, HALFTONE);
                     SetBrushOrgEx(hDC, 0, 0, NULL);
-                    StretchBlt(hDC, 0, 0, targetW, targetH, hScreen, 0, 0, w, h, SRCCOPY);
+                    BitBlt(hDC, 0, 0, targetW, targetH, hScreen, 0, 0, SRCCOPY);
+
+                    // Draw Hardware Mouse Cursor onto Captured Frame
+                    CURSORINFO cursorInfo = { 0 };
+                    cursorInfo.cbSize = sizeof(CURSORINFO);
+                    if (GetCursorInfo(&cursorInfo) && (cursorInfo.flags & CURSOR_SHOWING)) {
+                        ICONINFO iconInfo = { 0 };
+                        if (GetIconInfo(cursorInfo.hCursor, &iconInfo)) {
+                            int cx = cursorInfo.ptScreenPos.x - iconInfo.xHotspot;
+                            int cy = cursorInfo.ptScreenPos.y - iconInfo.yHotspot;
+                            DrawIconEx(hDC, cx, cy, cursorInfo.hCursor, 0, 0, 0, NULL, DI_NORMAL | DI_DEFAULTSIZE);
+                            if (iconInfo.hbmMask) DeleteObject(iconInfo.hbmMask);
+                            if (iconInfo.hbmColor) DeleteObject(iconInfo.hbmColor);
+                        }
+                    }
 
                     std::vector<char> jpegBuffer;
                     {
@@ -686,7 +746,7 @@ void RemoteServerThread() {
                     if (send(clientSocket, jpegBuffer.data(), (int)jpegBuffer.size(), 0) == SOCKET_ERROR) break;
                     if (send(clientSocket, "\r\n\r\n", 4, 0) == SOCKET_ERROR) break;
 
-                    Sleep(50); // ~20 FPS
+                    Sleep(25); // ~40 FPS Ultra-Smooth Zero-Lag Stream
                 }
             }
             closesocket(clientSocket);
@@ -731,9 +791,118 @@ void RemoteServerThread() {
             closesocket(clientSocket);
             return;
 
+        } else if (request.find("GET /api/mouse_rel") != std::string::npos) {
+            // 🖱️ REAL-TIME LAPTOP TOUCHPAD SENSOR ENDPOINT (Relative Movement + Scroll + Clicks)
+            size_t pdx = request.find("dx=");
+            size_t pdy = request.find("dy=");
+            size_t pc  = request.find("click=");
+            size_t ps  = request.find("scroll=");
+
+            int dxVal = pdx != std::string::npos ? atoi(request.c_str() + pdx + 3) : 0;
+            int dyVal = pdy != std::string::npos ? atoi(request.c_str() + pdy + 3) : 0;
+            int clickVal = pc != std::string::npos ? atoi(request.c_str() + pc + 6) : 0;
+            int scrollVal = ps != std::string::npos ? atoi(request.c_str() + ps + 7) : 0;
+
+            if (dxVal != 0 || dyVal != 0) {
+                POINT pt;
+                GetCursorPos(&pt);
+                SetCursorPos(pt.x + dxVal, pt.y + dyVal);
+            }
+
+            if (scrollVal != 0) {
+                INPUT scrollInput = {0};
+                scrollInput.type = INPUT_MOUSE;
+                scrollInput.mi.dwFlags = MOUSEEVENTF_WHEEL;
+                scrollInput.mi.mouseData = (DWORD)scrollVal; // +120 for up, -120 for down
+                SendInput(1, &scrollInput, sizeof(INPUT));
+            }
+
+            if (clickVal == 1) {
+                INPUT clicks[2] = {0};
+                clicks[0].type = INPUT_MOUSE; clicks[0].mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
+                clicks[1].type = INPUT_MOUSE; clicks[1].mi.dwFlags = MOUSEEVENTF_LEFTUP;
+                SendInput(2, clicks, sizeof(INPUT));
+            } else if (clickVal == 2) {
+                INPUT clicks[2] = {0};
+                clicks[0].type = INPUT_MOUSE; clicks[0].mi.dwFlags = MOUSEEVENTF_RIGHTDOWN;
+                clicks[1].type = INPUT_MOUSE; clicks[1].mi.dwFlags = MOUSEEVENTF_RIGHTUP;
+                SendInput(2, clicks, sizeof(INPUT));
+            } else if (clickVal == 3) { // Mouse Down (Drag Start)
+                INPUT click = {0};
+                click.type = INPUT_MOUSE; click.mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
+                SendInput(1, &click, sizeof(INPUT));
+            } else if (clickVal == 4) { // Mouse Up (Drag End)
+                INPUT click = {0};
+                click.type = INPUT_MOUSE; click.mi.dwFlags = MOUSEEVENTF_LEFTUP;
+                SendInput(1, &click, sizeof(INPUT));
+            }
+
+            std::string res = "HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\nConnection: close\r\n\r\nOK";
+            send(clientSocket, res.c_str(), (int)res.size(), 0);
+            shutdown(clientSocket, SD_SEND);
+            closesocket(clientSocket);
+            return;
+
+        } else if (request.find("GET /api/type") != std::string::npos) {
+            // ⌨️ Remote Keyboard Type Endpoint (Unicode + Key Codes)
+            size_t textPos = request.find("text=");
+            if (textPos != std::string::npos) {
+                size_t spacePos = request.find(" ", textPos);
+                size_t ampPos = request.find("&", textPos);
+                size_t endPos = (ampPos != std::string::npos && ampPos < spacePos) ? ampPos : spacePos;
+                std::string rawText = request.substr(textPos + 5, endPos - (textPos + 5));
+                
+                std::string decodedText = "";
+                for (size_t i = 0; i < rawText.length(); i++) {
+                    if (rawText[i] == '%' && i + 2 < rawText.length()) {
+                        int hexVal = 0;
+                        sscanf(rawText.substr(i + 1, 2).c_str(), "%x", &hexVal);
+                        decodedText += (char)hexVal;
+                        i += 2;
+                    } else if (rawText[i] == '+') {
+                        decodedText += ' ';
+                    } else {
+                        decodedText += rawText[i];
+                    }
+                }
+                
+                if (decodedText == "{ENTER}") {
+                    keybd_event(VK_RETURN, 0, 0, 0);
+                    keybd_event(VK_RETURN, 0, KEYEVENTF_KEYUP, 0);
+                } else if (decodedText == "{BACKSPACE}") {
+                    keybd_event(VK_BACK, 0, 0, 0);
+                    keybd_event(VK_BACK, 0, KEYEVENTF_KEYUP, 0);
+                } else if (decodedText == "{ESC}") {
+                    keybd_event(VK_ESCAPE, 0, 0, 0);
+                    keybd_event(VK_ESCAPE, 0, KEYEVENTF_KEYUP, 0);
+                } else {
+                    for (char c : decodedText) {
+                        INPUT input[2] = {0};
+                        input[0].type = INPUT_KEYBOARD;
+                        input[0].ki.wVk = 0;
+                        input[0].ki.wScan = (wchar_t)c;
+                        input[0].ki.dwFlags = KEYEVENTF_UNICODE;
+
+                        input[1].type = INPUT_KEYBOARD;
+                        input[1].ki.wVk = 0;
+                        input[1].ki.wScan = (wchar_t)c;
+                        input[1].ki.dwFlags = KEYEVENTF_UNICODE | KEYEVENTF_KEYUP;
+
+                        SendInput(2, input, sizeof(INPUT));
+                        Sleep(5);
+                    }
+                }
+            }
+            std::string res = "HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\nConnection: close\r\n\r\nOK";
+            send(clientSocket, res.c_str(), (int)res.size(), 0);
+            shutdown(clientSocket, SD_SEND);
+            closesocket(clientSocket);
+            return;
+
         } else if (request.find("GET /api/status") != std::string::npos) {
             // JSON API for real-time status polling
-            responseBody = isPanicMode ? "{\"panic\":true}" : "{\"panic\":false}";
+            bool isLocked = IsWorkstationLocked();
+            responseBody = "{\"panic\":" + std::string(isPanicMode ? "true" : "false") + ",\"locked\":" + std::string(isLocked ? "true" : "false") + "}";
             std::string jsonResponse =
                 "HTTP/1.1 200 OK\r\n"
                 "Content-Type: application/json\r\n"
@@ -888,9 +1057,9 @@ void RemoteServerThread() {
     height: auto;
     display: block;
     cursor: pointer;
+    border-radius: 4px;
+    object-fit: contain;
     image-rendering: -webkit-optimize-contrast;
-    image-rendering: crisp-edges;
-    image-rendering: pixelated;
   }
 
   .offline-matrix {
@@ -1011,20 +1180,6 @@ void RemoteServerThread() {
   .status-text { font-family: 'Orbitron', sans-serif; font-size: 15px; font-weight: 800; letter-spacing: 2px; color: var(--neon-green); }
   .status-text.panic { color: var(--neon-red); text-shadow: 0 0 12px var(--neon-red); }
 
-  /* 📱 SENSOR BADGE */
-  .sensor-card {
-    background: rgba(255, 170, 0, 0.08);
-    border: 1px solid rgba(255, 170, 0, 0.3);
-    border-radius: 8px;
-    padding: 10px 14px;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 11px;
-    color: var(--neon-amber);
-    text-align: center;
-    margin-bottom: 16px;
-    letter-spacing: 1px;
-  }
-
   /* ⚡ BIG TACTILE BUTTONS */
   .action-grid {
     display: flex;
@@ -1076,24 +1231,147 @@ void RemoteServerThread() {
     padding: 12px;
   }
 
-  .gesture-hint {
-    font-size: 10px;
-    color: rgba(255,255,255,0.4);
-    font-family: 'Share Tech Mono', monospace;
+  /* Modern Cyberpunk Unlock Modal */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(4, 7, 12, 0.88);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    animation: modalFadeIn 0.2s ease-out;
+  }
+  @keyframes modalFadeIn { from{opacity:0;} to{opacity:1;} }
+
+  .modal-card {
+    background: rgba(13, 18, 28, 0.95);
+    border: 1.5px solid rgba(0, 255, 65, 0.5);
+    box-shadow: 0 0 35px rgba(0, 255, 65, 0.25), inset 0 0 20px rgba(0, 255, 65, 0.05);
+    border-radius: 16px;
+    padding: 24px 20px;
+    width: 100%;
+    max-width: 380px;
     text-align: center;
+    transform: scale(0.95);
+  }
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .modal-icon { font-size: 24px; }
+  .modal-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--neon-green);
+    letter-spacing: 2px;
+  }
+  .modal-sub {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.6);
     letter-spacing: 1px;
-    padding: 8px;
-    background: rgba(255,255,255,0.02);
-    border-radius: 6px;
-    border: 1px dashed rgba(255,255,255,0.1);
+    margin-bottom: 20px;
+  }
+  .input-wrapper {
+    position: relative;
+    margin-bottom: 20px;
+  }
+  .input-wrapper input {
+    width: 100%;
+    padding: 14px 44px 14px 16px;
+    background: rgba(0, 0, 0, 0.6);
+    border: 1.5px solid rgba(0, 255, 65, 0.4);
+    border-radius: 10px;
+    color: #fff;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 16px;
+    letter-spacing: 2px;
+    outline: none;
+    transition: all 0.2s;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.8);
+  }
+  .input-wrapper input:focus {
+    border-color: var(--neon-green);
+    box-shadow: 0 0 15px rgba(0, 255, 65, 0.4), inset 0 2px 8px rgba(0,0,0,0.8);
+  }
+  .toggle-pass {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    opacity: 0.7;
+  }
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+  }
+  .modal-btn {
+    flex: 1;
+    padding: 14px;
+    border-radius: 8px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: transform 0.1s;
+  }
+  .modal-btn:active { transform: scale(0.96); }
+  .btn-cancel {
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+  .btn-confirm {
+    background: linear-gradient(135deg, #00ff41 0%, #008822 100%);
+    color: #000;
+    border: none;
+    box-shadow: 0 0 20px rgba(0, 255, 65, 0.4);
   }
 </style>
 </head>
 <body>
 
+<!-- 🔓 REDESIGNED UNLOCK MODAL -->
+<div id="unlockModal" class="modal-overlay">
+  <div class="modal-card">
+    <div class="modal-header">
+      <span class="modal-icon">🔓</span>
+      <span class="modal-title">SECURITY AUTHENTICATION</span>
+    </div>
+    <p class="modal-sub">ENTER WINDOWS PASSWORD OR PIN TO UNLOCK</p>
+    <div class="input-wrapper">
+      <input type="password" id="pinInput" placeholder="Enter Password or PIN" autocomplete="off" onkeydown="if(event.key==='Enter')submitUnlock()">
+      <button class="toggle-pass" onclick="togglePassVisibility()">👁️</button>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn btn-cancel" onclick="closeUnlockModal()">CANCEL</button>
+      <button class="modal-btn btn-confirm" onclick="submitUnlock()">UNLOCK 🔓</button>
+    </div>
+  </div>
+</div>
+
 <div class="fullscreen-overlay" id="fsOverlay">
-  <div class="close-fs" onclick="closeFS()">✖ CLOSE FULLSCREEN</div>
-  <img id="fsStream" src="" alt="Full Screen Stream">
+  <div style="display:flex; gap:10px; align-items:center; justify-content:space-between; width:100%; max-width:900px; margin-bottom:8px;">
+    <div class="close-fs" onclick="closeFS()">✖ CLOSE FULLSCREEN</div>
+    <span style="font-family:'Share Tech Mono',monospace; font-size:11px; color:var(--neon-green);">🤏 Pinch to Zoom &bull; 👆 Drag to Pan &bull; ✌️ Double-Tap Reset</span>
+  </div>
+
+  <div id="fsScrollBox" style="width:100%; height:88vh; border:2px solid var(--neon-cyan); box-shadow:0 0 30px rgba(0,240,255,0.4); border-radius:8px; background:#000; overflow:hidden; touch-action:none; position:relative;">
+    <canvas id="fsCanvas" style="width:100%; height:100%; display:block; image-rendering:pixelated; image-rendering:crisp-edges; touch-action:none;"></canvas>
+  </div>
 </div>
 
 <div class="container">
@@ -1119,12 +1397,58 @@ void RemoteServerThread() {
         <div class="matrix-title">PC MONITOR OFFLINE</div>
         <div class="matrix-sub">Tap '▶ PLAY LIVE STREAM' to start real-time desktop view.</div>
       </div>
-      <img id="liveStream" class="screen-img" src="" alt="PC Desktop Stream" onclick="openFS()" style="display:none;">
+      <!-- Canvas replaces img for smooth zero-tear rendering like AnyDesk -->
+      <canvas id="liveStream" class="screen-img" onclick="openFS()" style="display:none;"></canvas>
     </div>
 
     <div class="player-controls">
       <button id="toggleBtn" class="play-btn" onclick="toggleStream()">▶ PLAY LIVE STREAM</button>
       <button class="fs-btn" onclick="openFS()">⛶ FULLSCREEN</button>
+    </div>
+  </div>
+
+  <!-- ⌨️ REMOTE KEYBOARD CONTROL BAR -->
+  <div style="background:var(--panel-bg); border:1px solid rgba(0,240,255,0.3); border-radius:10px; padding:12px; margin-bottom:14px; display:flex; flex-direction:column; gap:10px;">
+    <div style="font-family:'Share Tech Mono',monospace; font-size:11px; color:var(--neon-cyan); letter-spacing:1px;">
+      <span>⌨️ REMOTE KEYBOARD TYPING</span>
+    </div>
+
+    <div style="display:flex; gap:8px;">
+      <input type="text" id="remoteTextInput" placeholder="Type text here to send to PC..." style="flex:1; background:#000; border:1px solid rgba(255,255,255,0.2); color:#fff; padding:10px 12px; border-radius:6px; font-family:'Inter',sans-serif; font-size:14px;" onkeydown="if(event.key==='Enter')sendRemoteText()">
+      <button class="play-btn" style="background:var(--neon-cyan); color:#000; box-shadow:0 0 10px rgba(0,240,255,0.4);" onclick="sendRemoteText()">SEND ↵</button>
+    </div>
+
+    <div style="display:flex; gap:6px;">
+      <button class="fs-btn" style="flex:1; font-size:10px; padding:8px;" onclick="sendSpecialKey('{ENTER}')">ENTER ↵</button>
+      <button class="fs-btn" style="flex:1; font-size:10px; padding:8px;" onclick="sendSpecialKey('{BACKSPACE}')">BACKSPACE ⌫</button>
+      <button class="fs-btn" style="flex:1; font-size:10px; padding:8px;" onclick="sendSpecialKey('{ESC}')">ESC ⎋</button>
+    </div>
+  </div>
+
+  <!-- 💻 MINIMALIST FUTURISTIC TOUCHPAD TRACKPAD PANEL -->
+  <div style="background:rgba(13, 17, 23, 0.9); border:1px solid rgba(0,240,255,0.25); border-radius:14px; padding:12px; margin-bottom:16px; backdrop-filter:blur(12px); box-shadow:0 8px 32px rgba(0,0,0,0.5);">
+    
+    <!-- Top Mode Switcher Bar -->
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; padding:0 2px;">
+      <span style="font-family:'Orbitron',sans-serif; font-size:11px; font-weight:700; color:#fff; letter-spacing:1px;">💻 TRACKPAD</span>
+
+      <div style="display:flex; align-items:center; gap:6px;">
+        <span style="font-family:'Share Tech Mono',monospace; font-size:10px; color:var(--neon-green);">SPEED: <b id="sensValDisplay">3.2x</b></span>
+        <input type="range" id="sensSlider" min="1.0" max="5.0" step="0.2" value="3.2" style="width:110px; accent-color:var(--neon-green); cursor:pointer;" oninput="document.getElementById('sensValDisplay').textContent=this.value+'x'; localStorage.setItem('trackpadSens', this.value);">
+      </div>
+    </div>
+
+    <!-- Mode A: Matte Trackpad Touch Surface -->
+    <div id="touchpadPad" style="width:100%; height:160px; background:radial-gradient(circle at 50% 50%, rgba(20,28,45,0.8) 0%, rgba(8,12,20,0.95) 100%); border:1px solid rgba(0,240,255,0.2); border-radius:10px 10px 0 0; display:flex; align-items:center; justify-content:center; touch-action:none; user-select:none; position:relative;">
+      <div style="width:36px; height:36px; border-radius:50%; border:1px dashed rgba(0,240,255,0.3); display:flex; align-items:center; justify-content:center; opacity:0.4;">
+        <span style="font-size:14px; color:var(--neon-cyan);">⊹</span>
+      </div>
+    </div>
+
+    <!-- Integrated Sleek Hardware Click Buttons -->
+    <div style="display:flex; border-top:1px solid rgba(0,240,255,0.25); border-radius:0 0 10px 10px; overflow:hidden;">
+      <button style="flex:1; padding:11px; background:rgba(0,255,65,0.08); color:var(--neon-green); border:none; border-right:1px solid rgba(0,240,255,0.2); font-family:'Orbitron',sans-serif; font-size:11px; font-weight:800; letter-spacing:1px; cursor:pointer;" onclick="vibratePhone(40); fetch('/api/mouse_rel?key='+KEY+'&click=1')">LEFT CLICK</button>
+      <button style="flex:1; padding:11px; background:rgba(255,170,0,0.08); color:var(--neon-amber); border:none; font-family:'Orbitron',sans-serif; font-size:11px; font-weight:800; letter-spacing:1px; cursor:pointer;" onclick="vibratePhone(40); fetch('/api/mouse_rel?key='+KEY+'&click=2')">RIGHT CLICK</button>
     </div>
   </div>
 
@@ -1161,54 +1485,189 @@ void RemoteServerThread() {
 <script>
 var KEY="imran2024";
 
-function openFS(){ document.getElementById('fsOverlay').style.display='flex'; }
-function closeFS(){ document.getElementById('fsOverlay').style.display='none'; }
+// 🎥 ULTRA-SMOOTH NATIVE CANVAS ZOOM ENGINE (YouTube / Photo Viewer Matrix)
+var fsZoom = 1.0;
+var fsPanX = 0, fsPanY = 0;
+var touchStartDist = 0;
+var touchStartZoom = 1.0;
+var touchStartPanX = 0, touchStartPanY = 0;
+var touchStartTouchX = 0, touchStartTouchY = 0;
+var lastTapTime = 0;
+var gesturesBound = false;
+
+function initGestures() {
+  if (gesturesBound) return;
+  var fsCanvas = document.getElementById("fsCanvas");
+  if (!fsCanvas) return;
+  gesturesBound = true;
+
+  fsCanvas.addEventListener("touchstart", function(e) {
+    if (e.touches.length === 2) {
+      // 🤏 Pinch Start
+      var dx = e.touches[0].clientX - e.touches[1].clientX;
+      var dy = e.touches[0].clientY - e.touches[1].clientY;
+      touchStartDist = Math.hypot(dx, dy);
+      touchStartZoom = fsZoom;
+    } else if (e.touches.length === 1) {
+      // 👆 Pan Start & Double Tap
+      touchStartTouchX = e.touches[0].clientX;
+      touchStartTouchY = e.touches[0].clientY;
+      touchStartPanX = fsPanX;
+      touchStartPanY = fsPanY;
+
+      var now = Date.now();
+      if (now - lastTapTime < 300) {
+        if (fsZoom > 1.2) {
+          fsZoom = 1.0; fsPanX = 0; fsPanY = 0;
+        } else {
+          fsZoom = 2.5;
+        }
+      }
+      lastTapTime = now;
+    }
+  }, { passive: false });
+
+  fsCanvas.addEventListener("touchmove", function(e) {
+    e.preventDefault();
+    if (e.touches.length === 2) {
+      // 🤏 Pinch Zooming
+      var dx = e.touches[0].clientX - e.touches[1].clientX;
+      var dy = e.touches[0].clientY - e.touches[1].clientY;
+      var dist = Math.hypot(dx, dy);
+      if (touchStartDist > 0) {
+        fsZoom = Math.min(Math.max(touchStartZoom * (dist / touchStartDist), 1.0), 6.0);
+        if (fsZoom === 1.0) { fsPanX = 0; fsPanY = 0; }
+      }
+    } else if (e.touches.length === 1 && fsZoom > 1.0) {
+      // 👆 Drag Panning
+      var moveX = e.touches[0].clientX - touchStartTouchX;
+      var moveY = e.touches[0].clientY - touchStartTouchY;
+      fsPanX = touchStartPanX + moveX;
+      fsPanY = touchStartPanY + moveY;
+    }
+  }, { passive: false });
+
+  fsCanvas.addEventListener("wheel", function(e) {
+    e.preventDefault();
+    var delta = e.deltaY < 0 ? 0.25 : -0.25;
+    fsZoom = Math.min(Math.max(fsZoom + delta, 1.0), 6.0);
+    if (fsZoom === 1.0) { fsPanX = 0; fsPanY = 0; }
+  }, { passive: false });
+}
+
+function openFS(){
+  document.getElementById('fsOverlay').style.display='flex';
+  fsZoom = 1.0; fsPanX = 0; fsPanY = 0;
+  setTimeout(initGestures, 100);
+}
+
+function closeFS(){
+  document.getElementById('fsOverlay').style.display='none';
+}
 
 var isStreaming = false;
+var canvasCtx = null;
+var pendingImg = null;
+var rafId = null;
 
-function loadNextFrame() {
+function initCanvas() {
+  var canvas = document.getElementById("liveStream");
+  canvasCtx = canvas.getContext("2d");
+}
+
+// 60FPS ROCK-SOLID MATRIX DRAW LOOP (100% Zero Flicker & Stable Zoom!)
+function drawLoop() {
   if (!isStreaming) return;
-  var img = document.getElementById("liveStream");
-  var fsImg = document.getElementById("fsStream");
-  var holder = document.getElementById("mirrorPlaceholder");
-  
-  var tempImg = new Image();
-  var nextUrl = "/rawframe?key=" + KEY + "&t=" + performance.now();
-  
-  tempImg.onload = function() {
-    if (!isStreaming) return;
-    img.src = nextUrl;
-    if (fsImg && document.getElementById('fsOverlay').style.display === 'flex') {
-      fsImg.src = nextUrl;
+  if (pendingImg && pendingImg.complete && pendingImg.naturalWidth > 0) {
+    var canvas = document.getElementById("liveStream");
+
+    // Main Card Canvas
+    if (canvas.width !== pendingImg.naturalWidth) {
+      canvas.width = pendingImg.naturalWidth;
+      canvas.height = pendingImg.naturalHeight;
     }
-    if (holder.style.display !== "none") {
+    canvasCtx.drawImage(pendingImg, 0, 0, canvas.width, canvas.height);
+
+    // Fullscreen Viewport Canvas (Direct Matrix Render!)
+    var fsCanvas = document.getElementById("fsCanvas");
+    if (fsCanvas && document.getElementById('fsOverlay').style.display === 'flex') {
+      var dpr = window.devicePixelRatio || 1;
+      var rect = fsCanvas.getBoundingClientRect();
+      var cW = Math.floor(rect.width * dpr);
+      var cH = Math.floor(rect.height * dpr);
+
+      if (fsCanvas.width !== cW || fsCanvas.height !== cH) {
+        fsCanvas.width = cW;
+        fsCanvas.height = cH;
+      }
+
+      var fsCtx = fsCanvas.getContext("2d");
+      fsCtx.fillStyle = "#000000";
+      fsCtx.fillRect(0, 0, cW, cH);
+
+      // Base Aspect-Fit Scale
+      var imgW = pendingImg.naturalWidth;
+      var imgH = pendingImg.naturalHeight;
+      var fitScale = Math.min(cW / imgW, cH / imgH);
+      var drawScale = fitScale * fsZoom;
+
+      // 🛡️ STRICT BOUNDARY CLAMPING: Prevents image from sliding off screen!
+      var maxPanX = Math.max(0, (imgW * drawScale - cW) / (2 * dpr));
+      var maxPanY = Math.max(0, (imgH * drawScale - cH) / (2 * dpr));
+
+      if (fsPanX > maxPanX) fsPanX = maxPanX;
+      if (fsPanX < -maxPanX) fsPanX = -maxPanX;
+      if (fsPanY > maxPanY) fsPanY = maxPanY;
+      if (fsPanY < -maxPanY) fsPanY = -maxPanY;
+
+      fsCtx.save();
+      // 🎯 CENTER-PIVOT MATRIX ZOOM: Scales evenly in ALL directions from viewport center!
+      fsCtx.translate(cW / 2 + fsPanX * dpr, cH / 2 + fsPanY * dpr);
+      fsCtx.scale(drawScale, drawScale);
+      fsCtx.translate(-imgW / 2, -imgH / 2);
+      fsCtx.drawImage(pendingImg, 0, 0);
+      fsCtx.restore();
+    }
+    pendingImg = null;
+    fetchNextFrame();
+  }
+  rafId = requestAnimationFrame(drawLoop);
+}
+
+function fetchNextFrame() {
+  if (!isStreaming) return;
+  var img = new Image();
+  img.src = "/rawframe?key=" + KEY + "&t=" + performance.now();
+  img.onload = function() {
+    pendingImg = img;
+    var holder = document.getElementById("mirrorPlaceholder");
+    if (holder && holder.style.display !== "none") {
       holder.style.display = "none";
-      img.style.display = "block";
+      document.getElementById("liveStream").style.display = "block";
     }
-    setTimeout(loadNextFrame, 30);
   };
-  
-  tempImg.onerror = function() {
-    if (isStreaming) setTimeout(loadNextFrame, 200);
+  img.onerror = function() {
+    if (isStreaming) setTimeout(fetchNextFrame, 200);
   };
-  
-  tempImg.src = nextUrl;
 }
 
 function toggleStream(){
   isStreaming = !isStreaming;
-  var img = document.getElementById("liveStream");
+  var canvas = document.getElementById("liveStream");
   var holder = document.getElementById("mirrorPlaceholder");
   var btn = document.getElementById("toggleBtn");
   
   if(isStreaming){
     btn.textContent = "⏸ PAUSE MONITOR";
-    loadNextFrame();
+    initCanvas();
+    fetchNextFrame();
+    rafId = requestAnimationFrame(drawLoop);
   } else {
+    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+    pendingImg = null;
     holder.style.display = "block";
-    img.style.display = "none";
+    canvas.style.display = "none";
     btn.textContent = "▶ START MONITOR";
-    img.src = "";
   }
 }
 
@@ -1252,60 +1711,280 @@ function triggerPanic(){
   });
 }
 function lockPC(){ vibratePhone(50); fetch("/lock?key=" + KEY, { keepalive: true, headers: { "Bypass-Tunnel-Reminder": "true" } }); }
+
+// 🔓 Modern Cyberpunk Unlock Modal Functions
 function unlockPC(){
   vibratePhone(50);
-  var pin = prompt("Enter Windows PIN / Password to unlock:");
-  if (pin !== null) {
-    fetch("/unlock?key=" + KEY + "&pin=" + encodeURIComponent(pin), { keepalive: true });
+  // Smart Check: Verify if PC is actually locked before prompting for password!
+  fetch("/api/status?key=" + KEY, { cache: "no-store" })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d && d.locked === false) {
+        alert("ℹ️ PC is ALREADY UNLOCKED!\nNo password needed.");
+        return;
+      }
+      var modal = document.getElementById("unlockModal");
+      var input = document.getElementById("pinInput");
+      modal.style.display = "flex";
+      input.value = "";
+      setTimeout(function(){ input.focus(); }, 100);
+    })
+    .catch(function() {
+      var modal = document.getElementById("unlockModal");
+      var input = document.getElementById("pinInput");
+      modal.style.display = "flex";
+      input.value = "";
+      setTimeout(function(){ input.focus(); }, 100);
+    });
+}
+function closeUnlockModal(){
+  document.getElementById("unlockModal").style.display = "none";
+}
+function togglePassVisibility(){
+  var input = document.getElementById("pinInput");
+  input.type = (input.type === "password") ? "text" : "password";
+}
+function submitUnlock(){
+  var pin = document.getElementById("pinInput").value;
+  if(pin.trim() !== ""){
+    vibratePhone(50);
+    fetch("/unlock?key=" + KEY + "&pin=" + encodeURIComponent(pin), { keepalive: true })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d && d.status === "already_unlocked") {
+          alert("ℹ️ PC is already unlocked!");
+        }
+      });
+    closeUnlockModal();
   }
 }
 function shutdownPC(){ vibratePhone(100); fetch("/shutdown?key=" + KEY, { keepalive: true, headers: { "Bypass-Tunnel-Reminder": "true" } }); }
 
 getStatus();
 setInterval(getStatus, 1500);
-// --- TELEMETRY: Remote Mouse Control ---
-function sendTelemetry(event, isClick, clickType) {
+
+// 🚀 AUTO-START LIVE MONITOR & CONTROLS ON PAGE LOAD
+setTimeout(function() {
+  if (!isStreaming) {
+    toggleStream();
+  }
+}, 100);
+// --- TELEMETRY: Remote Mouse & Keyboard Control ---
+var activeClickMode = 1; // 1 = Left Click, 2 = Right Click
+
+function setClickMode(mode) {
+    activeClickMode = mode;
+    var label = document.getElementById("clickTypeLabel");
+    var btnL = document.getElementById("btnLeftClick");
+    var btnR = document.getElementById("btnRightClick");
+
+    if (label) {
+        if (mode === 1) {
+            label.textContent = "MODE: LEFT CLICK";
+            label.style.color = "var(--neon-green)";
+            if (btnL) { btnL.style.borderColor = "var(--neon-green)"; btnL.style.color = "var(--neon-green)"; }
+            if (btnR) { btnR.style.borderColor = "rgba(255,255,255,0.2)"; btnR.style.color = "#fff"; }
+        } else {
+            label.textContent = "MODE: RIGHT CLICK";
+            label.style.color = "var(--neon-amber)";
+            if (btnR) { btnR.style.borderColor = "var(--neon-amber)"; btnR.style.color = "var(--neon-amber)"; }
+            if (btnL) { btnL.style.borderColor = "rgba(255,255,255,0.2)"; btnL.style.color = "#fff"; }
+        }
+    }
+}
+
+function sendRemoteText() {
+    var input = document.getElementById("remoteTextInput");
+    var text = input.value;
+    if (text) {
+        vibratePhone(30);
+        fetch("/api/type?key=" + KEY + "&text=" + encodeURIComponent(text), { keepalive: true });
+        input.value = "";
+    }
+}
+
+function sendSpecialKey(keyStr) {
+    vibratePhone(30);
+    fetch("/api/type?key=" + KEY + "&text=" + encodeURIComponent(keyStr), { keepalive: true });
+}
+
+function sendTelemetry(event, isClick, overrideClickType) {
     if (!isStreaming) return;
     var img = event.target;
     var rect = img.getBoundingClientRect();
     
-    // Normalize coordinates to 0.0 - 1.0
     var xPercent = (event.clientX - rect.left) / rect.width;
     var yPercent = (event.clientY - rect.top) / rect.height;
     if (xPercent < 0 || xPercent > 1 || yPercent < 0 || yPercent > 1) return;
 
-    // Convert to 0 - 10000 scale for C++ backend
     var px = Math.floor(xPercent * 10000);
     var py = Math.floor(yPercent * 10000);
+    var cType = overrideClickType || activeClickMode;
     var url = "/api/telemetry?key=" + KEY + "&x=" + px + "&y=" + py;
-    if (isClick) url += "&click=" + clickType;
+    if (isClick) url += "&click=" + cType;
     
-    // Fire and forget lightweight GET request
-    fetch(url, { keepalive: true }).catch(e => {});
+    fetch(url, { keepalive: true }).catch(function(e){});
 }
 
-['liveStream', 'fsStream'].forEach(id => {
-    var el = document.getElementById(id);
-    if (!el) return;
-    el.addEventListener('mousemove', function(e) { sendTelemetry(e, false, 0); });
-    el.addEventListener('mousedown', function(e) { 
-        var c = (e.button === 2) ? 2 : 1; 
-        sendTelemetry(e, true, c); 
-    });
-    el.addEventListener('contextmenu', function(e) { e.preventDefault(); });
-    
-    el.addEventListener('touchmove', function(e) {
-        if(e.touches.length > 0) {
-            e.preventDefault(); 
-            sendTelemetry(e.touches[0], false, 0);
+// 💻 HARDWARE-GRADE LAPTOP PRECISION TRACKPAD ENGINE (Kinetic Friction Physics)
+(function initTouchpadSensor() {
+    var pad = document.getElementById("touchpadPad");
+    if (!pad) return;
+
+    var lastX = 0, lastY = 0;
+    var touchStartTime = 0;
+    var lastTapEndTime = 0;
+    var totalMoveDist = 0;
+    var maxTouches = 0;
+    var isDragging = false;
+
+    // 🚀 Velocity & Kinetic Inertia Buffers
+    var accDx = 0, accDy = 0;
+    var flushTimer = null;
+    var velX = 0, velY = 0;
+    var inertiaTimer = null;
+
+    function stopInertia() {
+        if (inertiaTimer) {
+            cancelAnimationFrame(inertiaTimer);
+            inertiaTimer = null;
         }
-    }, {passive: false});
-    el.addEventListener('touchstart', function(e) {
-        if(e.touches.length > 0) {
-            sendTelemetry(e.touches[0], true, 1);
+        velX = 0; velY = 0;
+    }
+
+    function runInertiaGlide() {
+        if (Math.abs(velX) > 0.4 || Math.abs(velY) > 0.4) {
+            queueDelta(velX, velY);
+            velX *= 0.88; // 🌊 Smooth Friction Deceleration
+            velY *= 0.88;
+            inertiaTimer = requestAnimationFrame(runInertiaGlide);
+        } else {
+            stopInertia();
+        }
+    }
+
+    function flushDelta() {
+        if (accDx !== 0 || accDy !== 0) {
+            var sendX = Math.round(accDx);
+            var sendY = Math.round(accDy);
+            accDx = 0; accDy = 0;
+            fetch("/api/mouse_rel?key=" + KEY + "&dx=" + sendX + "&dy=" + sendY, { keepalive: true }).catch(function(){});
+        }
+        flushTimer = null;
+    }
+
+    // Restore saved sensitivity preference
+    var savedSens = localStorage.getItem('trackpadSens') || '3.2';
+    var sliderEl = document.getElementById('sensSlider');
+    var displayEl = document.getElementById('sensValDisplay');
+    if (sliderEl && displayEl) {
+        sliderEl.value = savedSens;
+        displayEl.textContent = savedSens + 'x';
+    }
+
+    function queueDelta(rawDx, rawDy) {
+        var sensEl = document.getElementById('sensSlider');
+        var userSens = parseFloat(sensEl ? sensEl.value : 3.2);
+        var dist = Math.hypot(rawDx, rawDy);
+        var accel = (1.2 + Math.pow(dist, 0.5) * 0.45) * userSens;
+        accDx += rawDx * accel;
+        accDy += rawDy * accel;
+
+        if (!flushTimer) {
+            flushTimer = requestAnimationFrame(flushDelta);
+        }
+    }
+
+    pad.addEventListener("touchstart", function(e) {
+        stopInertia();
+        var now = Date.now();
+        maxTouches = Math.max(maxTouches, e.touches.length);
+
+        if (e.touches.length === 1) {
+            lastX = e.touches[0].clientX;
+            lastY = e.touches[0].clientY;
+            touchStartTime = now;
+            totalMoveDist = 0;
+
+            // 🎯 Double Tap & Hold = Drag Windows!
+            if (now - lastTapEndTime < 320) {
+                isDragging = true;
+                vibratePhone(40);
+                fetch("/api/mouse_rel?key=" + KEY + "&click=3", { keepalive: true }).catch(function(){});
+            }
+        } else if (e.touches.length === 2) {
+            lastY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+            touchStartTime = now;
+            totalMoveDist = 0;
+        }
+    }, { passive: false });
+
+    pad.addEventListener("touchmove", function(e) {
+        e.preventDefault();
+        if (e.touches.length === 1) {
+            var curX = e.touches[0].clientX;
+            var curY = e.touches[0].clientY;
+            var dx = curX - lastX;
+            var dy = curY - lastY;
+            totalMoveDist += Math.hypot(dx, dy);
+            lastX = curX;
+            lastY = curY;
+
+            velX = dx;
+            velY = dy;
+
+            if (Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1) {
+                queueDelta(dx, dy);
+            }
+        } else if (e.touches.length === 2) {
+            // 📜 Kinetic Smooth 2-Finger Vertical Scroll
+            var curY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+            var dy = curY - lastY;
+            lastY = curY;
+
+            if (Math.abs(dy) > 3) {
+                var scrollAmount = (dy > 0) ? 120 : -120;
+                fetch("/api/mouse_rel?key=" + KEY + "&scroll=" + scrollAmount, { keepalive: true }).catch(function(){});
+            }
+        }
+    }, { passive: false });
+
+    pad.addEventListener("touchend", function(e) {
+        var now = Date.now();
+        var duration = now - touchStartTime;
+
+        if (isDragging) {
+            isDragging = false;
+            fetch("/api/mouse_rel?key=" + KEY + "&click=4", { keepalive: true }).catch(function(){});
+            lastTapEndTime = 0;
+            maxTouches = 0;
+            return;
+        }
+
+        if (e.touches.length === 0) {
+            // 🌊 Start Kinetic Inertia Glide if finger flicked fast
+            if (Math.hypot(velX, velY) > 2.5) {
+                runInertiaGlide();
+            }
+
+            // 👆 1-Finger Tap = Left Click!
+            if (maxTouches === 1 && totalMoveDist < 25 && duration < 380) {
+                stopInertia();
+                vibratePhone(40);
+                fetch("/api/mouse_rel?key=" + KEY + "&click=1", { keepalive: true }).catch(function(){});
+                lastTapEndTime = now;
+            } 
+            // ✌️ 2-Finger Tap = Right Click!
+            else if (maxTouches === 2 && totalMoveDist < 30 && duration < 400) {
+                stopInertia();
+                vibratePhone(50);
+                fetch("/api/mouse_rel?key=" + KEY + "&click=2", { keepalive: true }).catch(function(){});
+                lastTapEndTime = 0;
+            }
+            maxTouches = 0;
         }
     });
-});
+})();
 </script>
 </body>
 </html>)HTML";
@@ -1315,6 +1994,9 @@ function sendTelemetry(event, isClick, clickType) {
         std::string httpResponse =
             "HTTP/1.1 " + status + "\r\n"
             "Content-Type: text/html; charset=utf-8\r\n"
+            "Cache-Control: no-cache, no-store, must-revalidate\r\n"
+            "Pragma: no-cache\r\n"
+            "Expires: 0\r\n"
             "Content-Length: " + std::to_string(responseBody.size()) + "\r\n"
             "Connection: close\r\n\r\n" +
             responseBody;
@@ -1322,10 +2004,62 @@ function sendTelemetry(event, isClick, clickType) {
         send(clientSocket, httpResponse.c_str(), (int)httpResponse.size(), 0);
         shutdown(clientSocket, SD_SEND);
         closesocket(clientSocket);
-        }).detach(); // End of std::thread lambda
+        return;
+    } catch (...) {
+        closesocket(clientSocket);
+    }
+}
+
+DWORD WINAPI RemoteServerThread(LPVOID lpParam) {
+    FILE* logF = fopen("server_status.log", "w");
+    if (logF) { fprintf(logF, "RemoteServerThread started\n"); fflush(logF); }
+
+    WSADATA wsaData;
+    WSAStartup(MAKEWORD(2, 2), &wsaData);
+
+    SOCKET serverSocket = INVALID_SOCKET;
+    int attempt = 0;
+    while (serverSocket == INVALID_SOCKET) {
+        attempt++;
+        serverSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+        int opt = 1;
+        setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, (const char*)&opt, sizeof(opt));
+
+        sockaddr_in serverAddr;
+        memset(&serverAddr, 0, sizeof(serverAddr));
+        serverAddr.sin_family = AF_INET;
+        serverAddr.sin_addr.s_addr = htonl(INADDR_ANY);
+        serverAddr.sin_port = htons(REMOTE_PORT);
+
+        if (bind(serverSocket, (sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
+            int err = WSAGetLastError();
+            if (logF) { fprintf(logF, "Bind attempt %d failed: err=%d\n", attempt, err); fflush(logF); }
+            closesocket(serverSocket);
+            serverSocket = INVALID_SOCKET;
+            Sleep(500);
+        }
+    }
+
+    if (logF) { fprintf(logF, "Bind SUCCESS on port 8080!\n"); fflush(logF); fclose(logF); }
+
+    int listenRes = listen(serverSocket, SOMAXCONN);
+    logF = fopen("server_status.log", "a");
+    if (logF) { fprintf(logF, "Listen result: %d (err=%d)\n", listenRes, WSAGetLastError()); fflush(logF); fclose(logF); }
+
+    while (true) {
+        SOCKET clientSocket = accept(serverSocket, NULL, NULL);
+        if (clientSocket == INVALID_SOCKET) {
+            logF = fopen("server_status.log", "a");
+            if (logF) { fprintf(logF, "Accept invalid socket! err=%d\n", WSAGetLastError()); fflush(logF); fclose(logF); }
+            Sleep(100);
+            continue;
+        }
+
+        CreateThread(NULL, 0, ProcessClientThread, (LPVOID)(uintptr_t)clientSocket, 0, NULL);
     }
 
     WSACleanup();
+    return 0;
 }
 // =============================================
 
@@ -1391,7 +2125,8 @@ void AutoInstallProvider() {
     char szPathToExe[MAX_PATH];
     GetModuleFileNameA(NULL, szPathToExe, MAX_PATH);
     std::string exePath = szPathToExe;
-    std::string sourceDllPath = exePath.substr(0, exePath.find_last_of("\\/")) + "\\PanicProvider.dll";
+    size_t lastSlash = exePath.find_last_of("\\/");
+    std::string sourceDllPath = (lastSlash != std::string::npos) ? (exePath.substr(0, lastSlash) + "\\PanicProvider.dll") : "PanicProvider.dll";
     
     // LogonUI runs as SYSTEM, so it often cannot read DLLs from User/OneDrive folders.
     // We MUST copy it to System32!
@@ -1423,39 +2158,46 @@ void AutoInstallProvider() {
         RegCloseKey(hKey);
     }
 
-    // Disable Windows Lock Screen (Clock) so LogonUI starts directly on the password screen!
-    HKEY hKeyPolicies;
-    if (RegCreateKeyExA(HKEY_LOCAL_MACHINE, "SOFTWARE\\Policies\\Microsoft\\Windows\\Personalization", 0, NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL, &hKeyPolicies, NULL) == ERROR_SUCCESS) {
-        DWORD noLockScreen = 1;
-        RegSetValueExA(hKeyPolicies, "NoLockScreen", 0, REG_DWORD, (const BYTE*)&noLockScreen, sizeof(noLockScreen));
-        RegCloseKey(hKeyPolicies);
+    // Explicitly delete NoLockScreen key so original Windows Lock Screen displays normally
+    HKEY hKeyPol;
+    if (RegOpenKeyExA(HKEY_LOCAL_MACHINE, "SOFTWARE\\Policies\\Microsoft\\Windows\\Personalization", 0, KEY_SET_VALUE, &hKeyPol) == ERROR_SUCCESS) {
+        RegDeleteValueA(hKeyPol, "NoLockScreen");
+        RegCloseKey(hKeyPol);
     }
 }
 
+LONG WINAPI CrashFilter(EXCEPTION_POINTERS* pEx) {
+    FILE* f = fopen("crash_dump.log", "w");
+    if (f) {
+        fprintf(f, "CRASH DETECTED! Code: 0x%lX, Addr: %p\n", pEx->ExceptionRecord->ExceptionCode, pEx->ExceptionRecord->ExceptionAddress);
+        fflush(f);
+        fclose(f);
+    }
+    return EXCEPTION_CONTINUE_SEARCH;
+}
+
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+    SetUnhandledExceptionFilter(CrashFilter);
+
+    WSADATA wsaData;
+    WSAStartup(MAKEWORD(2, 2), &wsaData);
+
     HMODULE hNtDll = GetModuleHandle("ntdll.dll");
     if (hNtDll) {
         pfnNtSuspendProcess = (NtSuspendProcess)GetProcAddress(hNtDll, "NtSuspendProcess");
         pfnNtResumeProcess = (NtResumeProcess)GetProcAddress(hNtDll, "NtResumeProcess");
     }
 
-    // 💡 Fix DPI Scaling cropping: Force Windows to give exact native screen pixels!
     SetProcessDPIAware();
 
-    // Initialize Windows GDI+ Engine for Ultra-Fast JPEG Screen Compression
     ULONG_PTR gdiplusToken;
     GdiplusStartupInput gdiplusStartupInput;
     GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
 
-    // Automatically add this program to Windows Startup every time it runs
     AddToStartup();
-
-    // Auto-Register the DLL (Requires running as Administrator at least once!)
     AutoInstallProvider();
-
     InitializeTaskbar();
 
-    // Register Window Class for the Tray Icon
     WNDCLASSEX wc = {0};
     wc.cbSize = sizeof(WNDCLASSEX);
     wc.lpfnWndProc = WndProc;
@@ -1463,25 +2205,18 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     wc.lpszClassName = "PanicButtonTrayClass";
     RegisterClassEx(&wc);
 
-    // Create a Message-Only Window (Hidden) to process Tray Icon clicks
-    hMainWnd = CreateWindowEx(0, "PanicButtonTrayClass", "PanicButton", 0, 0, 0, 0, 0, HWND_MESSAGE, NULL, hInstance, NULL);
+    hMainWnd = CreateWindowEx(0, "PanicButtonTrayClass", "PanicButton", 0, 0, 0, 0, 0, NULL, NULL, hInstance, NULL);
 
-    // Start the Hotkey Listener in a background thread
-    std::thread listener(HotkeyListenerThread);
-    listener.detach();
+    CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)HotkeyListenerThread, NULL, 0, NULL);
+    CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)RemoteServerThread, NULL, 0, NULL);
 
-    // Start the Remote HTTP Server in a background thread
-    std::thread remoteServer(RemoteServerThread);
-    remoteServer.detach();
-
-    // Main GUI Message Loop
     MSG msg;
-    while (GetMessage(&msg, NULL, 0, 0)) {
+    BOOL bRet;
+    while ((bRet = GetMessage(&msg, NULL, 0, 0)) != 0) {
+        if (bRet == -1) break;
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
-    
-    if (pTaskbar) pTaskbar->Release();
-    CoUninitialize();
+
     return 0;
 }

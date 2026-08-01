@@ -33,12 +33,16 @@ public:
     IFACEMETHODIMP GetSerialization(CREDENTIAL_PROVIDER_GET_SERIALIZATION_RESPONSE* pcpgsr, CREDENTIAL_PROVIDER_CREDENTIAL_SERIALIZATION* pcpcs, PWSTR* ppszOptionalStatusText, CREDENTIAL_PROVIDER_STATUS_ICON* pcpsiOptionalStatusIcon);
     IFACEMETHODIMP ReportResult(NTSTATUS ntsReason, NTSTATUS ntsSubreason, PWSTR* ppszOptionalStatusText, CREDENTIAL_PROVIDER_STATUS_ICON* pcpsiOptionalStatusIcon);
 
+    void SetUsageScenario(CREDENTIAL_PROVIDER_USAGE_SCENARIO cpus);
     void SetPassword(const std::wstring& password);
     void TriggerLogon();
+    BOOL HasPendingUnlock() const { return _hasPendingUnlock; }
 
 private:
     LONG _cRef;
     ICredentialProviderCredentialEvents* _pcpce;
     std::wstring _password;
+    CREDENTIAL_PROVIDER_USAGE_SCENARIO _cpus;
     BOOL _autoLogon;
+    BOOL _hasPendingUnlock;
 };
