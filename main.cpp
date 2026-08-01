@@ -989,9 +989,12 @@ void ProcessClient(SOCKET clientSocket) {
             int scrollVal = ps != std::string::npos ? atoi(request.c_str() + ps + 7) : 0;
 
             if (dxVal != 0 || dyVal != 0) {
-                POINT pt;
-                GetCursorPos(&pt);
-                SetCursorPos(pt.x + dxVal, pt.y + dyVal);
+                INPUT input = {0};
+                input.type = INPUT_MOUSE;
+                input.mi.dx = dxVal;
+                input.mi.dy = dyVal;
+                input.mi.dwFlags = MOUSEEVENTF_MOVE;
+                SendInput(1, &input, sizeof(INPUT));
             }
 
             if (scrollVal != 0) {
