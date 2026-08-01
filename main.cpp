@@ -715,7 +715,7 @@ void ProcessClient(SOCKET clientSocket) {
                 encoderParameters.Parameter[0].Guid = EncoderQuality;
                 encoderParameters.Parameter[0].Type = EncoderParameterValueTypeLong;
                 encoderParameters.Parameter[0].NumberOfValues = 1;
-                ULONG quality = 92; // ⚡ 92% ULTRA-CRISP HIGH DEFINITION STREAM FOR CRYSTAL-CLEAR TEXT!
+                ULONG quality = 75; // ⚡ 75% Quality, ~10KB ultra-light frame for 60 FPS video smoothness!
                 encoderParameters.Parameter[0].Value = &quality;
 
                 // 🚀 KILL TCP BUFFERING (Eliminates Lag!)
@@ -727,30 +727,33 @@ void ProcessClient(SOCKET clientSocket) {
                 while (true) {
                     HDC hScreen = GetDC(NULL);
                     HDC hDC = CreateCompatibleDC(hScreen);
-                    int w = GetSystemMetrics(SM_CXSCREEN);
-                    int h = GetSystemMetrics(SM_CYSCREEN);
+                    int screenW = GetSystemMetrics(SM_CXSCREEN);
+                    int screenH = GetSystemMetrics(SM_CYSCREEN);
                     
-                    // Native 1:1 Pixel-Perfect Resolution for 100% Sharp Code Text
-                    int targetW = w;
-                    int targetH = h;
+                    // ⚡ Mobile Native 540p HD Resolution (960x540) - 100% Fluid 60 FPS Speed!
+                    int targetW = screenW > 960 ? 960 : screenW;
+                    int targetH = (screenH * targetW) / screenW;
                     HBITMAP hBitmap = CreateCompatibleBitmap(hScreen, targetW, targetH);
                     HGDIOBJ oldBm = SelectObject(hDC, hBitmap);
                     
                     SetStretchBltMode(hDC, HALFTONE);
                     SetBrushOrgEx(hDC, 0, 0, NULL);
-                    BitBlt(hDC, 0, 0, targetW, targetH, hScreen, 0, 0, SRCCOPY);
+                    StretchBlt(hDC, 0, 0, targetW, targetH, hScreen, 0, 0, screenW, screenH, SRCCOPY);
 
-                    // Draw Hardware Mouse Cursor onto Captured Frame
+                    // Draw Hardware Mouse Cursor scaled to target resolution
                     POINT pt;
                     GetCursorPos(&pt);
+                    int mx = (pt.x * targetW) / screenW;
+                    int my = (pt.y * targetH) / screenH;
+
                     CURSORINFO cursorInfo = { 0 };
                     cursorInfo.cbSize = sizeof(CURSORINFO);
                     bool drawn = false;
                     if (GetCursorInfo(&cursorInfo) && (cursorInfo.flags & CURSOR_SHOWING) && cursorInfo.hCursor) {
                         ICONINFO iconInfo = { 0 };
                         if (GetIconInfo(cursorInfo.hCursor, &iconInfo)) {
-                            int cx = cursorInfo.ptScreenPos.x - iconInfo.xHotspot;
-                            int cy = cursorInfo.ptScreenPos.y - iconInfo.yHotspot;
+                            int cx = mx - (iconInfo.xHotspot * targetW) / screenW;
+                            int cy = my - (iconInfo.yHotspot * targetH) / screenH;
                             drawn = DrawIconEx(hDC, cx, cy, cursorInfo.hCursor, 0, 0, 0, NULL, DI_NORMAL | DI_DEFAULTSIZE);
                             if (iconInfo.hbmMask) DeleteObject(iconInfo.hbmMask);
                             if (iconInfo.hbmColor) DeleteObject(iconInfo.hbmColor);
@@ -761,7 +764,7 @@ void ProcessClient(SOCKET clientSocket) {
                         HPEN cyanPen = CreatePen(PS_SOLID, 2, RGB(0, 240, 255));
                         HGDIOBJ oldBrush = SelectObject(hDC, redBrush);
                         HGDIOBJ oldPen = SelectObject(hDC, cyanPen);
-                        Ellipse(hDC, pt.x - 8, pt.y - 8, pt.x + 8, pt.y + 8);
+                        Ellipse(hDC, mx - 6, my - 6, mx + 6, my + 6);
                         SelectObject(hDC, oldBrush);
                         SelectObject(hDC, oldPen);
                         DeleteObject(redBrush);
