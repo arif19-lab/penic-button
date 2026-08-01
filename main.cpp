@@ -15,12 +15,19 @@
 #include <d3d11.h>
 #include <dxgi1_2.h>
 #include <wincrypt.h>
+#include <mfapi.h>
+#include <mfidl.h>
+#include <mftransform.h>
+#include <mferror.h>
 using namespace Gdiplus;
 #pragma comment(lib, "ws2_32.lib") // Winsock Library Link
 #pragma comment(lib, "gdiplus.lib")
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "crypt32.lib")
+#pragma comment(lib, "mfplat.lib")
+#pragma comment(lib, "mfreadwrite.lib")
+#pragma comment(lib, "mfuuid.lib")
 
 typedef LONG (NTAPI *NtSuspendProcess)(IN HANDLE ProcessHandle);
 typedef LONG (NTAPI *NtResumeProcess)(IN HANDLE ProcessHandle);
@@ -1765,6 +1772,8 @@ void ProcessClient(SOCKET clientSocket) {
         <div class="matrix-title">PC MONITOR OFFLINE</div>
         <div class="matrix-sub">Tap '▶ PLAY LIVE STREAM' to start real-time desktop view.</div>
       </div>
+      <!-- 🎬 Native Mobile GPU Hardware Video Element (H.264 WebRTC Stream) -->
+      <video id="remoteVideo" class="screen-img" onclick="openFS()" autoplay playsinline muted style="display:none; width:100%; border-radius:6px; object-fit:contain; cursor:pointer; touch-action:none;"></video>
       <!-- 🎮 High-Speed Hardware Accelerated WebSocket HTML5 Canvas Element -->
       <canvas id="liveCanvas" class="screen-img" onclick="openFS()" style="display:none; width:100%; border-radius:6px; object-fit:contain; cursor:pointer; touch-action:none;"></canvas>
     </div>
