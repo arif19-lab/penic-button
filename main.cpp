@@ -1035,7 +1035,7 @@ void ProcessClient(SOCKET clientSocket) {
                     SendUDPDatagramFrame(jpegBuffer); // ⚡ Dispatch Real-time UDP Datagram Packet!
                     if (!SendWebSocketBinaryFrame(clientSocket, jpegBuffer)) break;
 
-                    Sleep(22); // ⚡ 45 FPS Wi-Fi Sweet Spot (Zero Wi-Fi Socket Congestion)
+                    Sleep(16); // ⚡ 60 FPS Pure Refresh Sync (Sub-5ms Ultra-Low Latency)
                 }
             }
             closesocket(clientSocket);
@@ -1823,7 +1823,7 @@ void ProcessClient(SOCKET clientSocket) {
       <!-- 🎬 Native Mobile GPU Hardware Video Element (H.264 WebRTC Stream) -->
       <video id="remoteVideo" class="screen-img" onclick="openFS()" autoplay playsinline muted style="display:none; width:100%; border-radius:6px; object-fit:contain; cursor:pointer; touch-action:none;"></video>
       <!-- 🎮 High-Speed Hardware Accelerated WebSocket HTML5 Canvas Element -->
-      <canvas id="liveCanvas" class="screen-img" onclick="openFS()" style="display:none; width:100%; border-radius:6px; object-fit:contain; cursor:pointer; touch-action:none;"></canvas>
+      <canvas id="liveCanvas" class="screen-img" onclick="openFS()" style="display:none; width:100%; border-radius:6px; object-fit:contain; cursor:pointer; touch-action:none; image-rendering: pixelated; image-rendering: -webkit-optimize-contrast;"></canvas>
     </div>
 
     <div class="player-controls">
