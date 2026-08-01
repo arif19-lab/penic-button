@@ -841,10 +841,10 @@ void ProcessClient(SOCKET clientSocket) {
                 ULONG quality = 75; // ⚡ 75% Quality, ~10KB ultra-light frame for 60 FPS video smoothness!
                 encoderParameters.Parameter[0].Value = &quality;
 
-                // 🚀 KILL TCP BUFFERING (Eliminates Lag!)
+                // 🚀 MOBILE WI-FI SMOOTH SOCKET BUFFER (Prevents send blocking & stutter!)
                 int flag = 1;
                 setsockopt(clientSocket, IPPROTO_TCP, TCP_NODELAY, (char*)&flag, sizeof(int));
-                int sndbuf = 0;
+                int sndbuf = 32768; // 32KB Mobile Wi-Fi socket buffer
                 setsockopt(clientSocket, SOL_SOCKET, SO_SNDBUF, (char*)&sndbuf, sizeof(int));
 
                 while (true) {
