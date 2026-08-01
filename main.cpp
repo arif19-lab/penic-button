@@ -1470,8 +1470,8 @@ void ProcessClient(SOCKET clientSocket) {
         <div class="matrix-title">PC MONITOR OFFLINE</div>
         <div class="matrix-sub">Tap '▶ PLAY LIVE STREAM' to start real-time desktop view.</div>
       </div>
-      <!-- Canvas replaces img for smooth zero-tear rendering like AnyDesk -->
-      <canvas id="liveStream" class="screen-img" onclick="openFS()" style="display:none;"></canvas>
+      <!-- Native Hardware Accelerated MJPEG Push Stream Image Element -->
+      <img id="liveStream" class="screen-img" onclick="openFS()" style="display:none; width:100%; border-radius:6px; object-fit:contain; cursor:pointer;" />
     </div>
 
     <div class="player-controls">
@@ -1645,31 +1645,15 @@ function closeFS(){
 }
 
 var isStreaming = false;
-var canvasCtx = null;
-var pendingImg = null;
 var rafId = null;
 
-function initCanvas() {
-  var canvas = document.getElementById("liveStream");
-  canvasCtx = canvas.getContext("2d");
-}
-
-// 60FPS ROCK-SOLID MATRIX DRAW LOOP (100% Zero Flicker & Stable Zoom!)
+// 60FPS ROCK-SOLID ZERO-LATENCY MJPEG STREAM RENDERER
 function drawLoop() {
   if (!isStreaming) return;
-  if (pendingImg && pendingImg.complete && pendingImg.naturalWidth > 0) {
-    var canvas = document.getElementById("liveStream");
-
-    // Main Card Canvas
-    if (canvas.width !== pendingImg.naturalWidth) {
-      canvas.width = pendingImg.naturalWidth;
-      canvas.height = pendingImg.naturalHeight;
-    }
-    canvasCtx.drawImage(pendingImg, 0, 0, canvas.width, canvas.height);
-
-    // Fullscreen Viewport Canvas (Direct Matrix Render!)
-    var fsCanvas = document.getElementById("fsCanvas");
-    if (fsCanvas && document.getElementById('fsOverlay').style.display === 'flex') {
+  var streamImg = document.getElementById("liveStream");
+  var fsCanvas = document.getElementById("fsCanvas");
+  
+  if (fsCanvas && document.getElementById('fsOverlay').style.display === 'flex' && streamImg && streamImg.naturalWidth > 0) {
       var dpr = window.devicePixelRatio || 1;
       var rect = fsCanvas.getBoundingClientRect();
       var cW = Math.floor(rect.width * dpr);
@@ -1684,13 +1668,11 @@ function drawLoop() {
       fsCtx.fillStyle = "#000000";
       fsCtx.fillRect(0, 0, cW, cH);
 
-      // Base Aspect-Fit Scale
-      var imgW = pendingImg.naturalWidth;
-      var imgH = pendingImg.naturalHeight;
+      var imgW = streamImg.naturalWidth;
+      var imgH = streamImg.naturalHeight;
       var fitScale = Math.min(cW / imgW, cH / imgH);
       var drawScale = fitScale * fsZoom;
 
-      // 🛡️ STRICT BOUNDARY CLAMPING: Prevents image from sliding off screen!
       var maxPanX = Math.max(0, (imgW * drawScale - cW) / (2 * dpr));
       var maxPanY = Math.max(0, (imgH * drawScale - cH) / (2 * dpr));
 
@@ -1700,46 +1682,26 @@ function drawLoop() {
       if (fsPanY < -maxPanY) fsPanY = -maxPanY;
 
       fsCtx.save();
-      // 🎯 CENTER-PIVOT MATRIX ZOOM: Scales evenly in ALL directions from viewport center!
       fsCtx.translate(cW / 2 + fsPanX * dpr, cH / 2 + fsPanY * dpr);
       fsCtx.scale(drawScale, drawScale);
       fsCtx.translate(-imgW / 2, -imgH / 2);
-      fsCtx.drawImage(pendingImg, 0, 0);
+      fsCtx.drawImage(streamImg, 0, 0);
       fsCtx.restore();
-    }
-    pendingImg = null;
-    fetchNextFrame();
   }
   rafId = requestAnimationFrame(drawLoop);
 }
 
-function fetchNextFrame() {
-  if (!isStreaming) return;
-  var img = new Image();
-  img.src = "/rawframe?key=" + KEY + "&t=" + performance.now();
-  img.onload = function() {
-    pendingImg = img;
-    var holder = document.getElementById("mirrorPlaceholder");
-    if (holder && holder.style.display !== "none") {
-      holder.style.display = "none";
-      document.getElementById("liveStream").style.display = "block";
-    }
-  };
-  img.onerror = function() {
-    if (isStreaming) setTimeout(fetchNextFrame, 200);
-  };
-}
-
 function toggleStream(){
   isStreaming = !isStreaming;
-  var canvas = document.getElementById("liveStream");
+  var streamImg = document.getElementById("liveStream");
   var holder = document.getElementById("mirrorPlaceholder");
   var btn = document.getElementById("toggleBtn");
   
   if(isStreaming){
     btn.textContent = "⏸ PAUSE MONITOR";
-    initCanvas();
-    fetchNextFrame();
+    holder.style.display = "none";
+    streamImg.style.display = "block";
+    streamImg.src = "/mjpeg?key=" + KEY + "&t=" + Date.now();
     rafId = requestAnimationFrame(drawLoop);
   } else {
     if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
