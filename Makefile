@@ -6,7 +6,7 @@ DLL_SRCS = PanicProvider.cpp PanicCredential.cpp
 DLL_DEF = PanicProvider.def
 RES = resource.o
 
-LDFLAGS = -luser32 -lgdi32 -lole32 -luuid -lwinmm -lws2_32 -lgdiplus -lwtsapi32 -ld3d11 -ldxgi
+LDFLAGS = -luser32 -lgdi32 -lole32 -luuid -lwinmm -lws2_32 -lgdiplus -lwtsapi32 -ld3d11 -ldxgi -lcrypt32
 DLL_LDFLAGS = -shared -lole32 -luuid -lshlwapi -lsecur32 -lcredui
 
 all: $(TARGET) $(DLL_TARGET)
