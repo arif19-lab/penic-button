@@ -1814,6 +1814,7 @@ setInterval(getStatus, 1500);
 
 // 🚀 AUTO-START LIVE MONITOR & CONTROLS ON PAGE LOAD
 setTimeout(function() {
+  initLiveKeyboard();
   if (!isStreaming) {
     toggleStream();
   }
@@ -1842,34 +1843,53 @@ function setClickMode(mode) {
     }
 }
 
-function handleLiveTyping(e) {
-    var val = e.target.value;
-    if (val && val.length > 0) {
-        vibratePhone(20);
-        fetch("/api/type?key=" + KEY + "&text=" + encodeURIComponent(val), { keepalive: true }).catch(function(){});
-        e.target.value = "";
-    }
-}
+function initLiveKeyboard() {
+    var input = document.getElementById("remoteTextInput");
+    if (!input || input.dataset.bound) return;
+    input.dataset.bound = "true";
 
-function handleLiveKeydown(e) {
-    if (e.key === "Backspace") {
-        vibratePhone(20);
-        fetch("/api/type?key=" + KEY + "&text={BACKSPACE}", { keepalive: true }).catch(function(){});
-        e.target.value = "";
-    } else if (e.key === "Enter") {
-        vibratePhone(20);
-        fetch("/api/type?key=" + KEY + "&text={ENTER}", { keepalive: true }).catch(function(){});
-        e.target.value = "";
-    } else if (e.key === "Escape") {
-        vibratePhone(20);
-        fetch("/api/type?key=" + KEY + "&text={ESC}", { keepalive: true }).catch(function(){});
-        e.target.value = "";
-    } else if (e.key === "Tab") {
-        e.preventDefault();
-        vibratePhone(20);
-        fetch("/api/type?key=" + KEY + "&text={TAB}", { keepalive: true }).catch(function(){});
-        e.target.value = "";
-    }
+    // 📱 Native Mobile Soft-Keyboard Backspace & Enter Interceptor
+    input.addEventListener("beforeinput", function(e) {
+        if (e.inputType === "deleteContentBackward") {
+            vibratePhone(15);
+            fetch("/api/type?key=" + KEY + "&text={BACKSPACE}", { keepalive: true }).catch(function(){});
+        } else if (e.inputType === "insertLineBreak") {
+            vibratePhone(15);
+            fetch("/api/type?key=" + KEY + "&text={ENTER}", { keepalive: true }).catch(function(){});
+        }
+    });
+
+    // ⚡ Native Mobile Character, Symbol, Emoji, Space & Paste Typed Stream
+    input.addEventListener("input", function(e) {
+        var val = e.target.value;
+        if (val && val.length > 0) {
+            vibratePhone(15);
+            fetch("/api/type?key=" + KEY + "&text=" + encodeURIComponent(val), { keepalive: true }).catch(function(){});
+            e.target.value = "";
+        }
+    });
+
+    // ⌨️ Hardware & Physical Key Fallback Listener
+    input.addEventListener("keydown", function(e) {
+        if (e.key === "Backspace") {
+            vibratePhone(15);
+            fetch("/api/type?key=" + KEY + "&text={BACKSPACE}", { keepalive: true }).catch(function(){});
+            e.target.value = "";
+        } else if (e.key === "Enter") {
+            vibratePhone(15);
+            fetch("/api/type?key=" + KEY + "&text={ENTER}", { keepalive: true }).catch(function(){});
+            e.target.value = "";
+        } else if (e.key === "Escape") {
+            vibratePhone(15);
+            fetch("/api/type?key=" + KEY + "&text={ESC}", { keepalive: true }).catch(function(){});
+            e.target.value = "";
+        } else if (e.key === "Tab") {
+            e.preventDefault();
+            vibratePhone(15);
+            fetch("/api/type?key=" + KEY + "&text={TAB}", { keepalive: true }).catch(function(){});
+            e.target.value = "";
+        }
+    });
 }
 
 function sendSpecialKey(keyStr) {
