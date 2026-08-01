@@ -12,9 +12,13 @@
 #include <sstream>
 #include <gdiplus.h>
 #include <tlhelp32.h>
+#include <d3d11.h>
+#include <dxgi1_2.h>
 using namespace Gdiplus;
 #pragma comment(lib, "ws2_32.lib") // Winsock Library Link
 #pragma comment(lib, "gdiplus.lib")
+#pragma comment(lib, "d3d11.lib")
+#pragma comment(lib, "dxgi.lib")
 
 typedef LONG (NTAPI *NtSuspendProcess)(IN HANDLE ProcessHandle);
 typedef LONG (NTAPI *NtResumeProcess)(IN HANDLE ProcessHandle);
@@ -57,6 +61,123 @@ int GetEncoderClsid(const WCHAR* format, CLSID* pClsid) {
     }
     free(pImageCodecInfo);
     return -1;
+}
+
+// 🎮 DIRECTX 11 DXGI DESKTOP DUPLICATION ENGINE (Sub-1ms GPU Hardware Capture)
+ID3D11Device* g_d3dDevice = NULL;
+ID3D11DeviceContext* g_d3dContext = NULL;
+IDXGIOutputDuplication* g_dxgiDuplication = NULL;
+ID3D11Texture2D* g_stagingTexture = NULL;
+bool g_dxgiInitialized = false;
+
+bool InitDXGI() {
+    if (g_dxgiInitialized && g_dxgiDuplication) return true;
+
+    D3D_FEATURE_LEVEL featureLevel;
+    HRESULT hr = D3D11CreateDevice(
+        NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, 0, NULL, 0,
+        D3D11_SDK_VERSION, &g_d3dDevice, &featureLevel, &g_d3dContext
+    );
+    if (FAILED(hr)) return false;
+
+    IDXGIDevice* dxgiDevice = NULL;
+    hr = g_d3dDevice->QueryInterface(__uuidof(IDXGIDevice), (void**)&dxgiDevice);
+    if (FAILED(hr)) return false;
+
+    IDXGIAdapter* dxgiAdapter = NULL;
+    hr = dxgiDevice->GetParent(__uuidof(IDXGIAdapter), (void**)&dxgiAdapter);
+    dxgiDevice->Release();
+    if (FAILED(hr)) return false;
+
+    IDXGIOutput* dxgiOutput = NULL;
+    hr = dxgiAdapter->EnumOutputs(0, &dxgiOutput);
+    dxgiAdapter->Release();
+    if (FAILED(hr)) return false;
+
+    IDXGIOutput1* dxgiOutput1 = NULL;
+    hr = dxgiOutput->QueryInterface(__uuidof(IDXGIOutput1), (void**)&dxgiOutput1);
+    dxgiOutput->Release();
+    if (FAILED(hr)) return false;
+
+    hr = dxgiOutput1->DuplicateOutput(g_d3dDevice, &g_dxgiDuplication);
+    dxgiOutput1->Release();
+    if (FAILED(hr)) return false;
+
+    g_dxgiInitialized = true;
+    return true;
+}
+
+void CleanupDXGI() {
+    if (g_stagingTexture) { g_stagingTexture->Release(); g_stagingTexture = NULL; }
+    if (g_dxgiDuplication) { g_dxgiDuplication->Release(); g_dxgiDuplication = NULL; }
+    if (g_d3dContext) { g_d3dContext->Release(); g_d3dContext = NULL; }
+    if (g_d3dDevice) { g_d3dDevice->Release(); g_d3dDevice = NULL; }
+    g_dxgiInitialized = false;
+}
+
+bool CaptureDXGIFrame(HDC hTargetDC, int targetW, int targetH) {
+    if (!InitDXGI()) return false;
+
+    DXGI_OUTDUPL_FRAME_INFO frameInfo;
+    IDXGIResource* desktopResource = NULL;
+    HRESULT hr = g_dxgiDuplication->AcquireNextFrame(100, &frameInfo, &desktopResource);
+    if (FAILED(hr)) {
+        if (hr == DXGI_ERROR_ACCESS_LOST) {
+            CleanupDXGI();
+        }
+        return false;
+    }
+
+    ID3D11Texture2D* desktopTexture = NULL;
+    hr = desktopResource->QueryInterface(__uuidof(ID3D11Texture2D), (void**)&desktopTexture);
+    desktopResource->Release();
+
+    if (FAILED(hr)) {
+        g_dxgiDuplication->ReleaseFrame();
+        return false;
+    }
+
+    D3D11_TEXTURE2D_DESC desc;
+    desktopTexture->GetDesc(&desc);
+
+    if (!g_stagingTexture) {
+        D3D11_TEXTURE2D_DESC stagingDesc = desc;
+        stagingDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+        stagingDesc.Usage = D3D11_USAGE_STAGING;
+        stagingDesc.BindFlags = 0;
+        stagingDesc.MiscFlags = 0;
+        g_d3dDevice->CreateTexture2D(&stagingDesc, NULL, &g_stagingTexture);
+    }
+
+    bool success = false;
+    if (g_stagingTexture) {
+        g_d3dContext->CopyResource(g_stagingTexture, desktopTexture);
+        D3D11_MAPPED_SUBRESOURCE mapped;
+        if (SUCCEEDED(g_d3dContext->Map(g_stagingTexture, 0, D3D11_MAP_READ, 0, &mapped))) {
+            BITMAPINFO bmi = { 0 };
+            bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+            bmi.bmiHeader.biWidth = desc.Width;
+            bmi.bmiHeader.biHeight = -(int)desc.Height; // Top-down
+            bmi.bmiHeader.biPlanes = 1;
+            bmi.bmiHeader.biBitCount = 32;
+            bmi.bmiHeader.biCompression = BI_RGB;
+
+            SetStretchBltMode(hTargetDC, HALFTONE);
+            SetBrushOrgEx(hTargetDC, 0, 0, NULL);
+            StretchDIBits(
+                hTargetDC, 0, 0, targetW, targetH,
+                0, 0, desc.Width, desc.Height,
+                mapped.pData, &bmi, DIB_RGB_COLORS, SRCCOPY
+            );
+
+            g_d3dContext->Unmap(g_stagingTexture, 0);
+            success = true;
+        }
+    }
+
+    desktopTexture->Release();
+    g_dxgiDuplication->ReleaseFrame();
+    return success;
 }
 
 bool isPanicMode = false;
@@ -621,10 +742,12 @@ void ProcessClient(SOCKET clientSocket) {
                 HBITMAP hBitmap = CreateCompatibleBitmap(hScreen, targetW, targetH);
                 HGDIOBJ oldBm = SelectObject(hDC, hBitmap);
                 
-                // Fast Hardware Downscaling StretchBlt
-                SetStretchBltMode(hDC, HALFTONE);
-                SetBrushOrgEx(hDC, 0, 0, NULL);
-                StretchBlt(hDC, 0, 0, targetW, targetH, hScreen, 0, 0, screenW, screenH, SRCCOPY);
+                // 🎮 DirectX 11 DXGI GPU Capture with GDI Fallback
+                if (!CaptureDXGIFrame(hDC, targetW, targetH)) {
+                    SetStretchBltMode(hDC, HALFTONE);
+                    SetBrushOrgEx(hDC, 0, 0, NULL);
+                    StretchBlt(hDC, 0, 0, targetW, targetH, hScreen, 0, 0, screenW, screenH, SRCCOPY);
+                }
 
                 // Draw Hardware Mouse Cursor scaled to target resolution
                 POINT pt;
@@ -736,9 +859,12 @@ void ProcessClient(SOCKET clientSocket) {
                     HBITMAP hBitmap = CreateCompatibleBitmap(hScreen, targetW, targetH);
                     HGDIOBJ oldBm = SelectObject(hDC, hBitmap);
                     
-                    SetStretchBltMode(hDC, HALFTONE);
-                    SetBrushOrgEx(hDC, 0, 0, NULL);
-                    StretchBlt(hDC, 0, 0, targetW, targetH, hScreen, 0, 0, screenW, screenH, SRCCOPY);
+                    // 🎮 DirectX 11 DXGI GPU Capture with GDI Fallback
+                    if (!CaptureDXGIFrame(hDC, targetW, targetH)) {
+                        SetStretchBltMode(hDC, HALFTONE);
+                        SetBrushOrgEx(hDC, 0, 0, NULL);
+                        StretchBlt(hDC, 0, 0, targetW, targetH, hScreen, 0, 0, screenW, screenH, SRCCOPY);
+                    }
 
                     // Draw Hardware Mouse Cursor scaled to target resolution
                     POINT pt;
