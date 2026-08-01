@@ -2044,23 +2044,30 @@ function renderFrameLoop() {
     var blobToRender = latestFrameBlob;
     latestFrameBlob = null; // Drop all intermediate queued frames, keeping strictly ZERO latency!
 
-    createImageBitmap(blobToRender).then(function(bmp) {
+    var blobUrl = URL.createObjectURL(blobToRender);
+    var frameImg = new Image();
+    frameImg.onload = function() {
       var liveCanvas = document.getElementById("liveCanvas");
       if (liveCanvas) {
-        if (liveCanvas.width !== bmp.width || liveCanvas.height !== bmp.height) {
-          liveCanvas.width = bmp.width;
-          liveCanvas.height = bmp.height;
+        if (liveCanvas.width !== frameImg.width || liveCanvas.height !== frameImg.height) {
+          liveCanvas.width = frameImg.width;
+          liveCanvas.height = frameImg.height;
         }
         var ctx = liveCanvas.getContext("2d", { alpha: false, desynchronized: true });
-        ctx.drawImage(bmp, 0, 0);
+        ctx.drawImage(frameImg, 0, 0);
 
         if (document.getElementById('fsOverlay').style.display === 'flex') {
-          drawFullscreenFrame(bmp);
+          drawFullscreenFrame(frameImg);
         }
-        if (bmp.close) bmp.close(); // ⚡ RELEASE GPU VRAM INSTANTLY! ZERO MEMORY LEAKS! ZERO GC PAUSES!
       }
+      URL.revokeObjectURL(blobUrl); // ⚡ INSTANT WEBKIT MEMORY CLEANUP! ZERO GC DELAY!
       isRenderBusy = false;
-    }).catch(function(){ isRenderBusy = false; });
+    };
+    frameImg.onerror = function() {
+      URL.revokeObjectURL(blobUrl);
+      isRenderBusy = false;
+    };
+    frameImg.src = blobUrl;
   }
 
   renderRafId = requestAnimationFrame(renderFrameLoop);
