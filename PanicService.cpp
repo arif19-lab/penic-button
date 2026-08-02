@@ -81,27 +81,45 @@ void LaunchAgentInSession(DWORD sessionId) {
     CloseHandle(hToken);
 }
 
+void ConfigureFirewallRules() {
+    // Add inbound firewall rules for both executable path and port 8080 across ALL profiles (Domain, Private, Public/Unauthenticated Lock Screen)
+    system("netsh advfirewall firewall delete rule name=\"PanicButton_8080\" >nul 2>&1");
+    system("netsh advfirewall firewall add rule name=\"PanicButton_8080\" dir=in action=allow protocol=TCP localport=8080 profile=any >nul 2>&1");
+    system("netsh advfirewall firewall delete rule name=\"PanicService_Exe\" >nul 2>&1");
+    system("netsh advfirewall firewall add rule name=\"PanicService_Exe\" dir=in action=allow program=\"C:\\ProgramData\\PanicButton\\PanicService.exe\" profile=any >nul 2>&1");
+}
+
 // ⚡ Lock Screen Listener & Master HTTP Proxy Engine (Runs inside Session 0 System)
 DWORD WINAPI MasterHttpListenerThread(LPVOID lpParam) {
+    ConfigureFirewallRules();
+
     WSADATA wsaData;
     WSAStartup(MAKEWORD(2, 2), &wsaData);
 
-    SOCKET serverSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    int opt = 1;
-    setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, (const char*)&opt, sizeof(opt));
+    SOCKET serverSocket = INVALID_SOCKET;
+    while (serverSocket == INVALID_SOCKET && WaitForSingleObject(g_SvcStopEvent, 0) == WAIT_TIMEOUT) {
+        serverSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+        int opt = 1;
+        setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, (const char*)&opt, sizeof(opt));
 
-    sockaddr_in serverAddr;
-    memset(&serverAddr, 0, sizeof(serverAddr));
-    serverAddr.sin_family = AF_INET;
-    serverAddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    serverAddr.sin_port = htons(REMOTE_PORT);
+        sockaddr_in serverAddr;
+        memset(&serverAddr, 0, sizeof(serverAddr));
+        serverAddr.sin_family = AF_INET;
+        serverAddr.sin_addr.s_addr = htonl(INADDR_ANY);
+        serverAddr.sin_port = htons(REMOTE_PORT);
 
-    if (bind(serverSocket, (sockaddr*)&serverAddr, sizeof(serverAddr)) != SOCKET_ERROR) {
+        if (bind(serverSocket, (sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
+            closesocket(serverSocket);
+            serverSocket = INVALID_SOCKET;
+            Sleep(1000); // Retry every 1s until network interface & DHCP IP is ready
+        }
+    }
+
+    if (serverSocket != INVALID_SOCKET) {
         listen(serverSocket, SOMAXCONN);
         while (WaitForSingleObject(g_SvcStopEvent, 0) == WAIT_TIMEOUT) {
             SOCKET clientSocket = accept(serverSocket, NULL, NULL);
             if (clientSocket != INVALID_SOCKET) {
-                // Return immediate Lock Screen Status UI if user is on Lock Screen
                 char buffer[4096] = {0};
                 int bytes = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
                 if (bytes > 0) {
@@ -113,8 +131,8 @@ DWORD WINAPI MasterHttpListenerThread(LPVOID lpParam) {
                 closesocket(clientSocket);
             }
         }
+        closesocket(serverSocket);
     }
-    closesocket(serverSocket);
     WSACleanup();
     return 0;
 }
