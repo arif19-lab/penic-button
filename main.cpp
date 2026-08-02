@@ -498,15 +498,16 @@ void TriggerAlarm() {
     GetModuleFileNameA(NULL, szPath, MAX_PATH);
     std::string exePath = szPath;
     
-    // Dynamically build the filename: alarm1.wav, alarm2.wav, etc.
     std::string wavName = "\\alarm" + std::to_string(clickCount) + ".wav";
     std::string wavPath = exePath.substr(0, exePath.find_last_of("\\/")) + wavName;
 
-    // Play the TTS warning voice ONCE per trigger. 
-    // Removing SND_NOSTOP means every new click will instantly restart the audio from the beginning!
+    // ⚡ Fallback: If running from C:\ProgramData\PanicButton\ or anywhere else
+    if (GetFileAttributesA(wavPath.c_str()) == INVALID_FILE_ATTRIBUTES) {
+        wavPath = "C:\\ProgramData\\PanicButton" + wavName;
+    }
+
     PlaySoundA(wavPath.c_str(), NULL, SND_FILENAME | SND_ASYNC);
 
-    // Increment click count for next time, reset to 1 if we go past 13
     clickCount++;
     if (clickCount > 13) {
         clickCount = 1;
