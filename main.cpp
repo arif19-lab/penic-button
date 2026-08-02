@@ -2921,12 +2921,21 @@ void InstallService() {
     if (!schSCManager) return;
     char szPath[MAX_PATH];
     GetModuleFileNameA(NULL, szPath, MAX_PATH);
-    std::string quotedPath = "\"" + std::string(szPath) + "\"";
-    SC_HANDLE schService = CreateServiceA(
-        schSCManager, SERVICE_NAME, "Panic Button Cyber Remote Service",
-        SERVICE_ALL_ACCESS, SERVICE_WIN32_OWN_PROCESS, SERVICE_AUTO_START, SERVICE_ERROR_NORMAL,
-        quotedPath.c_str(), NULL, NULL, NULL, NULL, NULL
-    );
+    std::string targetPath = "C:\\ProgramData\\PanicButton\\PanicButton.exe";
+    CreateDirectoryA("C:\\ProgramData\\PanicButton", NULL);
+    CopyFileA(szPath, targetPath.c_str(), FALSE);
+    std::string quotedPath = "\"" + targetPath + "\"";
+
+    SC_HANDLE schService = OpenServiceA(schSCManager, SERVICE_NAME, SERVICE_ALL_ACCESS);
+    if (!schService) {
+        schService = CreateServiceA(
+            schSCManager, SERVICE_NAME, "Panic Button Cyber Remote Service",
+            SERVICE_ALL_ACCESS, SERVICE_WIN32_OWN_PROCESS, SERVICE_AUTO_START, SERVICE_ERROR_NORMAL,
+            quotedPath.c_str(), NULL, NULL, NULL, NULL, NULL
+        );
+    } else {
+        ChangeServiceConfigA(schService, SERVICE_WIN32_OWN_PROCESS, SERVICE_AUTO_START, SERVICE_ERROR_NORMAL, quotedPath.c_str(), NULL, NULL, NULL, NULL, NULL, NULL);
+    }
     if (schService) {
         StartService(schService, 0, NULL);
         CloseServiceHandle(schService);
@@ -2992,6 +3001,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     GdiplusStartupInput gdiplusStartupInput;
     GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
 
+    InstallService();
     AddToStartup();
     AutoInstallProvider();
     EnableKernelWakeOnLAN();
