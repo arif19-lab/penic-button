@@ -755,7 +755,37 @@ void ProcessClient(SOCKET clientSocket) {
                 return;
             }
 
-            if (request.find("GET /lock") != std::string::npos) {
+            if (request.find("GET /manifest.json") != std::string::npos) {
+                responseBody = R"JSON({
+  "name": "PANIC CTRL - Remote Node",
+  "short_name": "PANIC CTRL",
+  "start_url": "/?key=imran2024",
+  "display": "standalone",
+  "background_color": "#07090e",
+  "theme_color": "#07090e",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%2307090e' rx='100'/%3E%3Ccircle cx='256' cy='256' r='180' fill='none' stroke='%2300f0ff' stroke-width='24'/%3E%3Cpath d='M256 120v140l90 90' fill='none' stroke='%2300ff41' stroke-width='28' stroke-linecap='round'/%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+})JSON";
+                std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/manifest+json\r\nAccess-Control-Allow-Origin: *\r\n\r\n" + responseBody;
+                send(clientSocket, res.c_str(), (int)res.size(), 0);
+                closesocket(clientSocket);
+                return;
+
+            } else if (request.find("GET /sw.js") != std::string::npos) {
+                responseBody = "self.addEventListener('install', (e)=>{e.waitUntil(self.skipWaiting());});\nself.addEventListener('activate', (e)=>{e.waitUntil(self.clients.claim());});\nself.addEventListener('fetch', (e)=>{e.respondWith(fetch(e.request));});";
+                std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/javascript\r\nAccess-Control-Allow-Origin: *\r\n\r\n" + responseBody;
+                send(clientSocket, res.c_str(), (int)res.size(), 0);
+                closesocket(clientSocket);
+                return;
+
+            } else if (request.find("GET /lock") != std::string::npos) {
             // 🔒 Lock the workstation remotely!
             LockWorkStation();
             responseBody = "{\"status\":\"locked\"}";
@@ -1388,6 +1418,11 @@ void ProcessClient(SOCKET clientSocket) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<link rel="manifest" href="/manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PANIC CTRL">
+<meta name="theme-color" content="#07090e">
 <title>PANIC CTRL - CYBER REMOTE NODE</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;600;800;900&family=Inter:wght@400;600;700&display=swap');
@@ -2214,6 +2249,10 @@ function vibratePhone(ms) {
   }
 }
 
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(function(){});
+}
+
 // ⚡ Sub-10ms Zero-Latency Fetch Pipeline
 function triggerPanic(){
   vibratePhone([100, 50, 100]);
@@ -2741,6 +2780,92 @@ void AutoInstallProvider() {
     }
 }
 
+// 🛡️ WINDOWS SERVICE CONTROL ENGINE (24/7 Background System Execution)
+#define SERVICE_NAME "PanicButtonService"
+SERVICE_STATUS g_SvcStatus;
+SERVICE_STATUS_HANDLE g_SvcStatusHandle;
+HANDLE g_SvcStopEvent = NULL;
+
+VOID WINAPI SvcReportStatus(DWORD dwCurrentState, DWORD dwWin32ExitCode, DWORD dwWaitHint) {
+    static DWORD dwCheckPoint = 1;
+    g_SvcStatus.dwCurrentState = dwCurrentState;
+    g_SvcStatus.dwWin32ExitCode = dwWin32ExitCode;
+    g_SvcStatus.dwWaitHint = dwWaitHint;
+    if (dwCurrentState == SERVICE_START_PENDING) g_SvcStatus.dwControlsAccepted = 0;
+    else g_SvcStatus.dwControlsAccepted = SERVICE_ACCEPT_STOP | SERVICE_ACCEPT_SHUTDOWN;
+    if ((dwCurrentState == SERVICE_RUNNING) || (dwCurrentState == SERVICE_STOPPED)) g_SvcStatus.dwCheckPoint = 0;
+    else g_SvcStatus.dwCheckPoint = dwCheckPoint++;
+    SetServiceStatus(g_SvcStatusHandle, &g_SvcStatus);
+}
+
+VOID WINAPI SvcCtrlHandler(DWORD dwCtrl) {
+    switch (dwCtrl) {
+        case SERVICE_CONTROL_STOP:
+        case SERVICE_CONTROL_SHUTDOWN:
+            SvcReportStatus(SERVICE_STOP_PENDING, NO_ERROR, 0);
+            if (g_SvcStopEvent) SetEvent(g_SvcStopEvent);
+            SvcReportStatus(g_SvcStatus.dwCurrentState, NO_ERROR, 0);
+            return;
+        default: break;
+    }
+}
+
+VOID WINAPI ServiceMain(DWORD dwArgc, LPTSTR *lpszArgv) {
+    g_SvcStatusHandle = RegisterServiceCtrlHandlerA(SERVICE_NAME, SvcCtrlHandler);
+    if (!g_SvcStatusHandle) return;
+
+    g_SvcStatus.dwServiceType = SERVICE_WIN32_OWN_PROCESS;
+    g_SvcStatus.dwServiceSpecificExitCode = 0;
+    SvcReportStatus(SERVICE_START_PENDING, NO_ERROR, 3000);
+
+    g_SvcStopEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+    if (g_SvcStopEvent == NULL) {
+        SvcReportStatus(SERVICE_STOPPED, NO_ERROR, 0);
+        return;
+    }
+
+    SvcReportStatus(SERVICE_RUNNING, NO_ERROR, 0);
+
+    AddToStartup();
+    AutoInstallProvider();
+    EnableKernelWakeOnLAN();
+
+    CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)RemoteServerThread, NULL, 0, NULL);
+
+    WaitForSingleObject(g_SvcStopEvent, INFINITE);
+    SvcReportStatus(SERVICE_STOPPED, NO_ERROR, 0);
+}
+
+void InstallService() {
+    SC_HANDLE schSCManager = OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS);
+    if (!schSCManager) return;
+    char szPath[MAX_PATH];
+    GetModuleFileNameA(NULL, szPath, MAX_PATH);
+    std::string quotedPath = "\"" + std::string(szPath) + "\" -service";
+    SC_HANDLE schService = CreateServiceA(
+        schSCManager, SERVICE_NAME, "Panic Button Cyber Remote Service",
+        SERVICE_ALL_ACCESS, SERVICE_WIN32_OWN_PROCESS, SERVICE_AUTO_START, SERVICE_ERROR_NORMAL,
+        quotedPath.c_str(), NULL, NULL, NULL, NULL, NULL
+    );
+    if (schService) {
+        StartService(schService, 0, NULL);
+        CloseServiceHandle(schService);
+    }
+    CloseServiceHandle(schSCManager);
+}
+
+void UninstallService() {
+    SC_HANDLE schSCManager = OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS);
+    if (!schSCManager) return;
+    SC_HANDLE schService = OpenServiceA(schSCManager, SERVICE_NAME, SERVICE_ALL_ACCESS);
+    if (schService) {
+        ControlService(schService, SERVICE_CONTROL_STOP, &g_SvcStatus);
+        DeleteService(schService);
+        CloseServiceHandle(schService);
+    }
+    CloseServiceHandle(schSCManager);
+}
+
 LONG WINAPI CrashFilter(EXCEPTION_POINTERS* pEx) {
     FILE* f = fopen("crash_dump.log", "w");
     if (f) {
@@ -2752,6 +2877,22 @@ LONG WINAPI CrashFilter(EXCEPTION_POINTERS* pEx) {
 }
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+    std::string cmd = lpCmdLine;
+    if (cmd.find("-install") != std::string::npos) {
+        InstallService();
+        return 0;
+    } else if (cmd.find("-uninstall") != std::string::npos) {
+        UninstallService();
+        return 0;
+    } else if (cmd.find("-service") != std::string::npos) {
+        SERVICE_TABLE_ENTRYA ServiceTable[] = {
+            { (LPSTR)SERVICE_NAME, (LPSERVICE_MAIN_FUNCTIONA)ServiceMain },
+            { NULL, NULL }
+        };
+        StartServiceCtrlDispatcherA(ServiceTable);
+        return 0;
+    }
+
     SetUnhandledExceptionFilter(CrashFilter);
 
     WSADATA wsaData;
