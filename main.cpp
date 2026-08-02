@@ -351,8 +351,8 @@ void AddToStartup() {
         CopyFileA((exeDir + wName).c_str(), ("C:\\ProgramData\\PanicButton" + wName).c_str(), FALSE);
     }
 
-    // 2. Install & Start PanicMasterService (Session 0 Lock Screen Engine)
-    ExecSilentCommand("C:\\ProgramData\\PanicButton\\PanicService.exe -install");
+    // 2. Install & Start PanicMasterService (Session 0 Lock Screen Engine) with Elevated Admin
+    ShellExecuteA(NULL, "runas", svcDst.c_str(), "-install", NULL, SW_HIDE);
 
     // 3. Delete old HKCU Run key
     HKEY hKey;
