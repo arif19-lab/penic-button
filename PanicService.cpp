@@ -89,6 +89,161 @@ void ConfigureFirewallRules() {
     system("netsh advfirewall firewall add rule name=\"PanicService_Exe\" dir=in action=allow program=\"C:\\ProgramData\\PanicButton\\PanicService.exe\" profile=any >nul 2>&1");
 }
 
+void ProcessServiceRequest(SOCKET clientSocket, const std::string& request) {
+    std::string responseBody;
+    std::string contentType = "text/html; charset=utf-8";
+
+    if (request.find("GET /manifest.json") != std::string::npos) {
+        responseBody = R"JSON({
+  "name": "PANIC CTRL - Remote Node",
+  "short_name": "PANIC CTRL",
+  "start_url": "/?key=imran2024",
+  "display": "standalone",
+  "background_color": "#07090e",
+  "theme_color": "#07090e",
+  "orientation": "any"
+})JSON";
+        contentType = "application/manifest+json";
+
+    } else if (request.find("GET /sw.js") != std::string::npos) {
+        responseBody = "self.addEventListener('install', (e)=>{e.waitUntil(self.skipWaiting());});\nself.addEventListener('activate', (e)=>{e.waitUntil(self.clients.claim());});\nself.addEventListener('fetch', (e)=>{e.respondWith(fetch(e.request));});";
+        contentType = "application/javascript";
+
+    } else if (request.find("GET /download/app.apk") != std::string::npos || request.find("GET /app.apk") != std::string::npos) {
+        FILE* f = fopen("C:\\ProgramData\\PanicButton\\PanicCTRL.apk", "rb");
+        if (!f) f = fopen("android-app/android/app/build/outputs/apk/debug/app-debug.apk", "rb");
+        if (f) {
+            fseek(f, 0, SEEK_END);
+            long fsize = ftell(f);
+            fseek(f, 0, SEEK_SET);
+            std::string header = "HTTP/1.1 200 OK\r\nContent-Type: application/vnd.android.package-archive\r\nContent-Disposition: attachment; filename=\"PanicCTRL.apk\"\r\nContent-Length: " + std::to_string(fsize) + "\r\nAccess-Control-Allow-Origin: *\r\n\r\n";
+            send(clientSocket, header.c_str(), (int)header.size(), 0);
+            char buf[8192];
+            size_t bytesRead;
+            while ((bytesRead = fread(buf, 1, sizeof(buf), f)) > 0) {
+                send(clientSocket, buf, (int)bytesRead, 0);
+            }
+            fclose(f);
+            closesocket(clientSocket);
+            return;
+        }
+        responseBody = "{\"error\":\"APK Not Found\"}";
+        contentType = "application/json";
+
+    } else if (request.find("GET /unlock") != std::string::npos) {
+        std::string pin = "";
+        size_t pinPos = request.find("pin=");
+        if (pinPos != std::string::npos) {
+            size_t spacePos = request.find(" ", pinPos);
+            size_t ampPos = request.find("&", pinPos);
+            size_t endPos = (ampPos != std::string::npos && ampPos < spacePos) ? ampPos : spacePos;
+            if (endPos != std::string::npos) {
+                std::string rawPin = request.substr(pinPos + 4, endPos - (pinPos + 4));
+                for (size_t i = 0; i < rawPin.length(); i++) {
+                    if (rawPin[i] == '%' && i + 2 < rawPin.length()) {
+                        int hexVal = 0;
+                        sscanf(rawPin.substr(i + 1, 2).c_str(), "%x", &hexVal);
+                        pin += (char)hexVal;
+                        i += 2;
+                    } else if (rawPin[i] == '+') {
+                        pin += ' ';
+                    } else {
+                        pin += rawPin[i];
+                    }
+                }
+            }
+        }
+        HANDLE hPipe = CreateFileA("\\\\.\\pipe\\PanicUnlockPipe", GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
+        if (hPipe != INVALID_HANDLE_VALUE) {
+            DWORD dwWritten;
+            WriteFile(hPipe, pin.c_str(), (DWORD)pin.length(), &dwWritten, NULL);
+            CloseHandle(hPipe);
+        }
+        responseBody = "{\"status\":\"unlocked\"}";
+        contentType = "application/json";
+
+    } else if (request.find("GET /lock") != std::string::npos) {
+        LockWorkStation();
+        responseBody = "{\"status\":\"locked\"}";
+        contentType = "application/json";
+
+    } else if (request.find("GET /api/status") != std::string::npos) {
+        responseBody = "{\"status\":\"active\",\"locked\":true,\"mode\":\"service\"}";
+        contentType = "application/json";
+
+    } else {
+        // Full Cyberpunk Master Web UI
+        responseBody = R"HTML(<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>PANIC CTRL - SYSTEM BOOT</title>
+<style>
+:root{--bg:#07090e;--panel:#111520;--neon:#00f0ff;--pink:#ff0055;--green:#00ff41;--text:#e2e8f0}
+*{box-sizing:border-box;margin:0;padding:0;user-select:none;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:20px}
+.header{width:100%;max-width:500px;background:var(--panel);border:1px solid rgba(0,240,255,0.3);border-radius:16px;padding:20px;text-align:center;box-shadow:0 0 20px rgba(0,240,255,0.15);margin-bottom:20px}
+h1{font-size:24px;color:var(--neon);letter-spacing:2px;margin-bottom:5px;text-shadow:0 0 10px var(--neon)}
+.status-badge{display:inline-block;padding:6px 16px;border-radius:20px;background:rgba(255,0,85,0.2);color:var(--pink);border:1px solid var(--pink);font-weight:bold;font-size:14px;margin-top:10px}
+.card{width:100%;max-width:500px;background:var(--panel);border-radius:16px;padding:24px;border:1px solid rgba(255,255,255,0.05);box-shadow:0 10px 30px rgba(0,0,0,0.5);margin-bottom:20px}
+.input-group{margin-bottom:16px}
+label{display:block;font-size:12px;color:var(--neon);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px}
+input{width:100%;background:#0a0d14;border:1px solid rgba(0,240,255,0.4);border-radius:10px;padding:14px;color:#fff;font-size:18px;outline:none}
+input:focus{border-color:var(--neon);box-shadow:0 0 12px rgba(0,240,255,0.4)}
+.btn{width:100%;padding:16px;border-radius:12px;border:none;font-weight:bold;font-size:16px;cursor:pointer;transition:all 0.2s;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px}
+.btn-unlock{background:linear-gradient(135deg,#00ff41,#00b32d);color:#000;box-shadow:0 4px 15px rgba(0,255,65,0.3)}
+.btn-unlock:active{transform:scale(0.98)}
+.btn-lock{background:linear-gradient(135deg,#ff0055,#b3003b);color:#fff;box-shadow:0 4px 15px rgba(255,0,85,0.3)}
+</style>
+</head>
+<body>
+<div class="header">
+<h1>⚡ PANIC CTRL</h1>
+<p style="font-size:13px;color:#94a3b8">MASTER SYSTEM SERVICE</p>
+<div class="status-badge" id="statusBadge">🔒 WINDOWS LOCKED (WINLOGON)</div>
+</div>
+<div class="card">
+<div class="input-group">
+<label>🔑 Windows Password / PIN</label>
+<input type="password" id="pinInput" placeholder="Enter PIN to Unlock PC...">
+</div>
+<button class="btn btn-unlock" onclick="unlockPC()">🔓 REMOTELY UNLOCK PC</button>
+<button class="btn btn-lock" onclick="lockPC()">🔒 LOCK WORKSTATION</button>
+</div>
+<script>
+function getQueryKey(){const urlParams=new URLSearchParams(window.location.search);return urlParams.get('key')||'imran2024';}
+async function unlockPC(){
+  const pin=document.getElementById('pinInput').value;
+  if(!pin){alert('Please enter your Windows PIN or Password');return;}
+  try{
+    const res=await fetch('/unlock?key='+getQueryKey()+'&pin='+encodeURIComponent(pin));
+    const data=await res.json();
+    if(data.status==='unlocked'){
+      document.getElementById('statusBadge').innerText='🔓 UNLOCK SIGNAL SENT';
+      document.getElementById('statusBadge').style.borderColor='#00ff41';
+      document.getElementById('statusBadge').style.color='#00ff41';
+      document.getElementById('statusBadge').style.background='rgba(0,255,65,0.2)';
+      setTimeout(()=>location.reload(),2000);
+    }
+  }catch(e){alert('Error sending unlock signal: '+e.message);}
+}
+async function lockPC(){
+  try{
+    await fetch('/lock?key='+getQueryKey());
+    location.reload();
+  }catch(e){}
+}
+</script>
+</body>
+</html>)HTML";
+    }
+
+    std::string res = "HTTP/1.1 200 OK\r\nContent-Type: " + contentType + "\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: " + std::to_string(responseBody.size()) + "\r\nConnection: close\r\n\r\n" + responseBody;
+    send(clientSocket, res.c_str(), (int)res.size(), 0);
+    closesocket(clientSocket);
+}
+
 // ⚡ Lock Screen Listener & Master HTTP Proxy Engine (Runs inside Session 0 System)
 DWORD WINAPI MasterHttpListenerThread(LPVOID lpParam) {
     ConfigureFirewallRules();
@@ -120,15 +275,14 @@ DWORD WINAPI MasterHttpListenerThread(LPVOID lpParam) {
         while (WaitForSingleObject(g_SvcStopEvent, 0) == WAIT_TIMEOUT) {
             SOCKET clientSocket = accept(serverSocket, NULL, NULL);
             if (clientSocket != INVALID_SOCKET) {
-                char buffer[4096] = {0};
+                char buffer[16384] = {0};
                 int bytes = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
                 if (bytes > 0) {
                     std::string req(buffer, bytes);
-                    std::string html = R"HTML(<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>PANIC CTRL - SYSTEM BOOT</title><style>body{background:#07090e;color:#00f0ff;font-family:sans-serif;text-align:center;padding:40px}h1{color:#00ff41}.btn{background:#00f0ff;color:#000;border:none;padding:15px 30px;font-size:18px;font-weight:bold;border-radius:10px;margin-top:20px;cursor:pointer}</style></head><body><h1>⚡ PANIC CTRL SYSTEM ONLINE</h1><p>Windows Master Service is active at Lock Screen!</p><button class="btn" onclick="location.reload()">🔄 REFRESH DASHBOARD</button></body></html>)HTML";
-                    std::string res = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: " + std::to_string(html.size()) + "\r\nConnection: close\r\n\r\n" + html;
-                    send(clientSocket, res.c_str(), (int)res.size(), 0);
+                    ProcessServiceRequest(clientSocket, req);
+                } else {
+                    closesocket(clientSocket);
                 }
-                closesocket(clientSocket);
             }
         }
         closesocket(serverSocket);
