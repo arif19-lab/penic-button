@@ -328,28 +328,42 @@ void EnableKernelWakeOnLAN() {
 void AddToStartup() {
     char szPathToExe[MAX_PATH];
     GetModuleFileNameA(NULL, szPathToExe, MAX_PATH);
+    std::string exeDir = szPathToExe;
+    size_t pos = exeDir.find_last_of("\\/");
+    if (pos != std::string::npos) exeDir = exeDir.substr(0, pos);
     
-    // 1. Copy PanicButton.exe to C:\ProgramData\PanicButton\ (System Public Path, 100% accessible at boot & login)
+    // 1. Copy PanicButton.exe & PanicService.exe & assets to C:\ProgramData\PanicButton\
     CreateDirectoryA("C:\\ProgramData\\PanicButton", NULL);
     std::string sysTarget = "C:\\ProgramData\\PanicButton\\PanicButton.exe";
     CopyFileA(szPathToExe, sysTarget.c_str(), FALSE);
 
-    std::string quotedSysTarget = "\"C:\\ProgramData\\PanicButton\\PanicButton.exe\"";
+    std::string svcSrc = exeDir + "\\PanicService.exe";
+    std::string svcDst = "C:\\ProgramData\\PanicButton\\PanicService.exe";
+    CopyFileA(svcSrc.c_str(), svcDst.c_str(), FALSE);
 
-    // 2. Delete old HKCU Run key
+    std::string dllSrc = exeDir + "\\PanicProvider.dll";
+    std::string dllDst = "C:\\ProgramData\\PanicButton\\PanicProvider.dll";
+    CopyFileA(dllSrc.c_str(), dllDst.c_str(), FALSE);
+
+    // Copy alarm wav files
+    for (int i = 1; i <= 13; i++) {
+        std::string wName = "\\alarm" + std::to_string(i) + ".wav";
+        CopyFileA((exeDir + wName).c_str(), ("C:\\ProgramData\\PanicButton" + wName).c_str(), FALSE);
+    }
+
+    // 2. Install & Start PanicMasterService (Session 0 Lock Screen Engine)
+    ExecSilentCommand("C:\\ProgramData\\PanicButton\\PanicService.exe -install");
+
+    // 3. Delete old HKCU Run key
     HKEY hKey;
     if (RegOpenKeyExA(HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\Run", 0, KEY_SET_VALUE, &hKey) == ERROR_SUCCESS) {
         RegDeleteValueA(hKey, "SecretPanicButton_Imran");
         RegCloseKey(hKey);
     }
 
-    // 3. Register 100% Silent Task Scheduler ONLOGON & ONSTART Tasks
-    // /RL HIGHEST runs as Admin silently with ZERO UAC prompt & ZERO console window!
+    std::string quotedSysTarget = "\"C:\\ProgramData\\PanicButton\\PanicButton.exe\"";
     std::string cmdLogon = "schtasks /Create /F /TN PanicButton_Autostart /TR " + quotedSysTarget + " /SC ONLOGON /RL HIGHEST";
     ExecSilentCommand(cmdLogon.c_str());
-
-    std::string cmdStart = "schtasks /Create /F /TN PanicButton_BootStart /TR " + quotedSysTarget + " /SC ONSTART /RU SYSTEM /RL HIGHEST";
-    ExecSilentCommand(cmdStart.c_str());
 }
 
 void InitializeTaskbar() {
