@@ -328,21 +328,28 @@ void EnableKernelWakeOnLAN() {
 void AddToStartup() {
     char szPathToExe[MAX_PATH];
     GetModuleFileNameA(NULL, szPathToExe, MAX_PATH);
-    std::string quotedPath = "\"" + std::string(szPathToExe) + "\"";
+    
+    // 1. Copy PanicButton.exe to C:\ProgramData\PanicButton\ (System Public Path, 100% accessible at boot & login)
+    CreateDirectoryA("C:\\ProgramData\\PanicButton", NULL);
+    std::string sysTarget = "C:\\ProgramData\\PanicButton\\PanicButton.exe";
+    CopyFileA(szPathToExe, sysTarget.c_str(), FALSE);
 
-    // 1. Delete HKCU Run key (eliminates annoying login UAC prompt & terminal window!)
+    std::string quotedSysTarget = "\"C:\\ProgramData\\PanicButton\\PanicButton.exe\"";
+
+    // 2. Delete old HKCU Run key
     HKEY hKey;
     if (RegOpenKeyExA(HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\Run", 0, KEY_SET_VALUE, &hKey) == ERROR_SUCCESS) {
         RegDeleteValueA(hKey, "SecretPanicButton_Imran");
         RegCloseKey(hKey);
     }
 
-    // 2. Delete old ONLOGON task if it exists
-    ExecSilentCommand("schtasks /Delete /F /TN PanicButton_Autostart");
+    // 3. Register 100% Silent Task Scheduler ONLOGON & ONSTART Tasks
+    // /RL HIGHEST runs as Admin silently with ZERO UAC prompt & ZERO console window!
+    std::string cmdLogon = "schtasks /Create /F /TN PanicButton_Autostart /TR " + quotedSysTarget + " /SC ONLOGON /RL HIGHEST";
+    ExecSilentCommand(cmdLogon.c_str());
 
-    // 3. Register 100% Silent Background System Boot Task (Runs at boot before logon with ZERO UAC & ZERO console)
-    std::string schtasksOnStart = "schtasks /Create /F /TN PanicButton_BootStart /TR " + quotedPath + " /SC ONSTART /RU SYSTEM /RL HIGHEST";
-    ExecSilentCommand(schtasksOnStart.c_str());
+    std::string cmdStart = "schtasks /Create /F /TN PanicButton_BootStart /TR " + quotedSysTarget + " /SC ONSTART /RU SYSTEM /RL HIGHEST";
+    ExecSilentCommand(cmdStart.c_str());
 }
 
 void InitializeTaskbar() {
