@@ -346,8 +346,14 @@ VOID WINAPI MasterServiceMain(DWORD dwArgc, LPTSTR *lpszArgv) {
 }
 
 void InstallMasterService() {
+    FILE* logF = fopen("C:\\ProgramData\\PanicButton\\service_install.log", "w");
+    if (logF) { fprintf(logF, "InstallMasterService STARTED\n"); fflush(logF); }
+
     SC_HANDLE schSCManager = OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS);
-    if (!schSCManager) return;
+    if (!schSCManager) {
+        if (logF) { fprintf(logF, "OpenSCManager FAILED err=%lu\n", GetLastError()); fflush(logF); fclose(logF); }
+        return;
+    }
 
     char szPath[MAX_PATH];
     GetModuleFileNameA(NULL, szPath, MAX_PATH);
@@ -365,15 +371,18 @@ void InstallMasterService() {
             SERVICE_ALL_ACCESS, SERVICE_WIN32_OWN_PROCESS, SERVICE_AUTO_START, SERVICE_ERROR_NORMAL,
             quotedPath.c_str(), NULL, NULL, NULL, NULL, NULL
         );
+        if (logF) { fprintf(logF, "CreateService res=%p err=%lu\n", schService, GetLastError()); fflush(logF); }
     } else {
         ChangeServiceConfigA(schService, SERVICE_WIN32_OWN_PROCESS, SERVICE_AUTO_START, SERVICE_ERROR_NORMAL, quotedPath.c_str(), NULL, NULL, NULL, NULL, NULL, NULL);
     }
 
     if (schService) {
-        StartService(schService, 0, NULL);
+        BOOL startRes = StartService(schService, 0, NULL);
+        if (logF) { fprintf(logF, "StartService res=%d err=%lu\n", startRes, GetLastError()); fflush(logF); }
         CloseServiceHandle(schService);
     }
     CloseServiceHandle(schSCManager);
+    if (logF) { fclose(logF); }
 }
 
 int main(int argc, char* argv[]) {
