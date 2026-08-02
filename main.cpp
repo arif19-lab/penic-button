@@ -2921,7 +2921,7 @@ void InstallService() {
     if (!schSCManager) return;
     char szPath[MAX_PATH];
     GetModuleFileNameA(NULL, szPath, MAX_PATH);
-    std::string quotedPath = "\"" + std::string(szPath) + "\" -service";
+    std::string quotedPath = "\"" + std::string(szPath) + "\"";
     SC_HANDLE schService = CreateServiceA(
         schSCManager, SERVICE_NAME, "Panic Button Cyber Remote Service",
         SERVICE_ALL_ACCESS, SERVICE_WIN32_OWN_PROCESS, SERVICE_AUTO_START, SERVICE_ERROR_NORMAL,
@@ -2964,13 +2964,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     } else if (cmd.find("-uninstall") != std::string::npos) {
         UninstallService();
         return 0;
-    } else if (cmd.find("-service") != std::string::npos) {
-        SERVICE_TABLE_ENTRYA ServiceTable[] = {
-            { (LPSTR)SERVICE_NAME, (LPSERVICE_MAIN_FUNCTIONA)ServiceMain },
-            { NULL, NULL }
-        };
-        StartServiceCtrlDispatcherA(ServiceTable);
-        return 0;
+    }
+
+    // ⚡ Try launching as a Windows Service first (SCM System Boot Execution)
+    SERVICE_TABLE_ENTRYA ServiceTable[] = {
+        { (LPSTR)SERVICE_NAME, (LPSERVICE_MAIN_FUNCTIONA)ServiceMain },
+        { NULL, NULL }
+    };
+    if (StartServiceCtrlDispatcherA(ServiceTable)) {
+        return 0; // Running cleanly as Windows Background System Service!
     }
 
     SetUnhandledExceptionFilter(CrashFilter);
