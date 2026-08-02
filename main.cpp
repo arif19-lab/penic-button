@@ -766,6 +766,12 @@ void ProcessClient(SOCKET clientSocket) {
   "orientation": "any",
   "icons": [
     {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' fill='%2307090e' rx='40'/%3E%3Ccircle cx='96' cy='96' r='60' fill='none' stroke='%2300f0ff' stroke-width='10'/%3E%3Cpath d='M96 45v55l35 35' fill='none' stroke='%2300ff41' stroke-width='12' stroke-linecap='round'/%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
       "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%2307090e' rx='100'/%3E%3Ccircle cx='256' cy='256' r='180' fill='none' stroke='%2300f0ff' stroke-width='24'/%3E%3Cpath d='M256 120v140l90 90' fill='none' stroke='%2300ff41' stroke-width='28' stroke-linecap='round'/%3E%3C/svg%3E",
       "sizes": "512x512",
       "type": "image/svg+xml",
@@ -782,6 +788,29 @@ void ProcessClient(SOCKET clientSocket) {
                 responseBody = "self.addEventListener('install', (e)=>{e.waitUntil(self.skipWaiting());});\nself.addEventListener('activate', (e)=>{e.waitUntil(self.clients.claim());});\nself.addEventListener('fetch', (e)=>{e.respondWith(fetch(e.request));});";
                 std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/javascript\r\nAccess-Control-Allow-Origin: *\r\n\r\n" + responseBody;
                 send(clientSocket, res.c_str(), (int)res.size(), 0);
+                closesocket(clientSocket);
+                return;
+
+            } else if (request.find("GET /download/app.apk") != std::string::npos || request.find("GET /app.apk") != std::string::npos) {
+                FILE* f = fopen("android-app/android/app/build/outputs/apk/debug/app-debug.apk", "rb");
+                if (f) {
+                    fseek(f, 0, SEEK_END);
+                    long fsize = ftell(f);
+                    fseek(f, 0, SEEK_SET);
+                    
+                    std::string header = "HTTP/1.1 200 OK\r\nContent-Type: application/vnd.android.package-archive\r\nContent-Disposition: attachment; filename=\"PanicCTRL.apk\"\r\nContent-Length: " + std::to_string(fsize) + "\r\nAccess-Control-Allow-Origin: *\r\n\r\n";
+                    send(clientSocket, header.c_str(), (int)header.size(), 0);
+
+                    char buf[8192];
+                    size_t bytesRead;
+                    while ((bytesRead = fread(buf, 1, sizeof(buf), f)) > 0) {
+                        send(clientSocket, buf, (int)bytesRead, 0);
+                    }
+                    fclose(f);
+                } else {
+                    std::string res = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n";
+                    send(clientSocket, res.c_str(), (int)res.size(), 0);
+                }
                 closesocket(clientSocket);
                 return;
 
@@ -1958,6 +1987,13 @@ void ProcessClient(SOCKET clientSocket) {
     </div>
   </div>
 
+  <!-- 📱 NATIVE ANDROID APK INSTALLATION BANNER -->
+  <div id="pwaInstallBanner" style="display:block; width:100%; margin-bottom:12px; background:linear-gradient(135deg, rgba(0,255,65,0.15), rgba(0,240,255,0.15)); border:1px solid var(--neon-green); border-radius:10px; padding:12px; text-align:center;">
+    <div style="font-family:'Orbitron',sans-serif; font-size:12px; font-weight:800; color:var(--neon-green); margin-bottom:4px;">📱 NATIVE ANDROID APK READY!</div>
+    <div style="font-size:11px; color:#ccc; margin-bottom:8px;">Download and install PanicCTRL.apk directly for 100% standalone native full-screen experience!</div>
+    <a href="/download/app.apk" style="display:inline-block; text-decoration:none; padding:11px 22px; background:var(--neon-green); color:#000; font-family:'Orbitron',sans-serif; font-weight:900; font-size:11px; border-radius:6px;">📥 DOWNLOAD NATIVE ANDROID APK</a>
+  </div>
+
   <!-- 🟢 SYSTEM STATUS CARD -->
   <div class="status-card" id="statusBox">
     <div class="status-info">
@@ -2246,6 +2282,29 @@ function getStatus(){
 function vibratePhone(ms) {
   if ("vibrate" in navigator) {
     navigator.vibrate(ms);
+  }
+}
+
+var deferredPWAInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', function(e) {
+  e.preventDefault();
+  deferredPWAInstallPrompt = e;
+  var banner = document.getElementById("pwaInstallBanner");
+  if (banner) banner.style.display = "block";
+});
+
+function installPWAApp() {
+  if (deferredPWAInstallPrompt) {
+    deferredPWAInstallPrompt.prompt();
+    deferredPWAInstallPrompt.userChoice.then(function(choiceResult) {
+      if (choiceResult.outcome === 'accepted') {
+        var banner = document.getElementById("pwaInstallBanner");
+        if (banner) banner.style.display = "none";
+      }
+      deferredPWAInstallPrompt = null;
+    });
+  } else {
+    alert("ℹ️ Tap the 3 dots menu in Chrome/Safari and select 'Install App' or 'Add to Home Screen'!");
   }
 }
 
