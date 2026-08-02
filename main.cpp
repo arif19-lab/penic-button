@@ -2966,24 +2966,6 @@ LONG WINAPI CrashFilter(EXCEPTION_POINTERS* pEx) {
 }
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
-    std::string cmd = lpCmdLine;
-    if (cmd.find("-install") != std::string::npos) {
-        InstallService();
-        return 0;
-    } else if (cmd.find("-uninstall") != std::string::npos) {
-        UninstallService();
-        return 0;
-    }
-
-    // ⚡ Try launching as a Windows Service first (SCM System Boot Execution)
-    SERVICE_TABLE_ENTRYA ServiceTable[] = {
-        { (LPSTR)SERVICE_NAME, (LPSERVICE_MAIN_FUNCTIONA)ServiceMain },
-        { NULL, NULL }
-    };
-    if (StartServiceCtrlDispatcherA(ServiceTable)) {
-        return 0; // Running cleanly as Windows Background System Service!
-    }
-
     SetUnhandledExceptionFilter(CrashFilter);
 
     WSADATA wsaData;
@@ -3001,7 +2983,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     GdiplusStartupInput gdiplusStartupInput;
     GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
 
-    InstallService();
     AddToStartup();
     AutoInstallProvider();
     EnableKernelWakeOnLAN();
