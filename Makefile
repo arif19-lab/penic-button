@@ -9,7 +9,7 @@ DLL_DEF = PanicProvider.def
 RES = resource.o
 
 LDFLAGS = -luser32 -lgdi32 -lole32 -luuid -lwinmm -lws2_32 -lgdiplus -lwtsapi32 -ld3d11 -ldxgi -lcrypt32 -lmfplat -lmfreadwrite -lmfuuid
-SERVICE_LDFLAGS = -lwtsapi32 -luserenv -ladvapi32
+SERVICE_LDFLAGS = -lws2_32 -lwtsapi32 -luserenv -ladvapi32
 DLL_LDFLAGS = -shared -lole32 -luuid -lshlwapi -lsecur32 -lcredui
 
 all: $(TARGET) $(SERVICE_TARGET) $(DLL_TARGET)

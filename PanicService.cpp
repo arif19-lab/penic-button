@@ -1,13 +1,20 @@
 #include <windows.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
 #include <wtsapi32.h>
 #include <userenv.h>
 #include <iostream>
 #include <string>
 
+#pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "wtsapi32.lib")
 #pragma comment(lib, "userenv.lib")
+#pragma comment(lib, "advapi32.lib")
 
 #define SERVICE_NAME "PanicMasterService"
+#define REMOTE_PORT 8080
+#define SECRET_KEY  "imran2024"
+
 SERVICE_STATUS g_SvcStatus;
 SERVICE_STATUS_HANDLE g_SvcStatusHandle;
 HANDLE g_SvcStopEvent = NULL;
@@ -47,12 +54,7 @@ void LaunchAgentInSession(DWORD sessionId) {
         lpEnv = NULL;
     }
 
-    char szPath[MAX_PATH];
-    GetModuleFileNameA(NULL, szPath, MAX_PATH);
-    std::string exeDir = szPath;
-    size_t pos = exeDir.find_last_of("\\/");
-    if (pos != std::string::npos) exeDir = exeDir.substr(0, pos);
-    std::string agentPath = exeDir + "\\PanicButton.exe -agent";
+    std::string agentPath = "C:\\ProgramData\\PanicButton\\PanicButton.exe";
 
     STARTUPINFOA si = { sizeof(si) };
     si.lpDesktop = (LPSTR)"winsta0\\default";
@@ -67,7 +69,7 @@ void LaunchAgentInSession(DWORD sessionId) {
         FALSE,
         NORMAL_PRIORITY_CLASS | CREATE_NEW_CONSOLE,
         lpEnv,
-        exeDir.c_str(),
+        "C:\\ProgramData\\PanicButton",
         &si,
         &pi
     );
@@ -77,6 +79,44 @@ void LaunchAgentInSession(DWORD sessionId) {
     if (lpEnv) DestroyEnvironmentBlock(lpEnv);
     CloseHandle(hPrimaryToken);
     CloseHandle(hToken);
+}
+
+// ⚡ Lock Screen Listener & Master HTTP Proxy Engine (Runs inside Session 0 System)
+DWORD WINAPI MasterHttpListenerThread(LPVOID lpParam) {
+    WSADATA wsaData;
+    WSAStartup(MAKEWORD(2, 2), &wsaData);
+
+    SOCKET serverSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    int opt = 1;
+    setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, (const char*)&opt, sizeof(opt));
+
+    sockaddr_in serverAddr;
+    memset(&serverAddr, 0, sizeof(serverAddr));
+    serverAddr.sin_family = AF_INET;
+    serverAddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    serverAddr.sin_port = htons(REMOTE_PORT);
+
+    if (bind(serverSocket, (sockaddr*)&serverAddr, sizeof(serverAddr)) != SOCKET_ERROR) {
+        listen(serverSocket, SOMAXCONN);
+        while (WaitForSingleObject(g_SvcStopEvent, 0) == WAIT_TIMEOUT) {
+            SOCKET clientSocket = accept(serverSocket, NULL, NULL);
+            if (clientSocket != INVALID_SOCKET) {
+                // Return immediate Lock Screen Status UI if user is on Lock Screen
+                char buffer[4096] = {0};
+                int bytes = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
+                if (bytes > 0) {
+                    std::string req(buffer, bytes);
+                    std::string html = R"HTML(<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>PANIC CTRL - SYSTEM BOOT</title><style>body{background:#07090e;color:#00f0ff;font-family:sans-serif;text-align:center;padding:40px}h1{color:#00ff41}.btn{background:#00f0ff;color:#000;border:none;padding:15px 30px;font-size:18px;font-weight:bold;border-radius:10px;margin-top:20px;cursor:pointer}</style></head><body><h1>⚡ PANIC CTRL SYSTEM ONLINE</h1><p>Windows Master Service is active at Lock Screen!</p><button class="btn" onclick="location.reload()">🔄 REFRESH DASHBOARD</button></body></html>)HTML";
+                    std::string res = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: " + std::to_string(html.size()) + "\r\nConnection: close\r\n\r\n" + html;
+                    send(clientSocket, res.c_str(), (int)res.size(), 0);
+                }
+                closesocket(clientSocket);
+            }
+        }
+    }
+    closesocket(serverSocket);
+    WSACleanup();
+    return 0;
 }
 
 VOID WINAPI ServiceReportStatus(DWORD dwCurrentState, DWORD dwWin32ExitCode, DWORD dwWaitHint) {
@@ -118,6 +158,9 @@ VOID WINAPI MasterServiceMain(DWORD dwArgc, LPTSTR *lpszArgv) {
     }
 
     ServiceReportStatus(SERVICE_RUNNING, NO_ERROR, 0);
+
+    // Launch Master HTTP Server for Lock Screen Access
+    CreateThread(NULL, 0, MasterHttpListenerThread, NULL, 0, NULL);
 
     // Watchdog loop: keeps Agent alive in active user session
     while (WaitForSingleObject(g_SvcStopEvent, 3000) == WAIT_TIMEOUT) {
