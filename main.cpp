@@ -301,10 +301,27 @@ bool CaptureDXGIFrame(HDC hTargetDC, int targetW, int targetH) {
 bool isPanicMode = false;
 ITaskbarList* pTaskbar = NULL;
 
+void ExecSilentCommand(const char* cmdLine) {
+    STARTUPINFOA si = { sizeof(si) };
+    PROCESS_INFORMATION pi = { 0 };
+    si.cb = sizeof(si);
+    si.dwFlags = STARTF_USESHOWWINDOW;
+    si.wShowWindow = SW_HIDE;
+
+    char cmd[2048];
+    strncpy(cmd, cmdLine, sizeof(cmd) - 1);
+    cmd[sizeof(cmd) - 1] = '\0';
+
+    if (CreateProcessA(NULL, cmd, NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi)) {
+        WaitForSingleObject(pi.hProcess, 3000);
+        CloseHandle(pi.hProcess);
+        CloseHandle(pi.hThread);
+    }
+}
+
 // ⚡ Kernel & Driver Level: Programmatically enable Wake-on-LAN Magic Packet on all Windows Network Adapters
 void EnableKernelWakeOnLAN() {
-    system("powershell -Command \"Get-NetAdapter | Enable-NetAdapterPowerManagement -WakeOnMagicPacket -Confirm:$false\" >nul 2>&1");
-    system("powershell -Command \"Set-NetAdapterPowerManagement -Name '*' -WakeOnMagicPacket Enabled\" >nul 2>&1");
+    ExecSilentCommand("powershell -WindowStyle Hidden -Command \"Get-NetAdapter | Enable-NetAdapterPowerManagement -WakeOnMagicPacket -Confirm:$false\"");
 }
 
 // Function to add the program to Windows Startup automatically via Registry
@@ -313,22 +330,19 @@ void AddToStartup() {
     GetModuleFileNameA(NULL, szPathToExe, MAX_PATH);
     std::string quotedPath = "\"" + std::string(szPathToExe) + "\"";
 
-    // 1. Registry Startup (HKCU Run)
+    // 1. Delete HKCU Run key (eliminates annoying login UAC prompt & terminal window!)
     HKEY hKey;
-    const char* czStartName = "SecretPanicButton_Imran";
-    LONG lnRes = RegOpenKeyExA(HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\Run", 0, KEY_WRITE, &hKey);
-    if (lnRes == ERROR_SUCCESS) {
-        RegSetValueExA(hKey, czStartName, 0, REG_SZ, (const BYTE*)quotedPath.c_str(), (DWORD)(quotedPath.length() + 1));
+    if (RegOpenKeyExA(HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\Run", 0, KEY_SET_VALUE, &hKey) == ERROR_SUCCESS) {
+        RegDeleteValueA(hKey, "SecretPanicButton_Imran");
         RegCloseKey(hKey);
     }
 
-    // 2. Windows Task Scheduler ONSTART (Runs on System Boot BEFORE logon!)
-    std::string schtasksOnStart = "schtasks /Create /F /TN \"PanicButton_BootStart\" /TR " + quotedPath + " /SC ONSTART /RU \"SYSTEM\" /RL HIGHEST >nul 2>&1";
-    system(schtasksOnStart.c_str());
+    // 2. Delete old ONLOGON task if it exists
+    ExecSilentCommand("schtasks /Delete /F /TN PanicButton_Autostart");
 
-    // 3. Windows Task Scheduler ONLOGON (Runs on User Logon with Highest Admin Privileges)
-    std::string schtasksOnLogon = "schtasks /Create /F /TN \"PanicButton_Autostart\" /TR " + quotedPath + " /SC ONLOGON /RL HIGHEST >nul 2>&1";
-    system(schtasksOnLogon.c_str());
+    // 3. Register 100% Silent Background System Boot Task (Runs at boot before logon with ZERO UAC & ZERO console)
+    std::string schtasksOnStart = "schtasks /Create /F /TN PanicButton_BootStart /TR " + quotedPath + " /SC ONSTART /RU SYSTEM /RL HIGHEST";
+    ExecSilentCommand(schtasksOnStart.c_str());
 }
 
 void InitializeTaskbar() {
