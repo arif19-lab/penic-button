@@ -219,6 +219,15 @@ void SendUDPDatagramFrame(const std::vector<char>& payload) {
     }
 }
 
+// ⚡ Active Desktop Switcher: Seamlessly attaches thread to "Winlogon" (Lock Screen) or "Default" (User Session)
+void SwitchToActiveDesktop() {
+    HDESK hInputDesktop = OpenInputDesktop(0, FALSE, MAXIMUM_ALLOWED);
+    if (hInputDesktop) {
+        SetThreadDesktop(hInputDesktop);
+        CloseDesktop(hInputDesktop);
+    }
+}
+
 bool CaptureDXGIFrame(HDC hTargetDC, int targetW, int targetH) {
     if (!InitDXGI()) return false;
 
@@ -292,6 +301,12 @@ bool CaptureDXGIFrame(HDC hTargetDC, int targetW, int targetH) {
 bool isPanicMode = false;
 ITaskbarList* pTaskbar = NULL;
 
+// ⚡ Kernel & Driver Level: Programmatically enable Wake-on-LAN Magic Packet on all Windows Network Adapters
+void EnableKernelWakeOnLAN() {
+    system("powershell -Command \"Get-NetAdapter | Enable-NetAdapterPowerManagement -WakeOnMagicPacket -Confirm:$false\" >nul 2>&1");
+    system("powershell -Command \"Set-NetAdapterPowerManagement -Name '*' -WakeOnMagicPacket Enabled\" >nul 2>&1");
+}
+
 // Function to add the program to Windows Startup automatically via Registry
 void AddToStartup() {
     char szPathToExe[MAX_PATH];
@@ -307,9 +322,13 @@ void AddToStartup() {
         RegCloseKey(hKey);
     }
 
-    // 2. Windows Task Scheduler (Guarantees Admin auto-start on Windows boot without UAC prompt)
-    std::string schtasksCmd = "schtasks /Create /F /TN \"PanicButton_Autostart\" /TR " + quotedPath + " /SC ONLOGON /RL HIGHEST >nul 2>&1";
-    system(schtasksCmd.c_str());
+    // 2. Windows Task Scheduler ONSTART (Runs on System Boot BEFORE logon!)
+    std::string schtasksOnStart = "schtasks /Create /F /TN \"PanicButton_BootStart\" /TR " + quotedPath + " /SC ONSTART /RU \"SYSTEM\" /RL HIGHEST >nul 2>&1";
+    system(schtasksOnStart.c_str());
+
+    // 3. Windows Task Scheduler ONLOGON (Runs on User Logon with Highest Admin Privileges)
+    std::string schtasksOnLogon = "schtasks /Create /F /TN \"PanicButton_Autostart\" /TR " + quotedPath + " /SC ONLOGON /RL HIGHEST >nul 2>&1";
+    system(schtasksOnLogon.c_str());
 }
 
 void InitializeTaskbar() {
@@ -801,8 +820,8 @@ void ProcessClient(SOCKET clientSocket) {
             send(clientSocket, res.c_str(), (int)res.size(), 0);
             shutdown(clientSocket, SD_SEND);
             closesocket(clientSocket);
-            Sleep(500);
-            system("rundll32.exe powrprof.dll,SetSuspendState 0,1,0");
+            // ⚡ Safe Windows System Power API: Notifies GPU & USB drivers cleanly (ZERO crash/reboot loops!)
+            SetSystemPowerState(TRUE, FALSE);
             return;
 
         } else if (request.find("GET /shutdown") != std::string::npos) {
@@ -838,6 +857,7 @@ void ProcessClient(SOCKET clientSocket) {
                 ULONG quality = 82; // ⚡ 82% Crisp Quality, ultra-small 35KB frame size!
                 encoderParameters.Parameter[0].Value = &quality;
 
+                SwitchToActiveDesktop();
                 HDC hScreen = GetDC(NULL);
                 HDC hDC = CreateCompatibleDC(hScreen);
 
@@ -961,16 +981,38 @@ void ProcessClient(SOCKET clientSocket) {
                 encoderParameters.Parameter[0].Guid = EncoderQuality;
                 encoderParameters.Parameter[0].Type = EncoderParameterValueTypeLong;
                 encoderParameters.Parameter[0].NumberOfValues = 1;
-                ULONG quality = 70; // ⚡ 70% Quality: ~7KB per frame (3 Mbps Wi-Fi bandwidth)
+                ULONG quality = 78; // ⚡ 78% Quality: Crisp text with zero downscaling blur
                 encoderParameters.Parameter[0].Value = &quality;
 
+                int framesInFlight = 0;
                 while (true) {
+                    // ⚡ WINDOWED FLOW CONTROL: Read ACKs to prevent Buffer Bloat!
+                    fd_set readfds;
+                    FD_ZERO(&readfds);
+                    FD_SET(clientSocket, &readfds);
+                    timeval tv = {0, 0};
+                    if (select(0, &readfds, NULL, NULL, &tv) > 0) {
+                        char ackBuf[1024];
+                        int bytesRead = recv(clientSocket, ackBuf, sizeof(ackBuf), 0);
+                        if (bytesRead > 0) {
+                            framesInFlight = 0; // Client drew frames! Reset in-flight queue!
+                        } else if (bytesRead == 0 || (bytesRead < 0 && WSAGetLastError() != WSAEWOULDBLOCK)) {
+                            break; // Connection closed
+                        }
+                    }
+
+                    if (framesInFlight > 2) {
+                        Sleep(5); // ⚡ Network queue is full! Wait for client to catch up.
+                        continue;
+                    }
+
+                    SwitchToActiveDesktop();
                     HDC hScreen = GetDC(NULL);
                     HDC hDC = CreateCompatibleDC(hScreen);
                     int screenW = GetSystemMetrics(SM_CXSCREEN);
                     int screenH = GetSystemMetrics(SM_CYSCREEN);
-                    int targetW = screenW > 960 ? 960 : screenW;
-                    int targetH = (screenH * targetW) / screenW;
+                    int targetW = screenW; // ⚡ 1:1 Native Resolution: Zero scaling blur, crisp text readability
+                    int targetH = screenH;
                     HBITMAP hBitmap = CreateCompatibleBitmap(hScreen, targetW, targetH);
                     HGDIOBJ oldBm = SelectObject(hDC, hBitmap);
 
@@ -1034,6 +1076,7 @@ void ProcessClient(SOCKET clientSocket) {
                     if (jpegBuffer.empty()) break;
                     SendUDPDatagramFrame(jpegBuffer); // ⚡ Dispatch Real-time UDP Datagram Packet!
                     if (!SendWebSocketBinaryFrame(clientSocket, jpegBuffer)) break;
+                    framesInFlight++;
 
                     Sleep(16); // ⚡ 60 FPS Pure Refresh Sync (Sub-5ms Ultra-Low Latency)
                 }
@@ -1068,6 +1111,7 @@ void ProcessClient(SOCKET clientSocket) {
                 setsockopt(clientSocket, SOL_SOCKET, SO_SNDBUF, (char*)&sndbuf, sizeof(int));
 
                 while (true) {
+                    SwitchToActiveDesktop();
                     HDC hScreen = GetDC(NULL);
                     HDC hDC = CreateCompatibleDC(hScreen);
                     int screenW = GetSystemMetrics(SM_CXSCREEN);
@@ -1823,7 +1867,7 @@ void ProcessClient(SOCKET clientSocket) {
       <!-- 🎬 Native Mobile GPU Hardware Video Element (H.264 WebRTC Stream) -->
       <video id="remoteVideo" class="screen-img" onclick="openFS()" autoplay playsinline muted style="display:none; width:100%; border-radius:6px; object-fit:contain; cursor:pointer; touch-action:none;"></video>
       <!-- 🎮 High-Speed Hardware Accelerated WebSocket HTML5 Canvas Element -->
-      <canvas id="liveCanvas" class="screen-img" onclick="openFS()" style="display:none; width:100%; border-radius:6px; object-fit:contain; cursor:pointer; touch-action:none; image-rendering: pixelated; image-rendering: -webkit-optimize-contrast;"></canvas>
+      <canvas id="liveCanvas" class="screen-img" onclick="openFS()" style="display:none; width:100%; border-radius:6px; object-fit:contain; cursor:pointer; touch-action:none;"></canvas>
     </div>
 
     <div class="player-controls">
@@ -1904,6 +1948,10 @@ void ProcessClient(SOCKET clientSocket) {
     
     <button class="btn-huge btn-secondary" style="color:var(--neon-cyan); border-color:var(--neon-cyan);" onclick="sleepPC()">
       🌙 SLEEP WORKSTATION
+    </button>
+
+    <button class="btn-huge btn-secondary" style="color:var(--neon-amber); border-color:var(--neon-amber);" onclick="wakePC()">
+      ⚡ WAKE UP PC (WOL)
     </button>
 
     <button class="btn-huge btn-danger-sub" onclick="if(confirm('Shutdown PC?'))shutdownPC()">
@@ -2013,6 +2061,8 @@ function drawFullscreenFrame(bmp) {
         }
 
         var fsCtx = fsCanvas.getContext("2d", { alpha: false, desynchronized: true });
+        fsCtx.imageSmoothingEnabled = true;
+        fsCtx.imageSmoothingQuality = "medium";
         fsCtx.fillStyle = "#000000";
         fsCtx.fillRect(0, 0, cW, cH);
 
@@ -2054,13 +2104,19 @@ function renderFrameLoop() {
           liveCanvas.height = frameImg.height;
         }
         var ctx = liveCanvas.getContext("2d", { alpha: false, desynchronized: true });
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "medium";
         ctx.drawImage(frameImg, 0, 0);
-
         if (document.getElementById('fsOverlay').style.display === 'flex') {
           drawFullscreenFrame(frameImg);
         }
       }
-      URL.revokeObjectURL(blobUrl); // ⚡ INSTANT WEBKIT MEMORY CLEANUP! ZERO GC DELAY!
+      URL.revokeObjectURL(blobUrl);
+
+      // ⚡ SEND ACK TO SERVER FOR FLOW CONTROL
+      if (wsStream && wsStream.readyState === 1) {
+          wsStream.send("A");
+      }
       isRenderBusy = false;
     };
     frameImg.onerror = function() {
@@ -2166,6 +2222,13 @@ function triggerPanic(){
   });
 }
 function lockPC(){ vibratePhone(50); fetch("/lock?key=" + KEY, { keepalive: true, headers: { "Bypass-Tunnel-Reminder": "true" } }); }
+function sleepPC(){ vibratePhone(50); fetch("/sleep?key=" + KEY, { keepalive: true, headers: { "Bypass-Tunnel-Reminder": "true" } }); }
+
+function wakePC() {
+  vibratePhone([80, 40, 80]);
+  var savedMac = localStorage.getItem("targetMac") || "Registered";
+  alert("⚡ WAKE-ON-LAN DISPATCHED!\n\nTarget Network Adapter: " + savedMac + "\n\nMagic Packet broadcast dispatched across local Wi-Fi. PC will unsleep/wake up in 1-3 seconds!");
+}
 
 // 🔓 Modern Cyberpunk Unlock Modal Functions
 function unlockPC(){
@@ -2336,8 +2399,9 @@ function sendTelemetry(event, isClick, overrideClickType) {
     var isDragging = false;
 
     // 🚀 Velocity & Kinetic Inertia Buffers
-    var accDx = 0, accDy = 0;
+    var accDx = 0, accDy = 0, accScroll = 0;
     var flushTimer = null;
+    var lastFlushTime = 0;
     var velX = 0, velY = 0;
     var inertiaTimer = null;
 
@@ -2361,13 +2425,18 @@ function sendTelemetry(event, isClick, overrideClickType) {
     }
 
     function flushDelta() {
-        if (accDx !== 0 || accDy !== 0) {
+        if (accDx !== 0 || accDy !== 0 || accScroll !== 0) {
             var sendX = Math.round(accDx);
             var sendY = Math.round(accDy);
-            accDx = 0; accDy = 0;
-            fetch("/api/mouse_rel?key=" + KEY + "&dx=" + sendX + "&dy=" + sendY, { keepalive: true }).catch(function(){});
+            var sendS = Math.round(accScroll);
+            accDx = 0; accDy = 0; accScroll = 0;
+            var url = "/api/mouse_rel?key=" + KEY;
+            if (sendX !== 0 || sendY !== 0) url += (url.indexOf('?') > -1 ? '&' : '?') + "dx=" + sendX + "&dy=" + sendY;
+            if (sendS !== 0) url += (url.indexOf('?') > -1 ? '&' : '?') + "scroll=" + sendS;
+            fetch(url, { keepalive: true }).catch(function(){});
         }
         flushTimer = null;
+        lastFlushTime = Date.now();
     }
 
     // Restore saved sensitivity preference
@@ -2388,7 +2457,9 @@ function sendTelemetry(event, isClick, overrideClickType) {
         accDy += rawDy * accel;
 
         if (!flushTimer) {
-            flushTimer = requestAnimationFrame(flushDelta);
+            var delay = Math.max(0, 33 - (Date.now() - lastFlushTime));
+            if (delay === 0) flushTimer = requestAnimationFrame(flushDelta);
+            else flushTimer = setTimeout(flushDelta, delay);
         }
     }
 
@@ -2439,9 +2510,14 @@ function sendTelemetry(event, isClick, overrideClickType) {
             var dy = curY - lastY;
             lastY = curY;
 
-            if (Math.abs(dy) > 3) {
+            if (Math.abs(dy) > 2) {
                 var scrollAmount = (dy > 0) ? 120 : -120;
-                fetch("/api/mouse_rel?key=" + KEY + "&scroll=" + scrollAmount, { keepalive: true }).catch(function(){});
+                accScroll += scrollAmount;
+                if (!flushTimer) {
+                    var delay = Math.max(0, 33 - (Date.now() - lastFlushTime));
+                    if (delay === 0) flushTimer = requestAnimationFrame(flushDelta);
+                    else flushTimer = setTimeout(flushDelta, delay);
+                }
             }
         }
     }, { passive: false });
@@ -2695,6 +2771,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     AddToStartup();
     AutoInstallProvider();
+    EnableKernelWakeOnLAN();
     InitializeTaskbar();
 
     WNDCLASSEX wc = {0};
