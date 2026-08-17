@@ -3,7 +3,9 @@
   "appName": "PANIC CTRL",
   "webDir": "www",
   "server": {
-    "url": "http://192.168.0.108:8080/?key=imran2024",
+    "allowNavigation": [
+      "*"
+    ],
     "cleartext": true
   },
   "android": {

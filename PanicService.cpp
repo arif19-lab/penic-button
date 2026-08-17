@@ -3,6 +3,7 @@
 #include <ws2tcpip.h>
 #include <wtsapi32.h>
 #include <userenv.h>
+#include <tlhelp32.h>
 #include <iostream>
 #include <string>
 
@@ -18,6 +19,12 @@
 SERVICE_STATUS g_SvcStatus;
 SERVICE_STATUS_HANDLE g_SvcStatusHandle;
 HANDLE g_SvcStopEvent = NULL;
+
+// ⚡ Minimal diagnostic logger - tells us why a service start failed (1053 etc)
+static void SvcLog(const char* msg) {
+    FILE* f = fopen("C:\\ProgramData\\PanicButton\\service_run.log", "a");
+    if (f) { fprintf(f, "[%lu] %s (err=%lu)\n", GetTickCount(), msg, GetLastError()); fflush(f); fclose(f); }
+}
 
 DWORD GetActiveSessionId() {
     DWORD sessionId = WTSGetActiveConsoleSessionId();
@@ -244,6 +251,25 @@ async function lockPC(){
     closesocket(clientSocket);
 }
 
+// 🛡️ True when PanicButton.exe (the logged-in user's app) is running.
+// PanicService must NOT steal port 8080 while PanicButton owns it - with
+// SO_REUSEADDR dual-bind, new connections go to the LAST listener, so a
+// service restart would hijack ALL traffic and serve only the lock screen.
+bool PanicButtonRunning() {
+    HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    if (snap == INVALID_HANDLE_VALUE) return false;
+    PROCESSENTRY32W pe;
+    pe.dwSize = sizeof(pe);
+    bool found = false;
+    if (Process32FirstW(snap, &pe)) {
+        do {
+            if (_wcsicmp(pe.szExeFile, L"PanicButton.exe") == 0) { found = true; break; }
+        } while (Process32NextW(snap, &pe));
+    }
+    CloseHandle(snap);
+    return found;
+}
+
 // ⚡ Lock Screen Listener & Master HTTP Proxy Engine (Runs inside Session 0 System)
 DWORD WINAPI MasterHttpListenerThread(LPVOID lpParam) {
     ConfigureFirewallRules();
@@ -253,6 +279,14 @@ DWORD WINAPI MasterHttpListenerThread(LPVOID lpParam) {
 
     SOCKET serverSocket = INVALID_SOCKET;
     while (serverSocket == INVALID_SOCKET && WaitForSingleObject(g_SvcStopEvent, 0) == WAIT_TIMEOUT) {
+        // 🛡️ Only bind when the user's PanicButton is NOT running (Windows logon
+        // screen / no user session). This makes port 8080 ownership deterministic:
+        // PanicButton always serves when the user is logged in, PanicService only
+        // at the logon screen.
+        if (PanicButtonRunning()) {
+            Sleep(2000);
+            continue;
+        }
         serverSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
         int opt = 1;
         setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, (const char*)&opt, sizeof(opt));
@@ -316,8 +350,12 @@ VOID WINAPI ServiceCtrlHandler(DWORD dwCtrl) {
 }
 
 VOID WINAPI MasterServiceMain(DWORD dwArgc, LPTSTR *lpszArgv) {
+    SvcLog("MasterServiceMain entered");
     g_SvcStatusHandle = RegisterServiceCtrlHandlerA(SERVICE_NAME, ServiceCtrlHandler);
-    if (!g_SvcStatusHandle) return;
+    if (!g_SvcStatusHandle) {
+        SvcLog("RegisterServiceCtrlHandlerA FAILED");
+        return;
+    }
 
     g_SvcStatus.dwServiceType = SERVICE_WIN32_OWN_PROCESS;
     g_SvcStatus.dwServiceSpecificExitCode = 0;
@@ -325,11 +363,13 @@ VOID WINAPI MasterServiceMain(DWORD dwArgc, LPTSTR *lpszArgv) {
 
     g_SvcStopEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
     if (g_SvcStopEvent == NULL) {
+        SvcLog("CreateEvent FAILED");
         ServiceReportStatus(SERVICE_STOPPED, NO_ERROR, 0);
         return;
     }
 
     ServiceReportStatus(SERVICE_RUNNING, NO_ERROR, 0);
+    SvcLog("Service reported RUNNING");
 
     // Launch Master HTTP Server for Lock Screen Access
     CreateThread(NULL, 0, MasterHttpListenerThread, NULL, 0, NULL);
@@ -386,6 +426,7 @@ void InstallMasterService() {
 }
 
 int main(int argc, char* argv[]) {
+    SvcLog("PanicService main() entered");
     if (argc > 1 && std::string(argv[1]) == "-install") {
         InstallMasterService();
         return 0;
@@ -396,6 +437,7 @@ int main(int argc, char* argv[]) {
         { NULL, NULL }
     };
     if (!StartServiceCtrlDispatcherA(ServiceTable)) {
+        SvcLog("StartServiceCtrlDispatcherA FAILED - falling back to install");
         InstallMasterService();
     }
     return 0;

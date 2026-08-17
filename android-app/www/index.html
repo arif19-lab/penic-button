@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>PANIC CTRL - Zero-Config Auto Launcher</title>
+<style>
+:root { --bg: #07090e; --panel: #111520; --neon: #00f0ff; --green: #00ff41; --pink: #ff0055; --text: #e2e8f0; }
+* { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+body { background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, sans-serif; min-height: 100vh; width: 100vw; overflow: hidden; display: flex; justify-content: center; align-items: center; }
+
+#loaderOverlay {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 24px;
+  text-align: center;
+  background: var(--bg);
+}
+.card { width: 100%; max-width: 440px; background: var(--panel); border: 1px solid rgba(0,240,255,0.3); border-radius: 20px; padding: 32px; box-shadow: 0 0 30px rgba(0,240,255,0.2); }
+.spinner { width: 50px; height: 50px; border: 4px solid rgba(0,240,255,0.1); border-top-color: var(--neon); border-radius: 50%; animation: spin 1s infinite linear; margin: 0 auto 20px; }
+@keyframes spin { 100% { transform: rotate(360deg); } }
+h1 { font-size: 20px; color: var(--neon); letter-spacing: 2px; margin-bottom: 10px; }
+p { font-size: 13px; color: #94a3b8; line-height: 1.5; margin-bottom: 16px; }
+.log { font-family: monospace; font-size: 12px; color: var(--green); background: #0a0d14; padding: 12px; border-radius: 8px; border: 1px solid rgba(0,255,65,0.2); word-break: break-all; margin-bottom: 16px; }
+.input-box { width: 100%; padding: 12px; background: #000; border: 1px solid var(--neon); border-radius: 10px; color: #fff; font-family: monospace; font-size: 13px; margin-bottom: 10px; text-align: center; }
+.btn { display: inline-block; width: 100%; padding: 14px; background: var(--neon); color: #000; font-weight: bold; border-radius: 10px; border: none; font-size: 14px; cursor: pointer; text-transform: uppercase; margin-top: 6px; }
+.btn-alt { background: transparent; color: #94a3b8; border: 1px solid #334155; margin-top: 8px; padding: 10px; font-size: 12px; border-radius: 8px; width: 100%; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<div id="loaderOverlay">
+  <div class="card">
+    <div class="spinner" id="spinner"></div>
+    <h1 id="title">⚡ AUTO-CONNECTING TO PC</h1>
+    <p id="subtext">Searching WiFi network for Panic Server...</p>
+    <div class="log" id="logBox">Detecting PC server endpoint...</div>
+    
+    <div id="manualConfigBox" style="display:none; margin-top: 10px;">
+      <input type="text" id="ipInput" class="input-box" placeholder="PC IP (e.g. 192.168.0.106:8080)">
+      <button class="btn" style="background:var(--green);" onclick="saveLocalIp()">📡 CONNECT DIRECTLY</button>
+    </div>
+    
+    <button class="btn-alt" style="display:none;" id="retryBtn" onclick="autoDiscoverAndConnect()">🔄 RETRY AUTO DISCOVERY</button>
+    <button class="btn-alt" onclick="showManualInput()">⚙️ MANUAL IP INPUT</button>
+  </div>
+</div>
+
+<script>
+const SECRET_KEY = "imran2024";
+const PORT = 8080;
+let discoveryActive = false;
+
+function log(msg) {
+  document.getElementById('logBox').innerText = msg;
+}
+
+function showManualInput() {
+  document.getElementById('manualConfigBox').style.display = 'block';
+}
+
+function launchFullDashboard(url) {
+  discoveryActive = false;
+  log(`✅ Connected! Launching: ${url}`);
+  let finalUrl = url;
+  if (!finalUrl.includes("key=")) {
+    finalUrl += (finalUrl.includes("?") ? "&" : "/?") + `key=${SECRET_KEY}`;
+  }
+  // Direct Native Window Navigation to Master Dashboard
+  window.location.href = finalUrl;
+}
+
+// Single fast probe
+function probeHost(ip, timeoutMs) {
+  return new Promise((resolve, reject) => {
+    let target = `http://${ip}:${PORT}/api/status?key=${SECRET_KEY}`;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs || 1200);
+
+    fetch(target, { method: 'GET', signal: controller.signal, mode: 'cors' })
+      .then(res => {
+        clearTimeout(timer);
+        if (res.ok) resolve(`http://${ip}:${PORT}`);
+        else reject();
+      })
+      .catch(() => {
+        // Fallback probe with no-cors in case of header mismatch
+        const c2 = new AbortController();
+        const t2 = setTimeout(() => c2.abort(), 600);
+        fetch(`http://${ip}:${PORT}/?key=${SECRET_KEY}`, { method: 'HEAD', signal: c2.signal, mode: 'no-cors' })
+          .then(() => { clearTimeout(t2); resolve(`http://${ip}:${PORT}`); })
+          .catch(() => { clearTimeout(t2); reject(); });
+      });
+  });
+}
+
+// Parallel chunk scanner for fast subnet sweep
+async function scanSubnet(basePrefix, startIdx, endIdx) {
+  const batchSize = 20;
+  for (let i = startIdx; i <= endIdx; i += batchSize) {
+    if (!discoveryActive) return;
+    const batch = [];
+    for (let j = i; j < Math.min(i + batchSize, endIdx + 1); j++) {
+      batch.push(`${basePrefix}.${j}`);
+    }
+    log(`🔍 Scanning ${basePrefix}.${i}-${Math.min(i + batchSize - 1, endIdx)}...`);
+    try {
+      const foundUrl = await Promise.any(batch.map(ip => probeHost(ip, 1000)));
+      if (foundUrl) {
+        localStorage.setItem('panic_local_ip', foundUrl.replace('http://', ''));
+        launchFullDashboard(foundUrl);
+        return true;
+      }
+    } catch(e) {}
+  }
+  return false;
+}
+
+async function autoDiscoverAndConnect() {
+  discoveryActive = true;
+  document.getElementById('spinner').style.display = 'block';
+  document.getElementById('retryBtn').style.display = 'none';
+  log("🔍 Checking saved PC IP...");
+
+  // Phase 1: Try Saved / Known IPs first (Super-Fast: <500ms)
+  const quickList = [
+    localStorage.getItem('panic_local_ip') || "",
+    "192.168.0.106:8080",
+    "192.168.1.106:8080",
+    "10.0.2.2:8080"
+  ].filter(Boolean);
+
+  for (let host of quickList) {
+    let cleanIp = host.replace(/^http:\/\//, '').replace(/:.*/, '');
+    try {
+      log(`📡 Checking ${cleanIp}...`);
+      let foundUrl = await probeHost(cleanIp, 800);
+      localStorage.setItem('panic_local_ip', `${cleanIp}:${PORT}`);
+      launchFullDashboard(foundUrl);
+      return;
+    } catch(e) {}
+  }
+
+  // Phase 2: Full Automatic Subnet Scan (if PC IP changed due to router restart)
+  log("🔄 IP changed. Auto-scanning WiFi subnet...");
+  
+  // Scan 192.168.0.x (most common home router range)
+  let found = await scanSubnet("192.168.0", 2, 254);
+  if (found) return;
+
+  // Scan 192.168.1.x (second most common router range)
+  found = await scanSubnet("192.168.1", 2, 254);
+  if (found) return;
+
+  // Scan 10.0.0.x
+  found = await scanSubnet("10.0.0", 2, 254);
+  if (found) return;
+
+  // If all failed, show manual IP entry
+  document.getElementById('spinner').style.display = 'none';
+  document.getElementById('retryBtn').style.display = 'block';
+  document.getElementById('manualConfigBox').style.display = 'block';
+  log("⚠️ PC not found automatically. Check WiFi or enter IP manually.");
+}
+
+function saveLocalIp() {
+  const ip = document.getElementById('ipInput').value.trim();
+  if (ip) {
+    let host = ip.replace(/^http:\/\//, '').replace(/\/$/, '');
+    if (!host.includes(':')) host += `:${PORT}`;
+    localStorage.setItem('panic_local_ip', host);
+    autoDiscoverAndConnect();
+  }
+}
+
+// Auto-start on app launch
+autoDiscoverAndConnect();
+</script>
+</body>
+</html>

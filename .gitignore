@@ -1,5 +1,25 @@
+# Binary & Build artifacts
 cloudflared.exe
 *.o
 *.log
-PanicButton_*.exe
+*.tmp
+build_*.txt
+*.mp4
+
+# Node & JS dependencies
+node_modules/
+**/node_modules/
+
+# Android Build artifacts & Gradle cache
+.gradle/
+**/.gradle/
+**/build/
+android-app/android/.gradle/
+android-app/android/app/build/
+android-app/android/build/
+android-app/app-debug.apk
+android-app/android/build_output*.txt
+
+# IDE & Editor files
 .vscode/
+.idea/
