@@ -3710,6 +3710,14 @@ void ProcessClient(SOCKET clientSocket) {
         <span id="geminiStatusPill" class="gemini-status-pill status-disc">DISCONNECTED</span>
       </div>
       <div style="display:flex; align-items:center; gap:6px;">
+        <select id="geminiVoiceSelect" onchange="changeGeminiVoice(this.value)" style="background:#030816; color:var(--neon-cyan); border:1px solid rgba(0,240,255,0.4); border-radius:4px; font-family:'Share Tech Mono',monospace; font-size:10px; padding:3px 6px; outline:none; cursor:pointer;">
+          <option value="Puck">🎙️ Puck (Natural Male - Default)</option>
+          <option value="Aoede">🎙️ Aoede (Smooth Female)</option>
+          <option value="Charon">🎙️ Charon (Deep Male)</option>
+          <option value="Fenrir">🎙️ Fenrir (Dynamic Male)</option>
+          <option value="Kore">🎙️ Kore (Warm Female)</option>
+          <option value="Zephyr">🎙️ Zephyr (Calm Bright)</option>
+        </select>
         <button class="gemini-btn-icon" onclick="toggleGeminiKeyModal()" title="Gemini API Key">🔑 KEY</button>
         <button class="gemini-btn-icon" onclick="toggleGeminiTerminal()" title="Toggle Sandbox Terminal">📟 LOGS</button>
         <button id="geminiConnectBtn" class="gemini-btn-connect" onclick="toggleGeminiLiveConnection()">⚡ CONNECT AI</button>
@@ -5346,6 +5354,22 @@ function fetchLocalGeminiKey(callback) {
 }
 fetchLocalGeminiKey();
 
+function changeGeminiVoice(v) {
+  localStorage.setItem("gemini_voice", v);
+  appendGeminiLog("sys", "[VOICE] Voice persona changed to: " + v);
+}
+
+function initVoiceDropdown() {
+  var v = localStorage.getItem("gemini_voice") || "Puck";
+  var sel = document.getElementById("geminiVoiceSelect");
+  if (sel) sel.value = v;
+}
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initVoiceDropdown);
+} else {
+  initVoiceDropdown();
+}
+
 function toggleGeminiKeyModal() {
   var m = document.getElementById("geminiKeyModal");
   if (!m) return;
@@ -5630,6 +5654,7 @@ function connectGeminiLive() {
       }
     ];
 
+    var currentVoice = localStorage.getItem("gemini_voice") || "Puck";
     var setupMsg = {
       setup: {
         model: "models/gemini-3.1-flash-live-preview",
@@ -5638,7 +5663,7 @@ function connectGeminiLive() {
           speechConfig: {
             voiceConfig: {
               prebuiltVoiceConfig: {
-                voiceName: "Zephyr"
+                voiceName: currentVoice
               }
             }
           }
