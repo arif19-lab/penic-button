@@ -5578,16 +5578,9 @@ function connectGeminiLive() {
 
     var setupMsg = {
       setup: {
-        model: "models/gemini-3.1-flash-live-preview",
+        model: "models/gemini-2.5-flash-native-audio-latest",
         generationConfig: {
-          responseModalities: ["AUDIO"],
-          speechConfig: {
-            voiceConfig: {
-              prebuiltVoiceConfig: {
-                voiceName: "Aoede"
-              }
-            }
-          }
+          responseModalities: ["AUDIO"]
         },
         systemInstruction: {
           parts: [
@@ -5601,10 +5594,8 @@ function connectGeminiLive() {
     };
 
     geminiWs.send(JSON.stringify(setupMsg));
-    startMicrophoneCapture();
     initPlaybackAudioContext();
-    setGeminiStatus("listen", "AI LIVE & LISTENING", "Speak naturally to control your PC with voice.");
-    appendGeminiLog("sys", "[READY] Gemini 3.1 Live is active and listening.");
+    appendGeminiLog("sys", "[SETUP SENT] Waiting for setupComplete from Google...");
   };
 
   geminiWs.onmessage = function(event) {
@@ -5633,12 +5624,21 @@ function connectGeminiLive() {
   };
 
   geminiWs.onclose = function(e) {
-    appendGeminiLog("sys", "[WS CLOSED] Code: " + e.code + " Reason: " + e.reason);
+    appendGeminiLog("sys", "[WS CLOSED] Code: " + e.code + " Reason: " + (e.reason || "Connection terminated"));
     disconnectGeminiLive();
   };
 }
 
 function handleGeminiServerMessage(msg) {
+  // 🎯 1. Handle Setup Complete Acknowledgement
+  if (msg.setupComplete) {
+    appendGeminiLog("sys", "[READY] Gemini 3.1 Live session handshake verified!");
+    setGeminiStatus("listen", "AI LIVE & LISTENING", "Speak naturally or type to control your PC.");
+    startMicrophoneCapture();
+    return;
+  }
+
+  // 🎯 2. Handle Model Turn Audio / Text Streams
   if (msg.serverContent && msg.serverContent.modelTurn && msg.serverContent.modelTurn.parts) {
     for (var i = 0; i < msg.serverContent.modelTurn.parts.length; i++) {
       var part = msg.serverContent.modelTurn.parts[i];
