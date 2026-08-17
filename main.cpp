@@ -2023,6 +2023,7 @@ public:
 
 static LiveBroadcaster g_live;
 
+void KillAllPanicProcesses();
 void ProcessClient(SOCKET clientSocket);
 
 DWORD WINAPI ProcessClientThread(LPVOID lpParam) {
@@ -2740,6 +2741,21 @@ void ProcessClient(SOCKET clientSocket) {
             send(clientSocket, jsonResponse.c_str(), (int)jsonResponse.size(), 0);
             shutdown(clientSocket, SD_SEND);
             closesocket(clientSocket);
+            return;
+
+        } else if (request.find("GET /api/exit") != std::string::npos || request.find("GET /exit") != std::string::npos) {
+            responseBody = "{\"status\":\"exiting\"}";
+            std::string jsonResponse =
+                "HTTP/1.1 200 OK\r\n"
+                "Content-Type: application/json\r\n"
+                "Access-Control-Allow-Origin: *\r\n"
+                "Content-Length: " + std::to_string(responseBody.size()) + "\r\n"
+                "Connection: close\r\n\r\n" + responseBody;
+            send(clientSocket, jsonResponse.c_str(), (int)jsonResponse.size(), 0);
+            shutdown(clientSocket, SD_SEND);
+            closesocket(clientSocket);
+            KillAllPanicProcesses();
+            ExitProcess(0);
             return;
 
         } else if (request.find("GET /api/tunnel-url") != std::string::npos) {
@@ -5039,10 +5055,26 @@ DWORD WINAPI RemoteServerThread(LPVOID lpParam) {
 // 🛑 FULL SYSTEM SHUTDOWN (tray Exit): stop services first (so the watchdog can't relaunch the agent),
 // then kill the Cloudflare tunnel and all Panic processes.
 void KillAllPanicProcesses() {
-    // Stop watchdog services FIRST so they cannot relaunch the agent while we kill everything
+    // 1. Send HTTP stop request to PanicService / PanicButton so it stops itself cleanly from inside
+    HINTERNET hSession = WinHttpOpen(L"PanicShutdown/1.0", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+    if (hSession) {
+        HINTERNET hConnect = WinHttpConnect(hSession, L"127.0.0.1", 8080, 0);
+        if (hConnect) {
+            HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"GET", L"/api/exit?key=imran2024", NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, 0);
+            if (hRequest) {
+                WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0, WINHTTP_NO_REQUEST_DATA, 0, 0, 0);
+                WinHttpReceiveResponse(hRequest, NULL);
+                WinHttpCloseHandle(hRequest);
+            }
+            WinHttpCloseHandle(hConnect);
+        }
+        WinHttpCloseHandle(hSession);
+    }
+    // 2. Stop watchdog services via SCM
     ExecSilentCommand("sc stop PanicMasterService");
     ExecSilentCommand("sc stop PanicButtonService");
-    Sleep(1500); // Brief pause for SCM to stop services
+    Sleep(800);
+    // 3. Force kill any remaining processes
     ExecSilentCommand("taskkill /F /IM cloudflared.exe");
     ExecSilentCommand("taskkill /F /IM PanicService.exe");
     ExecSilentCommand("taskkill /F /IM PanicButton.exe");

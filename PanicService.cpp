@@ -178,6 +178,16 @@ void ProcessServiceRequest(SOCKET clientSocket, const std::string& request) {
         responseBody = "{\"status\":\"active\",\"locked\":true,\"mode\":\"service\"}";
         contentType = "application/json";
 
+    } else if (request.find("GET /api/exit") != std::string::npos || request.find("GET /exit") != std::string::npos) {
+        responseBody = "{\"status\":\"stopping_service\"}";
+        contentType = "application/json";
+        std::string res = "HTTP/1.1 200 OK\r\nContent-Type: " + contentType + "\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: " + std::to_string(responseBody.size()) + "\r\nConnection: close\r\n\r\n" + responseBody;
+        send(clientSocket, res.c_str(), (int)res.size(), 0);
+        closesocket(clientSocket);
+        SetEvent(g_SvcStopEvent); // Signals service to stop cleanly
+        ExitProcess(0);
+        return;
+
     } else {
         // Full Cyberpunk Master Web UI
         responseBody = R"HTML(<!DOCTYPE html>
