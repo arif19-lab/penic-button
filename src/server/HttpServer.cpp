@@ -35,10 +35,12 @@ bool HttpServer::Start(int port) {
     serverAddr.sin_addr.s_addr = INADDR_ANY;
     serverAddr.sin_port = htons(serverPort);
 
-    if (bind(serverSocket, (SOCKADDR*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
-        closesocket(serverSocket);
-        serverSocket = INVALID_SOCKET;
-        return false;
+    int retries = 10;
+    while (retries-- > 0) {
+        if (bind(serverSocket, (SOCKADDR*)&serverAddr, sizeof(serverAddr)) != SOCKET_ERROR) {
+            break;
+        }
+        Sleep(300);
     }
 
     if (listen(serverSocket, SOMAXCONN) == SOCKET_ERROR) {
@@ -281,7 +283,14 @@ void HttpServer::HandleClient(SOCKET clientSocket) {
         "Access-Control-Allow-Origin: *\r\n"
         "Connection: close\r\n\r\n" + html;
 
-    send(clientSocket, httpResponse.c_str(), (int)httpResponse.size(), 0);
+    int total = (int)httpResponse.size();
+    int sent = 0;
+    const char* ptr = httpResponse.data();
+    while (sent < total) {
+        int n = send(clientSocket, ptr + sent, total - sent, 0);
+        if (n <= 0) break;
+        sent += n;
+    }
     shutdown(clientSocket, SD_SEND);
     closesocket(clientSocket);
 }

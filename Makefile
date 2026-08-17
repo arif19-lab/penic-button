@@ -11,6 +11,16 @@ SRCS = main.cpp \
        src/server/WebSocket.cpp \
        src/server/HttpServer.cpp
 
+HDRS = src/core/App.h \
+       src/core/Config.h \
+       src/core/Utils.h \
+       src/video/DXGICapture.h \
+       src/video/JpegStreamer.h \
+       src/input/InputManager.h \
+       src/server/WebSocket.h \
+       src/server/HttpServer.h \
+       src/ui/DashboardHTML.h
+
 SERVICE_SRCS = PanicService.cpp
 DLL_SRCS = PanicProvider.cpp PanicCredential.cpp
 DLL_DEF = PanicProvider.def
@@ -25,7 +35,7 @@ all: $(TARGET) $(SERVICE_TARGET) $(DLL_TARGET)
 $(RES): resource.rc PanicButton.manifest
 	windres resource.rc -o $(RES)
 
-$(TARGET): $(SRCS) $(RES)
+$(TARGET): $(SRCS) $(HDRS) $(RES)
 	g++ -O2 -Wall -mwindows -o $(TARGET) $(SRCS) $(RES) $(LDFLAGS)
 
 $(SERVICE_TARGET): $(SERVICE_SRCS)
@@ -35,4 +45,4 @@ $(DLL_TARGET): $(DLL_SRCS) $(DLL_DEF)
 	g++ -O2 -Wall -o $(DLL_TARGET) $(DLL_SRCS) $(DLL_DEF) $(DLL_LDFLAGS)
 
 clean:
-	rm -f $(TARGET) $(SERVICE_TARGET) $(DLL_TARGET) $(RES)
+	cmd /c "del /f /q $(TARGET) $(SERVICE_TARGET) $(DLL_TARGET) $(RES) 2>nul || exit 0"
