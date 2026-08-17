@@ -5867,6 +5867,9 @@ function startMicrophoneCapture() {
 
       audioInputProcessor.onaudioprocess = function(e) {
         if (!geminiWs || geminiWs.readyState !== WebSocket.OPEN) return;
+        // 🛡️ DUCKING: If Gemini is actively speaking and user isn't shouting over it, don't feedback speaker noise!
+        if (blobState.status === "speak" && blobState.micLevel < 0.25) return;
+
         var inputData = e.inputBuffer.getChannelData(0);
         var downsampled = downsampleBuffer(inputData, sampleRate, 16000);
         var pcm16 = convertFloat32ToInt16(downsampled);
@@ -5931,12 +5934,14 @@ function arrayBufferToBase64(buffer) {
 
 function initPlaybackAudioContext() {
   if (!audioPlaybackCtx) {
-    audioPlaybackCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+    audioPlaybackCtx = new (window.AudioContext || window.webkitAudioContext)();
   }
   if (audioPlaybackCtx.state === "suspended") {
     audioPlaybackCtx.resume();
   }
-  nextPlayTime = audioPlaybackCtx.currentTime;
+  if (nextPlayTime < audioPlaybackCtx.currentTime) {
+    nextPlayTime = audioPlaybackCtx.currentTime + 0.05;
+  }
 }
 
 function playPcm24kBase64Chunk(base64Data) {
@@ -5953,9 +5958,10 @@ function playPcm24kBase64Chunk(base64Data) {
     float32[j] = int16[j] / 32768.0;
   }
 
+  // Smooth audio reaction for blob visualizer
   var sum = 0;
   for (var k = 0; k < float32.length; k += 4) sum += Math.abs(float32[k]);
-  blobState.geminiLevel = Math.min(1, (sum / (float32.length / 4)) * 3);
+  blobState.geminiLevel = Math.min(1, (sum / (float32.length / 4)) * 3.5);
 
   var audioBuf = audioPlaybackCtx.createBuffer(1, float32.length, 24000);
   audioBuf.copyToChannel(float32, 0);
@@ -5964,12 +5970,17 @@ function playPcm24kBase64Chunk(base64Data) {
   source.buffer = audioBuf;
   source.connect(audioPlaybackCtx.destination);
 
-  var startTime = Math.max(audioPlaybackCtx.currentTime, nextPlayTime);
-  source.start(startTime);
-  nextPlayTime = startTime + audioBuf.duration;
+  // ⚡ Seamless continuous jitter buffer scheduling (ZERO gaps, pops, or stutters!)
+  if (nextPlayTime < audioPlaybackCtx.currentTime) {
+    nextPlayTime = audioPlaybackCtx.currentTime + 0.06; // 60ms smooth lookahead
+  }
+  source.start(nextPlayTime);
+  nextPlayTime += audioBuf.duration;
 
   source.onended = function() {
-    blobState.geminiLevel = 0;
+    if (audioPlaybackCtx && audioPlaybackCtx.currentTime >= nextPlayTime - 0.05) {
+      blobState.geminiLevel = 0;
+    }
   };
 }
 
