@@ -5952,10 +5952,14 @@ function playPcm24kBase64Chunk(base64Data) {
   for (var i = 0; i < len; i++) {
     bytes[i] = binary.charCodeAt(i);
   }
-  var int16 = new Int16Array(bytes.buffer);
-  var float32 = new Float32Array(int16.length);
-  for (var j = 0; j < int16.length; j++) {
-    float32[j] = int16[j] / 32768.0;
+
+  // 🎯 Bit-exact Little-Endian 16-bit PCM to Float32 conversion (pure HD studio quality)
+  var dataView = new DataView(bytes.buffer);
+  var numSamples = Math.floor(len / 2);
+  var float32 = new Float32Array(numSamples);
+  for (var j = 0; j < numSamples; j++) {
+    var int16 = dataView.getInt16(j * 2, true); // true = Little-Endian
+    float32[j] = int16 / 32768.0;
   }
 
   // Smooth audio reaction for blob visualizer
