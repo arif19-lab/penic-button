@@ -5634,7 +5634,14 @@ function connectGeminiLive() {
       setup: {
         model: "models/gemini-2.5-flash-native-audio-latest",
         generationConfig: {
-          responseModalities: ["AUDIO"]
+          responseModalities: ["AUDIO"],
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: {
+                voiceName: "Zephyr"
+              }
+            }
+          }
         },
         systemInstruction: {
           parts: [
@@ -5686,13 +5693,23 @@ function connectGeminiLive() {
 function handleGeminiServerMessage(msg) {
   // 🎯 1. Handle Setup Complete Acknowledgement
   if (msg.setupComplete) {
-    appendGeminiLog("sys", "[READY] Gemini 3.1 Live session handshake verified!");
-    setGeminiStatus("listen", "AI LIVE & LISTENING", "Speak naturally or type to control your PC.");
+    appendGeminiLog("sys", "[READY] Gemini Live AI session verified & active!");
+    setGeminiStatus("listen", "AI LIVE & LISTENING", "Speak naturally or type in terminal to control PC.");
     startMicrophoneCapture();
     return;
   }
 
-  // 🎯 2. Handle Model Turn Audio / Text Streams
+  // 🎯 2. Handle Interruption (Barge-in)
+  if (msg.serverContent && msg.serverContent.interrupted) {
+    appendGeminiLog("sys", "[INTERRUPT] User spoke. Cutting off playback.");
+    if (audioPlaybackCtx) {
+      nextPlayTime = audioPlaybackCtx.currentTime;
+    }
+    setGeminiStatus("listen", "AI LIVE & LISTENING", "Listening to user...");
+    return;
+  }
+
+  // 🎯 3. Handle Model Turn Audio / Text Streams
   if (msg.serverContent && msg.serverContent.modelTurn && msg.serverContent.modelTurn.parts) {
     for (var i = 0; i < msg.serverContent.modelTurn.parts.length; i++) {
       var part = msg.serverContent.modelTurn.parts[i];
