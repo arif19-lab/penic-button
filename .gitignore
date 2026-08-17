@@ -5,6 +5,8 @@ cloudflared.exe
 *.tmp
 build_*.txt
 *.mp4
+*key*.txt
+gemini_key.txt
 
 # Node & JS dependencies
 node_modules/

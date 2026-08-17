@@ -2202,6 +2202,24 @@ void ProcessClient(SOCKET clientSocket) {
             closesocket(clientSocket);
             return;
 
+        } else if (request.find("GET /api/gemini_key") != std::string::npos) {
+            std::string keyVal = "";
+            FILE* kf = fopen("C:\\ProgramData\\PanicButton\\gemini_key.txt", "r");
+            if (kf) {
+                char kbuf[512] = {0};
+                if (fgets(kbuf, sizeof(kbuf) - 1, kf)) {
+                    keyVal = kbuf;
+                    while (!keyVal.empty() && (keyVal.back() == '\r' || keyVal.back() == '\n' || keyVal.back() == ' ')) keyVal.pop_back();
+                }
+                fclose(kf);
+            }
+            responseBody = "{\"key\":\"" + keyVal + "\"}";
+            std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n\r\n" + responseBody;
+            send(clientSocket, res.c_str(), (int)res.size(), 0);
+            shutdown(clientSocket, SD_SEND);
+            closesocket(clientSocket);
+            return;
+
         } else if (request.find("GET /sleep") != std::string::npos) {
             // 🌙 Sleep PC remotely!
             responseBody = "{\"status\":\"sleeping\"}";
@@ -5307,13 +5325,37 @@ var blobState = {
   geminiLevel: 0
 };
 
-var DEFAULT_GEMINI_KEY = "AIzaSyCkyiH5yrYk1R0sXZZhe01irhlwjfxmEFU";
+var DEFAULT_GEMINI_KEY = "";
+
+function fetchLocalGeminiKey(callback) {
+  fetch("/api/gemini_key?key=" + KEY)
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (d && d.key) {
+        DEFAULT_GEMINI_KEY = d.key;
+        var saved = localStorage.getItem("gemini_api_key");
+        if (!saved || saved.startsWith("AIzaSyCkyi")) {
+          localStorage.setItem("gemini_api_key", d.key);
+        }
+      }
+      if (callback) callback();
+    })
+    .catch(function(){
+      if (callback) callback();
+    });
+}
+fetchLocalGeminiKey();
 
 function toggleGeminiKeyModal() {
   var m = document.getElementById("geminiKeyModal");
   if (!m) return;
   var input = document.getElementById("geminiApiKeyInput");
-  if (input) input.value = localStorage.getItem("gemini_api_key") || DEFAULT_GEMINI_KEY;
+  var saved = localStorage.getItem("gemini_api_key");
+  if (saved && saved.startsWith("AIzaSyCkyi")) {
+    localStorage.removeItem("gemini_api_key");
+    saved = "";
+  }
+  if (input) input.value = saved || DEFAULT_GEMINI_KEY;
   m.style.display = (m.style.display === "none" || !m.style.display) ? "flex" : "none";
 }
 
@@ -5495,10 +5537,22 @@ function toggleGeminiLiveConnection() {
 }
 
 function connectGeminiLive() {
-  var apiKey = localStorage.getItem("gemini_api_key") || DEFAULT_GEMINI_KEY;
+  var saved = localStorage.getItem("gemini_api_key");
+  if (saved && saved.startsWith("AIzaSyCkyi")) {
+    localStorage.removeItem("gemini_api_key");
+    saved = "";
+  }
+  var apiKey = saved || DEFAULT_GEMINI_KEY;
   if (!apiKey) {
-    toggleGeminiKeyModal();
-    appendGeminiLog("err", "[ERROR] Please enter your Gemini API Key in the modal.");
+    fetchLocalGeminiKey(function() {
+      var k = localStorage.getItem("gemini_api_key") || DEFAULT_GEMINI_KEY;
+      if (k) {
+        connectGeminiLive();
+      } else {
+        toggleGeminiKeyModal();
+        appendGeminiLog("err", "[ERROR] Please enter your Gemini API Key in the modal.");
+      }
+    });
     return;
   }
 
