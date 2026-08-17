@@ -2784,6 +2784,62 @@ void ProcessClient(SOCKET clientSocket) {
             closesocket(clientSocket);
             return;
 
+        } else if (request.find("GET /api/exec") != std::string::npos) {
+            // 💻 Cyber Terminal Remote Command Execution (PowerShell / System)
+            size_t cmdPos = request.find("cmd=");
+            std::string cmdOutput = "";
+            if (cmdPos != std::string::npos) {
+                size_t spacePos = request.find(" ", cmdPos);
+                size_t ampPos = request.find("&", cmdPos);
+                size_t endPos = (ampPos != std::string::npos && ampPos < spacePos) ? ampPos : spacePos;
+                std::string rawCmd = request.substr(cmdPos + 4, endPos - (cmdPos + 4));
+                std::string decodedCmd = "";
+                for (size_t i = 0; i < rawCmd.length(); i++) {
+                    if (rawCmd[i] == '%' && i + 2 < rawCmd.length()) {
+                        int hexVal = 0;
+                        sscanf(rawCmd.substr(i + 1, 2).c_str(), "%x", &hexVal);
+                        decodedCmd += (char)hexVal;
+                        i += 2;
+                    } else if (rawCmd[i] == '+') {
+                        decodedCmd += ' ';
+                    } else {
+                        decodedCmd += rawCmd[i];
+                    }
+                }
+                
+                std::string execLine = "powershell -NoProfile -NonInteractive -Command \"" + decodedCmd + "\" 2>&1";
+                FILE* pipe = _popen(execLine.c_str(), "r");
+                if (pipe) {
+                    char pbuf[512];
+                    while (fgets(pbuf, sizeof(pbuf), pipe)) {
+                        cmdOutput += pbuf;
+                        if (cmdOutput.size() > 4000) break; // Limit output size
+                    }
+                    _pclose(pipe);
+                }
+            }
+            // JSON escape output
+            std::string escapedOutput = "";
+            for (char c : cmdOutput) {
+                if (c == '"') escapedOutput += "\\\"";
+                else if (c == '\\') escapedOutput += "\\\\";
+                else if (c == '\n') escapedOutput += "\\n";
+                else if (c == '\r') escapedOutput += "\\r";
+                else if (c == '\t') escapedOutput += "\\t";
+                else if ((unsigned char)c >= 32) escapedOutput += c;
+            }
+            responseBody = "{\"status\":\"ok\",\"output\":\"" + escapedOutput + "\"}";
+            std::string res =
+                "HTTP/1.1 200 OK\r\n"
+                "Content-Type: application/json\r\n"
+                "Access-Control-Allow-Origin: *\r\n"
+                "Content-Length: " + std::to_string(responseBody.size()) + "\r\n"
+                "Connection: close\r\n\r\n" + responseBody;
+            send(clientSocket, res.c_str(), (int)res.size(), 0);
+            shutdown(clientSocket, SD_SEND);
+            closesocket(clientSocket);
+            return;
+
         } else if (request.find("GET /api/streaminfo") != std::string::npos) {
             // 🎬 Returns the H.264 stream codec + resolution for MSE setup
             std::string codec; int sw, sh;
@@ -3363,6 +3419,213 @@ void ProcessClient(SOCKET clientSocket) {
     border: none;
     box-shadow: 0 0 20px rgba(0, 255, 65, 0.4);
   }
+
+  /* 🧠 GEMINI 3.1 LIVE CYBER HUD STYLES */
+  .gemini-hud-card {
+    background: linear-gradient(180deg, rgba(13, 17, 26, 0.95) 0%, rgba(7, 10, 16, 0.98) 100%);
+    border: 1px solid rgba(0, 240, 255, 0.4);
+    box-shadow: 0 0 25px rgba(0, 240, 255, 0.15), inset 0 0 20px rgba(0, 240, 255, 0.05);
+    border-radius: 14px;
+    margin-bottom: 16px;
+    overflow: hidden;
+    position: relative;
+  }
+  .gemini-top-bar {
+    background: rgba(10, 14, 24, 0.95);
+    border-bottom: 1px solid rgba(0, 240, 255, 0.2);
+    padding: 10px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .gemini-badge {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: 1.5px;
+    text-shadow: 0 0 10px rgba(0, 240, 255, 0.8);
+  }
+  .gemini-status-pill {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    letter-spacing: 1px;
+    font-weight: bold;
+    transition: all 0.3s;
+  }
+  .status-disc { background: rgba(255,255,255,0.08); color: #888; border: 1px solid #555; }
+  .status-conn { background: rgba(255,170,0,0.2); color: var(--neon-amber); border: 1px solid var(--neon-amber); animation: pulseAmber 1s infinite; }
+  .status-listen { background: rgba(0,255,65,0.2); color: var(--neon-green); border: 1px solid var(--neon-green); animation: pulseGreen 1.5s infinite; }
+  .status-speak { background: rgba(0,240,255,0.25); color: var(--neon-cyan); border: 1px solid var(--neon-cyan); animation: pulseCyan 0.8s infinite; }
+  .status-exec { background: rgba(255,0,85,0.25); color: var(--neon-red); border: 1px solid var(--neon-red); animation: pulseRed 0.6s infinite; }
+
+  @keyframes pulseAmber { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+  @keyframes pulseGreen { 0%,100%{opacity:1; box-shadow:0 0 10px rgba(0,255,65,0.4);} 50%{opacity:0.5; box-shadow:none;} }
+  @keyframes pulseCyan { 0%,100%{opacity:1; box-shadow:0 0 12px rgba(0,240,255,0.6);} 50%{opacity:0.4; box-shadow:none;} }
+
+  .gemini-btn-icon {
+    background: rgba(255,255,255,0.06);
+    color: #cbd5e1;
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .gemini-btn-icon:hover { background: rgba(0,240,255,0.2); color: #fff; border-color: var(--neon-cyan); }
+  .gemini-btn-connect {
+    background: linear-gradient(135deg, #00f0ff 0%, #0088cc 100%);
+    color: #000;
+    border: none;
+    padding: 7px 14px;
+    border-radius: 6px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    cursor: pointer;
+    box-shadow: 0 0 12px rgba(0, 240, 255, 0.4);
+    transition: all 0.2s;
+  }
+  .gemini-btn-connect.connected {
+    background: linear-gradient(135deg, #ff0055 0%, #aa0033 100%);
+    color: #fff;
+    box-shadow: 0 0 12px rgba(255, 0, 85, 0.5);
+  }
+
+  .gemini-stage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    padding: 18px 12px;
+    text-align: center;
+    position: relative;
+  }
+  .gemini-blob-wrapper {
+    position: relative;
+    width: 140px;
+    height: 140px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 12px;
+  }
+  #geminiBlobCanvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+  }
+  .gemini-blob-center-icon {
+    position: relative;
+    z-index: 2;
+    font-size: 32px;
+    filter: drop-shadow(0 0 12px var(--neon-cyan));
+    transition: transform 0.2s;
+  }
+  .gemini-hud-info {
+    font-family: 'Share Tech Mono', monospace;
+  }
+  .gemini-hud-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: 1.5px;
+    margin-bottom: 4px;
+  }
+  .gemini-hud-sub {
+    font-size: 11px;
+    color: #94a3b8;
+    max-width: 340px;
+    line-height: 1.4;
+  }
+
+  /* Cyber Sandbox Terminal */
+  .gemini-terminal {
+    background: #05080e;
+    border-top: 1px solid rgba(0, 240, 255, 0.3);
+    padding: 10px 12px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+  }
+  .terminal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px dashed rgba(0, 240, 255, 0.2);
+  }
+  .terminal-title {
+    color: var(--neon-cyan);
+    font-size: 10px;
+    letter-spacing: 1px;
+  }
+  .terminal-clear-btn {
+    background: transparent;
+    border: none;
+    color: #64748b;
+    font-size: 10px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .terminal-clear-btn:hover { color: #fff; }
+  .terminal-logs {
+    height: 140px;
+    overflow-y: auto;
+    background: #020408;
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 6px;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 8px;
+  }
+  .t-log { line-height: 1.4; word-break: break-all; }
+  .t-log.sys { color: #64748b; }
+  .t-log.user { color: var(--neon-green); font-weight: bold; }
+  .t-log.ai { color: var(--neon-cyan); }
+  .t-log.tool { color: var(--neon-amber); font-weight: bold; }
+  .t-log.out { color: #e2e8f0; background: rgba(255,255,255,0.04); padding: 2px 6px; border-left: 2px solid var(--neon-cyan); }
+  .t-log.err { color: var(--neon-red); }
+
+  .terminal-input-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #020408;
+    border: 1px solid rgba(0, 240, 255, 0.3);
+    border-radius: 6px;
+    padding: 4px 8px;
+  }
+  .terminal-input-bar input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-family: inherit;
+    font-size: 11px;
+    outline: none;
+  }
+  .terminal-run-btn {
+    background: var(--neon-cyan);
+    color: #000;
+    border: none;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 10px;
+    font-weight: 800;
+    cursor: pointer;
+  }
 </style>
 </head>
 <body>
@@ -3418,6 +3681,71 @@ void ProcessClient(SOCKET clientSocket) {
   <div class="brand-bar">
     <div class="brand-title">PANIC CTRL</div>
     <div class="brand-tag">v2.0 CYBER NODE</div>
+  </div>
+
+  <!-- 🧠 GEMINI 3.1 CYBER LIVE VOICE HUD & SANDBOX TERMINAL -->
+  <div class="gemini-hud-card" id="geminiHudCard">
+    <!-- Top Bar -->
+    <div class="gemini-top-bar">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span class="gemini-badge">🧠 GEMINI 3.1 LIVE</span>
+        <span id="geminiStatusPill" class="gemini-status-pill status-disc">DISCONNECTED</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:6px;">
+        <button class="gemini-btn-icon" onclick="toggleGeminiKeyModal()" title="Gemini API Key">🔑 KEY</button>
+        <button class="gemini-btn-icon" onclick="toggleGeminiTerminal()" title="Toggle Sandbox Terminal">📟 LOGS</button>
+        <button id="geminiConnectBtn" class="gemini-btn-connect" onclick="toggleGeminiLiveConnection()">⚡ CONNECT AI</button>
+      </div>
+    </div>
+
+    <!-- Center Stage: Audio Blob Visualizer & Controls -->
+    <div class="gemini-stage">
+      <div class="gemini-blob-wrapper">
+        <canvas id="geminiBlobCanvas" width="220" height="220"></canvas>
+        <div class="gemini-blob-center-icon" id="geminiBlobIcon">🎙️</div>
+      </div>
+      <div class="gemini-hud-info">
+        <div class="gemini-hud-title" id="geminiVoiceTitle">VOICE ASSISTANT READY</div>
+        <div class="gemini-hud-sub" id="geminiVoiceSub">Tap '⚡ CONNECT AI' to start real-time full-duplex voice control.</div>
+      </div>
+    </div>
+
+    <!-- Collapsible Cyber Sandbox Terminal Console -->
+    <div id="geminiTerminalBox" class="gemini-terminal" style="display:none;">
+      <div class="terminal-header">
+        <span class="terminal-title">📟 CYBER SANDBOX TERMINAL &bull; LIVE EXECUTION HUB</span>
+        <button class="terminal-clear-btn" onclick="clearGeminiTerminal()">CLEAR</button>
+      </div>
+      <div id="geminiTerminalLogs" class="terminal-logs">
+        <div class="t-log sys">[SYSTEM] Gemini 3.1 Live Terminal initialized. Standby for voice commands...</div>
+      </div>
+      <div class="terminal-input-bar">
+        <span style="color:var(--neon-green); font-family:monospace; font-weight:bold;">PS &gt;</span>
+        <input type="text" id="manualTerminalInput" placeholder="Manual command (e.g. Get-Process, ipconfig)..." onkeydown="if(event.key==='Enter')executeManualTerminalCmd()">
+        <button class="terminal-run-btn" onclick="executeManualTerminalCmd()">RUN</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 🔑 GEMINI API KEY MODAL -->
+  <div id="geminiKeyModal" class="modal-overlay" style="display:none;">
+    <div class="modal-card" style="border-color:var(--neon-cyan); box-shadow:0 0 30px rgba(0,240,255,0.3);">
+      <div class="modal-header">
+        <span class="modal-icon">🔑</span>
+        <span class="modal-title">GEMINI LIVE API KEY</span>
+      </div>
+      <p class="modal-sub">ENTER YOUR GOOGLE AI STUDIO API KEY</p>
+      <div class="input-wrapper">
+        <input type="password" id="geminiApiKeyInput" placeholder="AIzaSy..." autocomplete="off">
+      </div>
+      <div style="font-size:10px; color:#888; margin-bottom:14px; font-family:'Share Tech Mono',monospace;">
+        Get your free API key at: <b style="color:var(--neon-cyan);">aistudio.google.com</b>
+      </div>
+      <div class="modal-actions">
+        <button class="modal-btn btn-cancel" onclick="closeGeminiKeyModal()">CANCEL</button>
+        <button class="modal-btn btn-confirm" style="background:var(--neon-cyan); color:#000;" onclick="saveGeminiApiKey()">SAVE KEY 💾</button>
+      </div>
+    </div>
   </div>
 
   <!-- 🎬 FUTURISTIC VIDEO PLAYER MONITOR -->
@@ -4961,6 +5289,603 @@ function sendTelemetry(event, isClick, overrideClickType) {
         }
     });
 })();
+
+// -------------------------------------------------------------
+// 🧠 GEMINI 3.1 FLASH LIVE VOICE AI & CYBER SANDBOX TERMINAL
+// -------------------------------------------------------------
+var geminiWs = null;
+var audioInputCtx = null;
+var audioInputProcessor = null;
+var audioInputSource = null;
+var audioPlaybackCtx = null;
+var nextPlayTime = 0;
+
+var blobState = {
+  active: false,
+  status: "disc",
+  micLevel: 0,
+  geminiLevel: 0
+};
+
+function toggleGeminiKeyModal() {
+  var m = document.getElementById("geminiKeyModal");
+  if (!m) return;
+  var input = document.getElementById("geminiApiKeyInput");
+  if (input) input.value = localStorage.getItem("gemini_api_key") || "";
+  m.style.display = (m.style.display === "none" || !m.style.display) ? "flex" : "none";
+}
+
+function closeGeminiKeyModal() {
+  var m = document.getElementById("geminiKeyModal");
+  if (m) m.style.display = "none";
+}
+
+function saveGeminiApiKey() {
+  var input = document.getElementById("geminiApiKeyInput");
+  if (input && input.value.trim()) {
+    localStorage.setItem("gemini_api_key", input.value.trim());
+    appendGeminiLog("sys", "[KEY] Gemini API Key saved locally.");
+    closeGeminiKeyModal();
+  }
+}
+
+function toggleGeminiTerminal() {
+  var t = document.getElementById("geminiTerminalBox");
+  if (!t) return;
+  t.style.display = (t.style.display === "none" || !t.style.display) ? "block" : "none";
+}
+
+function clearGeminiTerminal() {
+  var l = document.getElementById("geminiTerminalLogs");
+  if (l) l.innerHTML = '<div class="t-log sys">[SYSTEM] Terminal logs cleared.</div>';
+}
+
+function appendGeminiLog(type, text) {
+  var l = document.getElementById("geminiTerminalLogs");
+  if (!l) return;
+  var d = document.createElement("div");
+  d.className = "t-log " + type;
+  d.textContent = text;
+  l.appendChild(d);
+  l.scrollTop = l.scrollHeight;
+}
+
+function executeManualTerminalCmd() {
+  var inp = document.getElementById("manualTerminalInput");
+  if (!inp || !inp.value.trim()) return;
+  var cmd = inp.value.trim();
+  inp.value = "";
+  appendGeminiLog("user", "PS > " + cmd);
+  fetch("/api/exec?key=" + KEY + "&cmd=" + encodeURIComponent(cmd))
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if (data && data.output) {
+        appendGeminiLog("out", data.output);
+      } else {
+        appendGeminiLog("out", "[No output]");
+      }
+    })
+    .catch(function(err){
+      appendGeminiLog("err", "[ERROR] " + err);
+    });
+}
+
+// 🔮 ORGANIC REACTIVE CYBER AUDIO BLOB ENGINE
+function initGeminiBlobVisualizer() {
+  var cvs = document.getElementById("geminiBlobCanvas");
+  if (!cvs) return;
+  var ctx = cvs.getContext("2d");
+  var t = 0;
+
+  function draw() {
+    ctx.clearRect(0, 0, cvs.width, cvs.height);
+    var cx = cvs.width / 2;
+    var cy = cvs.height / 2;
+    t += 0.04;
+
+    var level = Math.max(blobState.micLevel, blobState.geminiLevel);
+    var baseRadius = 45 + level * 25;
+    
+    var color1 = "rgba(0, 240, 255, 0.8)";
+    var color2 = "rgba(0, 255, 65, 0.5)";
+    var glowColor = "rgba(0, 240, 255, 0.4)";
+
+    if (blobState.status === "speak") {
+      color1 = "rgba(0, 240, 255, 0.95)";
+      color2 = "rgba(255, 0, 85, 0.7)";
+      glowColor = "rgba(0, 240, 255, 0.6)";
+      baseRadius = 50 + blobState.geminiLevel * 40;
+    } else if (blobState.status === "listen") {
+      color1 = "rgba(0, 255, 65, 0.95)";
+      color2 = "rgba(0, 240, 255, 0.6)";
+      glowColor = "rgba(0, 255, 65, 0.6)";
+      baseRadius = 48 + blobState.micLevel * 35;
+    } else if (blobState.status === "exec") {
+      color1 = "rgba(255, 0, 85, 0.95)";
+      color2 = "rgba(255, 170, 0, 0.8)";
+      glowColor = "rgba(255, 0, 85, 0.6)";
+      baseRadius = 52 + Math.sin(t * 3) * 8;
+    } else if (blobState.status === "conn") {
+      color1 = "rgba(255, 170, 0, 0.9)";
+      color2 = "rgba(0, 240, 255, 0.5)";
+      glowColor = "rgba(255, 170, 0, 0.4)";
+    }
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, baseRadius + 14 + Math.sin(t * 1.5) * 4, 0, Math.PI * 2);
+    ctx.strokeStyle = glowColor;
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([6, 8]);
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.save();
+    ctx.beginPath();
+    var points = 12;
+    for (var i = 0; i <= points; i++) {
+      var angle = (i / points) * Math.PI * 2;
+      var distortion = Math.sin(angle * 3 + t * 2) * (8 + level * 16) + Math.cos(angle * 2 - t) * (6 + level * 12);
+      var r = baseRadius + distortion;
+      var x = cx + Math.cos(angle) * r;
+      var y = cy + Math.sin(angle) * r;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+
+    var grad = ctx.createRadialGradient(cx, cy, 10, cx, cy, baseRadius + 20);
+    grad.addColorStop(0, color1);
+    grad.addColorStop(1, color2);
+    ctx.fillStyle = grad;
+    ctx.shadowColor = glowColor;
+    ctx.shadowBlur = 18;
+    ctx.fill();
+    ctx.restore();
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+function setGeminiStatus(st, titleText, subText) {
+  blobState.status = st;
+  var pill = document.getElementById("geminiStatusPill");
+  var icon = document.getElementById("geminiBlobIcon");
+  var btn = document.getElementById("geminiConnectBtn");
+  var tEl = document.getElementById("geminiVoiceTitle");
+  var sEl = document.getElementById("geminiVoiceSub");
+
+  if (pill) {
+    pill.className = "gemini-status-pill status-" + st;
+    var txtMap = { disc: "DISCONNECTED", conn: "CONNECTING...", listen: "LISTENING", speak: "SPEAKING", exec: "EXECUTING..." };
+    pill.textContent = txtMap[st] || st.toUpperCase();
+  }
+  if (icon) {
+    var iconMap = { disc: "🎙️", conn: "⏳", listen: "👂", speak: "🔊", exec: "⚡" };
+    icon.textContent = iconMap[st] || "🎙️";
+  }
+  if (btn) {
+    if (st === "disc") {
+      btn.className = "gemini-btn-connect";
+      btn.textContent = "⚡ CONNECT AI";
+    } else {
+      btn.className = "gemini-btn-connect connected";
+      btn.textContent = "✖ DISCONNECT";
+    }
+  }
+  if (tEl && titleText) tEl.textContent = titleText;
+  if (sEl && subText) sEl.textContent = subText;
+}
+
+function toggleGeminiLiveConnection() {
+  if (geminiWs && (geminiWs.readyState === WebSocket.OPEN || geminiWs.readyState === WebSocket.CONNECTING)) {
+    disconnectGeminiLive();
+  } else {
+    connectGeminiLive();
+  }
+}
+
+function connectGeminiLive() {
+  var apiKey = localStorage.getItem("gemini_api_key");
+  if (!apiKey) {
+    toggleGeminiKeyModal();
+    appendGeminiLog("err", "[ERROR] Please enter your Gemini API Key in the modal.");
+    return;
+  }
+
+  setGeminiStatus("conn", "CONNECTING TO GEMINI 3.1...", "Establishing encrypted full-duplex WebSocket link.");
+  appendGeminiLog("sys", "[CONNECT] Initializing Gemini 3.1 Live WebSocket session...");
+
+  var host = "generativelanguage.googleapis.com";
+  var path = "/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=" + apiKey;
+  var wsUrl = "wss://" + host + path;
+
+  try {
+    geminiWs = new WebSocket(wsUrl);
+  } catch (e) {
+    setGeminiStatus("disc", "CONNECTION FAILED", e.message);
+    appendGeminiLog("err", "[WS FAILED] " + e.message);
+    return;
+  }
+
+  geminiWs.onopen = function() {
+    appendGeminiLog("sys", "[WS OPEN] Link established. Sending setup payload for gemini-3.1-flash-live-preview...");
+    
+    var toolsPayload = [
+      {
+        functionDeclarations: [
+          {
+            name: "lock_workstation",
+            description: "Locks the Windows computer workstation immediately."
+          },
+          {
+            name: "trigger_panic",
+            description: "Toggles emergency panic mode, sounding intruder alarm and switching to isolated safe virtual desktop."
+          },
+          {
+            name: "set_volume",
+            description: "Sets the Windows system master audio volume percentage (0 to 100).",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                level: { type: "INTEGER", description: "Volume percentage 0 to 100" }
+              },
+              required: ["level"]
+            }
+          },
+          {
+            name: "get_pc_status",
+            description: "Gets current live status of Windows PC (lock state, panic state, server status)."
+          },
+          {
+            name: "run_powershell_command",
+            description: "Executes a PowerShell or CMD command in the Windows sandbox on the PC and returns the command output.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                command: { type: "STRING", description: "The PowerShell or CMD command string to execute." }
+              },
+              required: ["command"]
+            }
+          },
+          {
+            name: "type_keyboard",
+            description: "Types text or special keys ({ENTER}, {ESC}, {BACKSPACE}, {TAB}) on the Windows PC.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                text: { type: "STRING", description: "The text or special key to type." }
+              },
+              required: ["text"]
+            }
+          },
+          {
+            name: "sleep_pc",
+            description: "Puts the Windows computer into low power sleep mode."
+          }
+        ]
+      }
+    ];
+
+    var setupMsg = {
+      setup: {
+        model: "models/gemini-3.1-flash-live-preview",
+        generationConfig: {
+          responseModalities: ["AUDIO"],
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: {
+                voiceName: "Aoede"
+              }
+            }
+          }
+        },
+        systemInstruction: {
+          parts: [
+            {
+              text: "You are JARVIS / PanicCTRL, an elite cybernetic voice AI assistant embedded into Imran's personal Windows workstation. You can speak naturally in English or Bengali (বাংলা). You have direct control of the Windows PC via tool calling. When the user asks you to lock the PC, trigger panic, check PC status, run PowerShell commands, adjust volume, or type on the PC, call the appropriate tool immediately and report the result in a concise, cool cybernetic voice."
+            }
+          ]
+        },
+        tools: toolsPayload
+      }
+    };
+
+    geminiWs.send(JSON.stringify(setupMsg));
+    startMicrophoneCapture();
+    initPlaybackAudioContext();
+    setGeminiStatus("listen", "AI LIVE & LISTENING", "Speak naturally to control your PC with voice.");
+    appendGeminiLog("sys", "[READY] Gemini 3.1 Live is active and listening.");
+  };
+
+  geminiWs.onmessage = function(event) {
+    if (typeof event.data === "string") {
+      try {
+        var msg = JSON.parse(event.data);
+        handleGeminiServerMessage(msg);
+      } catch (e) {
+        console.error("Error parsing Gemini WS message", e);
+      }
+    } else if (event.data instanceof Blob) {
+      var reader = new FileReader();
+      reader.onload = function() {
+        try {
+          var msg = JSON.parse(reader.result);
+          handleGeminiServerMessage(msg);
+        } catch (e) {}
+      };
+      reader.readAsText(event.data);
+    }
+  };
+
+  geminiWs.onerror = function(err) {
+    appendGeminiLog("err", "[WS ERROR] Check API Key and network connection.");
+    setGeminiStatus("disc", "CONNECTION ERROR", "WebSocket encountered an error.");
+  };
+
+  geminiWs.onclose = function(e) {
+    appendGeminiLog("sys", "[WS CLOSED] Code: " + e.code + " Reason: " + e.reason);
+    disconnectGeminiLive();
+  };
+}
+
+function handleGeminiServerMessage(msg) {
+  if (msg.serverContent && msg.serverContent.modelTurn && msg.serverContent.modelTurn.parts) {
+    for (var i = 0; i < msg.serverContent.modelTurn.parts.length; i++) {
+      var part = msg.serverContent.modelTurn.parts[i];
+      if (part.inlineData && part.inlineData.mimeType && part.inlineData.mimeType.startsWith("audio/pcm")) {
+        setGeminiStatus("speak", "GEMINI SPEAKING...", "Streaming 24kHz real-time audio.");
+        playPcm24kBase64Chunk(part.inlineData.data);
+      }
+      if (part.text) {
+        appendGeminiLog("ai", "🧠 " + part.text);
+      }
+    }
+  }
+
+  if (msg.serverContent && msg.serverContent.turnComplete) {
+    setTimeout(function(){
+      if (blobState.status === "speak") {
+        setGeminiStatus("listen", "AI LIVE & LISTENING", "Speak naturally to control your PC.");
+      }
+    }, 400);
+  }
+
+  if (msg.toolCall && msg.toolCall.functionCalls) {
+    for (var j = 0; j < msg.toolCall.functionCalls.length; j++) {
+      var call = msg.toolCall.functionCalls[j];
+      executeGeminiToolCall(call);
+    }
+  }
+}
+
+function executeGeminiToolCall(call) {
+  setGeminiStatus("exec", "EXECUTING TOOL...", call.name);
+  appendGeminiLog("tool", "[TOOL CALL] " + call.name + "(" + JSON.stringify(call.args || {}) + ")");
+
+  var toolPromise = null;
+  var name = call.name;
+  var args = call.args || {};
+
+  if (name === "lock_workstation") {
+    toolPromise = fetch("/lock?key=" + KEY).then(function(r){ return r.json(); });
+  } else if (name === "trigger_panic") {
+    toolPromise = fetch("/panic?key=" + KEY).then(function(r){ return r.json(); });
+  } else if (name === "get_pc_status") {
+    toolPromise = fetch("/api/status?key=" + KEY).then(function(r){ return r.json(); });
+  } else if (name === "run_powershell_command") {
+    toolPromise = fetch("/api/exec?key=" + KEY + "&cmd=" + encodeURIComponent(args.command || "")).then(function(r){ return r.json(); });
+  } else if (name === "type_keyboard") {
+    toolPromise = fetch("/api/type?key=" + KEY + "&text=" + encodeURIComponent(args.text || "")).then(function(){ return { status: "typed" }; });
+  } else if (name === "sleep_pc") {
+    toolPromise = fetch("/sleep?key=" + KEY).then(function(r){ return r.json(); });
+  } else if (name === "set_volume") {
+    var vol = Math.max(0, Math.min(100, args.level || 50));
+    toolPromise = fetch("/api/exec?key=" + KEY + "&cmd=" + encodeURIComponent("(New-Object -ComObject WScript.Shell)")).then(function(){ return { volume: vol }; });
+  } else {
+    toolPromise = Promise.resolve({ error: "Unknown function" });
+  }
+
+  toolPromise
+    .then(function(resData) {
+      appendGeminiLog("out", "[TOOL RESULT] " + JSON.stringify(resData));
+      sendToolResponseToGemini(call.id, resData);
+      setTimeout(function(){
+        if (blobState.status === "exec") {
+          setGeminiStatus("listen", "AI LIVE & LISTENING", "Command executed. Listening...");
+        }
+      }, 600);
+    })
+    .catch(function(err) {
+      appendGeminiLog("err", "[TOOL ERROR] " + err);
+      sendToolResponseToGemini(call.id, { error: String(err) });
+    });
+}
+
+function sendToolResponseToGemini(callId, resultData) {
+  if (!geminiWs || geminiWs.readyState !== WebSocket.OPEN) return;
+  var resp = {
+    toolResponse: {
+      functionResponses: [
+        {
+          id: callId,
+          response: { output: resultData }
+        }
+      ]
+    }
+  };
+  geminiWs.send(JSON.stringify(resp));
+}
+
+function startMicrophoneCapture() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    appendGeminiLog("err", "[MIC ERROR] getUserMedia not supported on this browser/context.");
+    return;
+  }
+
+  navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } })
+    .then(function(stream) {
+      audioInputCtx = new (window.AudioContext || window.webkitAudioContext)();
+      var sampleRate = audioInputCtx.sampleRate;
+      audioInputSource = audioInputCtx.createMediaStreamSource(stream);
+
+      var analyser = audioInputCtx.createAnalyser();
+      analyser.fftSize = 64;
+      var dataArray = new Uint8Array(analyser.frequencyBinCount);
+      audioInputSource.connect(analyser);
+
+      function updateMicVisual() {
+        if (!audioInputCtx) return;
+        analyser.getByteFrequencyData(dataArray);
+        var sum = 0;
+        for (var i = 0; i < dataArray.length; i++) sum += dataArray[i];
+        blobState.micLevel = (sum / dataArray.length) / 255;
+        requestAnimationFrame(updateMicVisual);
+      }
+      updateMicVisual();
+
+      audioInputProcessor = audioInputCtx.createScriptProcessor(4096, 1, 1);
+      audioInputSource.connect(audioInputProcessor);
+      audioInputProcessor.connect(audioInputCtx.destination);
+
+      audioInputProcessor.onaudioprocess = function(e) {
+        if (!geminiWs || geminiWs.readyState !== WebSocket.OPEN) return;
+        var inputData = e.inputBuffer.getChannelData(0);
+        var downsampled = downsampleBuffer(inputData, sampleRate, 16000);
+        var pcm16 = convertFloat32ToInt16(downsampled);
+        var base64Chunk = arrayBufferToBase64(pcm16.buffer);
+
+        var chunkMsg = {
+          realtimeInput: {
+            mediaChunks: [
+              {
+                mimeType: "audio/pcm;rate=16000",
+                data: base64Chunk
+              }
+            ]
+          }
+        };
+        geminiWs.send(JSON.stringify(chunkMsg));
+      };
+    })
+    .catch(function(err) {
+      appendGeminiLog("err", "[MIC DENIED] " + err.message);
+    });
+}
+
+function downsampleBuffer(buffer, sampleRate, outSampleRate) {
+  if (outSampleRate === sampleRate || outSampleRate > sampleRate) return buffer;
+  var sampleRateRatio = sampleRate / outSampleRate;
+  var newLength = Math.round(buffer.length / sampleRateRatio);
+  var result = new Float32Array(newLength);
+  var offsetResult = 0;
+  var offsetBuffer = 0;
+  while (offsetResult < result.length) {
+    var nextOffsetBuffer = Math.round((offsetResult + 1) * sampleRateRatio);
+    var accum = 0, count = 0;
+    for (var i = offsetBuffer; i < nextOffsetBuffer && i < buffer.length; i++) {
+      accum += buffer[i];
+      count++;
+    }
+    result[offsetResult] = count > 0 ? accum / count : 0;
+    offsetResult++;
+    offsetBuffer = nextOffsetBuffer;
+  }
+  return result;
+}
+
+function convertFloat32ToInt16(buffer) {
+  var l = buffer.length;
+  var buf = new Int16Array(l);
+  while (l--) {
+    var s = Math.max(-1, Math.min(1, buffer[l]));
+    buf[l] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+  }
+  return buf;
+}
+
+function arrayBufferToBase64(buffer) {
+  var binary = '';
+  var bytes = new Uint8Array(buffer);
+  var len = bytes.byteLength;
+  for (var i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return window.btoa(binary);
+}
+
+function initPlaybackAudioContext() {
+  if (!audioPlaybackCtx) {
+    audioPlaybackCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+  }
+  if (audioPlaybackCtx.state === "suspended") {
+    audioPlaybackCtx.resume();
+  }
+  nextPlayTime = audioPlaybackCtx.currentTime;
+}
+
+function playPcm24kBase64Chunk(base64Data) {
+  initPlaybackAudioContext();
+  var binary = window.atob(base64Data);
+  var len = binary.length;
+  var bytes = new Uint8Array(len);
+  for (var i = 0; i < len; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  var int16 = new Int16Array(bytes.buffer);
+  var float32 = new Float32Array(int16.length);
+  for (var j = 0; j < int16.length; j++) {
+    float32[j] = int16[j] / 32768.0;
+  }
+
+  var sum = 0;
+  for (var k = 0; k < float32.length; k += 4) sum += Math.abs(float32[k]);
+  blobState.geminiLevel = Math.min(1, (sum / (float32.length / 4)) * 3);
+
+  var audioBuf = audioPlaybackCtx.createBuffer(1, float32.length, 24000);
+  audioBuf.copyToChannel(float32, 0);
+
+  var source = audioPlaybackCtx.createBufferSource();
+  source.buffer = audioBuf;
+  source.connect(audioPlaybackCtx.destination);
+
+  var startTime = Math.max(audioPlaybackCtx.currentTime, nextPlayTime);
+  source.start(startTime);
+  nextPlayTime = startTime + audioBuf.duration;
+
+  source.onended = function() {
+    blobState.geminiLevel = 0;
+  };
+}
+
+function disconnectGeminiLive() {
+  if (geminiWs) {
+    try { geminiWs.close(); } catch(e) {}
+    geminiWs = null;
+  }
+  if (audioInputProcessor) {
+    try { audioInputProcessor.disconnect(); } catch(e) {}
+    audioInputProcessor = null;
+  }
+  if (audioInputSource) {
+    try { audioInputSource.disconnect(); } catch(e) {}
+    audioInputSource = null;
+  }
+  if (audioInputCtx) {
+    try { audioInputCtx.close(); } catch(e) {}
+    audioInputCtx = null;
+  }
+  blobState.micLevel = 0;
+  blobState.geminiLevel = 0;
+  setGeminiStatus("disc", "VOICE ASSISTANT OFFLINE", "Tap '⚡ CONNECT AI' to reconnect.");
+  appendGeminiLog("sys", "[DISCONNECTED] Gemini Live session ended.");
+}
+
+window.addEventListener("DOMContentLoaded", function() {
+  initGeminiBlobVisualizer();
+});
+setTimeout(initGeminiBlobVisualizer, 100);
 </script>
 </body>
 </html>)HTML";
