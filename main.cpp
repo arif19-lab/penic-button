@@ -5874,12 +5874,10 @@ function startMicrophoneCapture() {
 
         var chunkMsg = {
           realtimeInput: {
-            mediaChunks: [
-              {
-                mimeType: "audio/pcm;rate=16000",
-                data: base64Chunk
-              }
-            ]
+            audio: {
+              mimeType: "audio/pcm;rate=16000",
+              data: base64Chunk
+            }
           }
         };
         geminiWs.send(JSON.stringify(chunkMsg));
