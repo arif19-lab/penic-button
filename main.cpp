@@ -5671,7 +5671,7 @@ function connectGeminiLive() {
         systemInstruction: {
           parts: [
             {
-              text: "You are JARVIS / PanicCTRL, an elite cybernetic voice AI assistant embedded into Imran's personal Windows workstation. You can speak naturally in English or Bengali (বাংলা). You have direct control of the Windows PC via tool calling. When the user asks you to lock the PC, trigger panic, check PC status, run PowerShell commands, adjust volume, or type on the PC, call the appropriate tool immediately and report the result in a concise, cool cybernetic voice."
+              text: "You are a friendly, highly intelligent, and expressive voice AI assistant. Speak with completely natural human emotion, lively conversational pacing, clear intonation, and a warm, engaging tone. You speak fluent, natural English and fluent natural Bengali (বাংলা) depending on what language the user speaks. You have direct control of the Windows PC via tool calling. When the user asks you to perform an action, execute the appropriate tool immediately and respond in a natural, lively, and conversational human manner."
             }
           ]
         },
@@ -5999,12 +5999,10 @@ function playPcm24kBase64Chunk(base64Data) {
   source.buffer = audioBuf;
   source.connect(audioPlaybackCtx.destination);
 
-  // ⚡ Seamless continuous jitter buffer scheduling (ZERO gaps, pops, or stutters!)
-  if (nextPlayTime < audioPlaybackCtx.currentTime) {
-    nextPlayTime = audioPlaybackCtx.currentTime + 0.06; // 60ms smooth lookahead
-  }
-  source.start(nextPlayTime);
-  nextPlayTime += audioBuf.duration;
+  // ⚡ Official Google AudioStreamer continuous scheduling (smooth, natural, gapless!)
+  var startTime = Math.max(audioPlaybackCtx.currentTime, nextPlayTime);
+  source.start(startTime);
+  nextPlayTime = startTime + audioBuf.duration;
 
   source.onended = function() {
     if (audioPlaybackCtx && audioPlaybackCtx.currentTime >= nextPlayTime - 0.05) {
