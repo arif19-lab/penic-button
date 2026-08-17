@@ -188,6 +188,52 @@ void HttpServer::HandleClient(SOCKET clientSocket) {
         return;
     }
 
+    // ⚡ Alarm & Sound API (Local PlaySound & Web Audio Stream)
+    if (request.find("GET /api/alarm") != std::string::npos || request.find("GET /alarm") != std::string::npos) {
+        size_t idPos = request.find("id=");
+        int alarmId = (idPos != std::string::npos) ? atoi(request.c_str() + idPos + 3) : 1;
+        if (alarmId < 1 || alarmId > 13) alarmId = 1;
+        std::string soundPath = "assets\\alarms\\alarm" + std::to_string(alarmId) + ".wav";
+        PlaySoundA(soundPath.c_str(), NULL, SND_ASYNC | SND_FILENAME);
+
+        std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n\r\n{\"alarm\":true,\"id\":" + std::to_string(alarmId) + "}";
+        send(clientSocket, res.c_str(), (int)res.size(), 0);
+        closesocket(clientSocket);
+        return;
+    }
+
+    if (request.find("GET /api/stop_alarm") != std::string::npos) {
+        PlaySoundA(NULL, NULL, 0); // Stop playing
+        std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n\r\n{\"alarm\":false}";
+        send(clientSocket, res.c_str(), (int)res.size(), 0);
+        closesocket(clientSocket);
+        return;
+    }
+
+    // ⚡ Static Sound Asset Streaming (/assets/alarms/*.wav)
+    if (request.find("GET /assets/alarms/") != std::string::npos) {
+        size_t pathStart = request.find("GET /") + 5;
+        size_t pathEnd = request.find(" ", pathStart);
+        std::string reqPath = request.substr(pathStart, pathEnd - pathStart);
+        FILE* f = fopen(reqPath.c_str(), "rb");
+        if (f) {
+            fseek(f, 0, SEEK_END);
+            long sz = ftell(f);
+            fseek(f, 0, SEEK_SET);
+            std::string header = "HTTP/1.1 200 OK\r\nContent-Type: audio/wav\r\nContent-Length: " + std::to_string(sz) + "\r\nAccess-Control-Allow-Origin: *\r\n\r\n";
+            send(clientSocket, header.c_str(), (int)header.size(), 0);
+            char buf[8192];
+            size_t n;
+            while ((n = fread(buf, 1, sizeof(buf), f)) > 0) send(clientSocket, buf, (int)n, 0);
+            fclose(f);
+        } else {
+            std::string res = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n";
+            send(clientSocket, res.c_str(), (int)res.size(), 0);
+        }
+        closesocket(clientSocket);
+        return;
+    }
+
     // ⚡ Panic Trigger API
     if (request.find("GET /panic") != std::string::npos) {
         Input::LockWorkstation();
