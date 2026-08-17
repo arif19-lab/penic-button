@@ -5307,11 +5307,13 @@ var blobState = {
   geminiLevel: 0
 };
 
+var DEFAULT_GEMINI_KEY = "AIzaSyCkyiH5yrYk1R0sXZZhe01irhlwjfxmEFU";
+
 function toggleGeminiKeyModal() {
   var m = document.getElementById("geminiKeyModal");
   if (!m) return;
   var input = document.getElementById("geminiApiKeyInput");
-  if (input) input.value = localStorage.getItem("gemini_api_key") || "";
+  if (input) input.value = localStorage.getItem("gemini_api_key") || DEFAULT_GEMINI_KEY;
   m.style.display = (m.style.display === "none" || !m.style.display) ? "flex" : "none";
 }
 
@@ -5487,7 +5489,7 @@ function toggleGeminiLiveConnection() {
 }
 
 function connectGeminiLive() {
-  var apiKey = localStorage.getItem("gemini_api_key");
+  var apiKey = localStorage.getItem("gemini_api_key") || DEFAULT_GEMINI_KEY;
   if (!apiKey) {
     toggleGeminiKeyModal();
     appendGeminiLog("err", "[ERROR] Please enter your Gemini API Key in the modal.");
