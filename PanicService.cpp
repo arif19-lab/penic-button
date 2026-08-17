@@ -6,7 +6,6 @@
 #include <tlhelp32.h>
 #include <iostream>
 #include <string>
-#include "src/ui/DashboardHTML.h"
 
 #pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "wtsapi32.lib")
@@ -181,19 +180,74 @@ void ProcessServiceRequest(SOCKET clientSocket, const std::string& request) {
 
     } else {
         // Full Cyberpunk Master Web UI
-        responseBody = UI::GetDashboardHTML();
+        responseBody = R"HTML(<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>PANIC CTRL - SYSTEM BOOT</title>
+<style>
+:root{--bg:#07090e;--panel:#111520;--neon:#00f0ff;--pink:#ff0055;--green:#00ff41;--text:#e2e8f0}
+*{box-sizing:border-box;margin:0;padding:0;user-select:none;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:20px}
+.header{width:100%;max-width:500px;background:var(--panel);border:1px solid rgba(0,240,255,0.3);border-radius:16px;padding:20px;text-align:center;box-shadow:0 0 20px rgba(0,240,255,0.15);margin-bottom:20px}
+h1{font-size:24px;color:var(--neon);letter-spacing:2px;margin-bottom:5px;text-shadow:0 0 10px var(--neon)}
+.status-badge{display:inline-block;padding:6px 16px;border-radius:20px;background:rgba(255,0,85,0.2);color:var(--pink);border:1px solid var(--pink);font-weight:bold;font-size:14px;margin-top:10px}
+.card{width:100%;max-width:500px;background:var(--panel);border-radius:16px;padding:24px;border:1px solid rgba(255,255,255,0.05);box-shadow:0 10px 30px rgba(0,0,0,0.5);margin-bottom:20px}
+.input-group{margin-bottom:16px}
+label{display:block;font-size:12px;color:var(--neon);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px}
+input{width:100%;background:#0a0d14;border:1px solid rgba(0,240,255,0.4);border-radius:10px;padding:14px;color:#fff;font-size:18px;outline:none}
+input:focus{border-color:var(--neon);box-shadow:0 0 12px rgba(0,240,255,0.4)}
+.btn{width:100%;padding:16px;border-radius:12px;border:none;font-weight:bold;font-size:16px;cursor:pointer;transition:all 0.2s;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px}
+.btn-unlock{background:linear-gradient(135deg,#00ff41,#00b32d);color:#000;box-shadow:0 4px 15px rgba(0,255,65,0.3)}
+.btn-unlock:active{transform:scale(0.98)}
+.btn-lock{background:linear-gradient(135deg,#ff0055,#b3003b);color:#fff;box-shadow:0 4px 15px rgba(255,0,85,0.3)}
+</style>
+</head>
+<body>
+<div class="header">
+<h1>⚡ PANIC CTRL</h1>
+<p style="font-size:13px;color:#94a3b8">MASTER SYSTEM SERVICE</p>
+<div class="status-badge" id="statusBadge">🔒 WINDOWS LOCKED (WINLOGON)</div>
+</div>
+<div class="card">
+<div class="input-group">
+<label>🔑 Windows Password / PIN</label>
+<input type="password" id="pinInput" placeholder="Enter PIN to Unlock PC...">
+</div>
+<button class="btn btn-unlock" onclick="unlockPC()">🔓 REMOTELY UNLOCK PC</button>
+<button class="btn btn-lock" onclick="lockPC()">🔒 LOCK WORKSTATION</button>
+</div>
+<script>
+function getQueryKey(){const urlParams=new URLSearchParams(window.location.search);return urlParams.get('key')||'imran2024';}
+async function unlockPC(){
+  const pin=document.getElementById('pinInput').value;
+  if(!pin){alert('Please enter your Windows PIN or Password');return;}
+  try{
+    const res=await fetch('/unlock?key='+getQueryKey()+'&pin='+encodeURIComponent(pin));
+    const data=await res.json();
+    if(data.status==='unlocked'){
+      document.getElementById('statusBadge').innerText='🔓 UNLOCK SIGNAL SENT';
+      document.getElementById('statusBadge').style.borderColor='#00ff41';
+      document.getElementById('statusBadge').style.color='#00ff41';
+      document.getElementById('statusBadge').style.background='rgba(0,255,65,0.2)';
+      setTimeout(()=>location.reload(),2000);
+    }
+  }catch(e){alert('Error sending unlock signal: '+e.message);}
+}
+async function lockPC(){
+  try{
+    await fetch('/lock?key='+getQueryKey());
+    location.reload();
+  }catch(e){}
+}
+</script>
+</body>
+</html>)HTML";
     }
 
     std::string res = "HTTP/1.1 200 OK\r\nContent-Type: " + contentType + "\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: " + std::to_string(responseBody.size()) + "\r\nConnection: close\r\n\r\n" + responseBody;
-    int total = (int)res.size();
-    int sent = 0;
-    const char* ptr = res.data();
-    while (sent < total) {
-        int n = send(clientSocket, ptr + sent, total - sent, 0);
-        if (n <= 0) break;
-        sent += n;
-    }
-    shutdown(clientSocket, SD_SEND);
+    send(clientSocket, res.c_str(), (int)res.size(), 0);
     closesocket(clientSocket);
 }
 
@@ -224,45 +278,35 @@ DWORD WINAPI MasterHttpListenerThread(LPVOID lpParam) {
     WSAStartup(MAKEWORD(2, 2), &wsaData);
 
     SOCKET serverSocket = INVALID_SOCKET;
-
-    while (WaitForSingleObject(g_SvcStopEvent, 0) == WAIT_TIMEOUT) {
+    while (serverSocket == INVALID_SOCKET && WaitForSingleObject(g_SvcStopEvent, 0) == WAIT_TIMEOUT) {
+        // 🛡️ Only bind when the user's PanicButton is NOT running (Windows logon
+        // screen / no user session). This makes port 8080 ownership deterministic:
+        // PanicButton always serves when the user is logged in, PanicService only
+        // at the logon screen.
         if (PanicButtonRunning()) {
-            if (serverSocket != INVALID_SOCKET) {
-                closesocket(serverSocket);
-                serverSocket = INVALID_SOCKET;
-            }
-            Sleep(1000);
+            Sleep(2000);
             continue;
         }
+        serverSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+        int opt = 1;
+        setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, (const char*)&opt, sizeof(opt));
 
-        if (serverSocket == INVALID_SOCKET) {
-            serverSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-            int opt = 1;
-            setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, (const char*)&opt, sizeof(opt));
+        sockaddr_in serverAddr;
+        memset(&serverAddr, 0, sizeof(serverAddr));
+        serverAddr.sin_family = AF_INET;
+        serverAddr.sin_addr.s_addr = htonl(INADDR_ANY);
+        serverAddr.sin_port = htons(REMOTE_PORT);
 
-            sockaddr_in serverAddr;
-            memset(&serverAddr, 0, sizeof(serverAddr));
-            serverAddr.sin_family = AF_INET;
-            serverAddr.sin_addr.s_addr = htonl(INADDR_ANY);
-            serverAddr.sin_port = htons(REMOTE_PORT);
-
-            if (bind(serverSocket, (sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
-                closesocket(serverSocket);
-                serverSocket = INVALID_SOCKET;
-                Sleep(1000);
-                continue;
-            }
-            listen(serverSocket, SOMAXCONN);
+        if (bind(serverSocket, (sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
+            closesocket(serverSocket);
+            serverSocket = INVALID_SOCKET;
+            Sleep(1000); // Retry every 1s until network interface & DHCP IP is ready
         }
+    }
 
-        fd_set readSet;
-        FD_ZERO(&readSet);
-        FD_SET(serverSocket, &readSet);
-        timeval tv;
-        tv.tv_sec = 1;
-        tv.tv_usec = 0;
-        int sel = select(0, &readSet, NULL, NULL, &tv);
-        if (sel > 0 && FD_ISSET(serverSocket, &readSet)) {
+    if (serverSocket != INVALID_SOCKET) {
+        listen(serverSocket, SOMAXCONN);
+        while (WaitForSingleObject(g_SvcStopEvent, 0) == WAIT_TIMEOUT) {
             SOCKET clientSocket = accept(serverSocket, NULL, NULL);
             if (clientSocket != INVALID_SOCKET) {
                 char buffer[16384] = {0};
@@ -275,9 +319,8 @@ DWORD WINAPI MasterHttpListenerThread(LPVOID lpParam) {
                 }
             }
         }
+        closesocket(serverSocket);
     }
-
-    if (serverSocket != INVALID_SOCKET) closesocket(serverSocket);
     WSACleanup();
     return 0;
 }
