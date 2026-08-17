@@ -5357,19 +5357,25 @@ function executeManualTerminalCmd() {
   if (!inp || !inp.value.trim()) return;
   var cmd = inp.value.trim();
   inp.value = "";
-  appendGeminiLog("user", "PS > " + cmd);
-  fetch("/api/exec?key=" + KEY + "&cmd=" + encodeURIComponent(cmd))
-    .then(function(r){ return r.json(); })
-    .then(function(data){
-      if (data && data.output) {
-        appendGeminiLog("out", data.output);
-      } else {
-        appendGeminiLog("out", "[No output]");
-      }
-    })
-    .catch(function(err){
-      appendGeminiLog("err", "[ERROR] " + err);
-    });
+
+  if (cmd.startsWith("/ai ") || (geminiWs && geminiWs.readyState === WebSocket.OPEN && !cmd.startsWith("ps ") && !cmd.startsWith("cmd "))) {
+    var prompt = cmd.startsWith("/ai ") ? cmd.substring(4) : cmd;
+    sendTextMessageToGemini(prompt);
+  } else {
+    appendGeminiLog("user", "PS > " + cmd);
+    fetch("/api/exec?key=" + KEY + "&cmd=" + encodeURIComponent(cmd))
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        if (data && data.output) {
+          appendGeminiLog("out", data.output);
+        } else {
+          appendGeminiLog("out", "[No output]");
+        }
+      })
+      .catch(function(err){
+        appendGeminiLog("err", "[ERROR] " + err);
+      });
+  }
 }
 
 // 🔮 ORGANIC REACTIVE CYBER AUDIO BLOB ENGINE
@@ -5720,13 +5726,50 @@ function sendToolResponseToGemini(callId, resultData) {
   geminiWs.send(JSON.stringify(resp));
 }
 
+function sendTextMessageToGemini(text) {
+  if (!geminiWs || geminiWs.readyState !== WebSocket.OPEN) {
+    appendGeminiLog("err", "[ERROR] Gemini Live is not connected. Click ⚡ CONNECT AI first.");
+    return;
+  }
+  appendGeminiLog("user", "🗣️ User: " + text);
+  var msg = {
+    clientContent: {
+      turns: [
+        {
+          role: "user",
+          parts: [{ text: text }]
+        }
+      ],
+      turnComplete: true
+    }
+  };
+  geminiWs.send(JSON.stringify(msg));
+  setGeminiStatus("speak", "GEMINI PROCESSING...", "Generating audio & executing tools...");
+}
+
 function startMicrophoneCapture() {
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    appendGeminiLog("err", "[MIC ERROR] getUserMedia not supported on this browser/context.");
+  var getUserMediaFn = null;
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    getUserMediaFn = function(constraints) { return navigator.mediaDevices.getUserMedia(constraints); };
+  } else {
+    var legacyGUM = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;
+    if (legacyGUM) {
+      getUserMediaFn = function(constraints) {
+        return new Promise(function(resolve, reject) {
+          legacyGUM.call(navigator, constraints, resolve, reject);
+        });
+      };
+    }
+  }
+
+  if (!getUserMediaFn) {
+    appendGeminiLog("err", "[MIC NOTICE] Mobile Chrome blocks Mic over plain HTTP (Insecure Context).");
+    appendGeminiLog("sys", "[TIP] Use Cloudflare HTTPS URL, or type your voice commands in the Terminal input below!");
+    setGeminiStatus("listen", "TEXT & CLOUD READY", "Type below or use HTTPS URL for live microphone.");
     return;
   }
 
-  navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } })
+  getUserMediaFn({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } })
     .then(function(stream) {
       audioInputCtx = new (window.AudioContext || window.webkitAudioContext)();
       var sampleRate = audioInputCtx.sampleRate;

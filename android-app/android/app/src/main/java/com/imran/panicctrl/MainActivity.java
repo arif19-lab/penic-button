@@ -95,8 +95,21 @@ public class MainActivity extends BridgeActivity {
                 settings.setRenderPriority(WebSettings.RenderPriority.HIGH);
                 settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
 
+                // ⚡ Grant microphone and media permissions to WebView automatically
+                this.bridge.getWebView().setWebChromeClient(new android.webkit.WebChromeClient() {
+                    @Override
+                    public void onPermissionRequest(final android.webkit.PermissionRequest request) {
+                        runOnUiThread(() -> request.grant(request.getResources()));
+                    }
+                });
+
                 // ⚡ Register Native Moonlight Bridge to JavaScript
                 this.bridge.getWebView().addJavascriptInterface(new NativeStreamBridge(), "AndroidNativeStream");
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                    requestPermissions(new String[]{android.Manifest.permission.RECORD_AUDIO}, 101);
+                }
             }
         } catch (Exception e) {}
 
