@@ -2845,7 +2845,7 @@ void ProcessClient(SOCKET clientSocket) {
   body {
     background: var(--bg-dark);
     color: #e6edf3;
-    font-family: 'Inter', sans-serif;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
@@ -5414,22 +5414,25 @@ DWORD WINAPI UdpAutoDiscoveryThread(LPVOID lpParam) {
             buffer[bytesRecv] = '\0';
             std::string req(buffer);
             if (req.find("PANIC_DISCOVER_REQ") != std::string::npos) {
-                std::string resp = "PANIC_DISCOVER_RESP:http://";
+                std::string resolvedIp = "";
                 char hostName[256];
                 if (gethostname(hostName, sizeof(hostName)) == 0) {
                     struct hostent* host = gethostbyname(hostName);
-                    if (host && host->h_addr_list[0]) {
-                        struct in_addr addr;
-                        memcpy(&addr, host->h_addr_list[0], sizeof(struct in_addr));
-                        resp += inet_ntoa(addr);
-                    } else {
-                        resp += "192.168.0.106";
+                    if (host && host->h_addr_list) {
+                        for (int i = 0; host->h_addr_list[i] != NULL; ++i) {
+                            struct in_addr addr;
+                            memcpy(&addr, host->h_addr_list[i], sizeof(struct in_addr));
+                            std::string curIp = inet_ntoa(addr);
+                            // Avoid loopback and 169.254 APIPA addresses
+                            if (curIp != "127.0.0.1" && curIp.find("169.254.") != 0) {
+                                resolvedIp = curIp;
+                                break;
+                            }
+                        }
                     }
-                } else {
-                    resp += "192.168.0.106";
                 }
-                resp += ":8080";
-
+                if (resolvedIp.empty()) resolvedIp = "127.0.0.1";
+                std::string resp = "PANIC_DISCOVER_RESP:http://" + resolvedIp + ":8080";
                 sendto(discSocket, resp.c_str(), (int)resp.length(), 0, (SOCKADDR*)&clientAddr, clientLen);
             }
         }
