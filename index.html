@@ -180,42 +180,39 @@
     }
   }
 
-  function tryFetch(url) {
-    return fetch(url, { cache: "no-store" })
-      .then(function(res) {
-        if (!res.ok) throw new Error("HTTP " + res.status);
-        return res.json();
-      });
-  }
-
   function resolveCloudNode() {
     var badge = document.getElementById("badgeText");
     var msg = document.getElementById("msgBox");
     var directBtn = document.getElementById("directLinkBtn");
 
-    var localUrl = "tunnel.json?t=" + Date.now();
-    var rawUrl = "https://raw.githubusercontent.com/arif19-lab/penic-button/main/tunnel.json?t=" + Date.now();
+    // Always fetch directly from GitHub Raw with randomized timestamp to bypass any CDN cache
+    var rawUrl = "https://raw.githubusercontent.com/arif19-lab/penic-button/main/tunnel.json?_t=" + Date.now() + "_" + Math.floor(Math.random()*10000);
 
-    tryFetch(localUrl)
-      .catch(function() { return tryFetch(rawUrl); })
+    fetch(rawUrl, { cache: "no-store", headers: { "Accept": "application/json" } })
+      .then(function(res) {
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return res.json();
+      })
       .then(function(data) {
         if (data && data.url) {
           var target = data.url + "/?key=" + (data.key || "imran2024");
           badge.textContent = "CONNECTED TO PC!";
-          msg.innerHTML = "Redirecting to your live stream...<br><span style='font-size:11px; color:#00f0ff;'>" + data.url + "</span>";
+          msg.innerHTML = "Opening your live dashboard...<br><b style='color:#00f0ff; font-size:11px;'>" + data.url.replace('https://','') + "</b>";
           
           directBtn.href = target;
           directBtn.style.display = "block";
 
-          // Instant redirection
-          window.location.replace(target);
+          // Seamless redirect
+          setTimeout(function() {
+            window.location.href = target;
+          }, 300);
         } else {
           throw new Error("No URL in JSON");
         }
       })
       .catch(function(err) {
-        badge.textContent = "PC OFFLINE / WAITING";
-        msg.innerHTML = "Make sure <b style='color:#00ff41;'>PanicButton.exe</b> is running on your PC.<br><small style='color:#666;'>Auto-retrying in 2s...</small>";
+        badge.textContent = "SYNCING WITH PC...";
+        msg.innerHTML = "Make sure <b style='color:#00ff41;'>PanicButton.exe</b> is running.<br><small style='color:#666;'>Auto-retrying in 2s...</small>";
         setTimeout(resolveCloudNode, 2000);
       });
   }
