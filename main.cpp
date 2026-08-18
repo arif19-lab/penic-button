@@ -2802,6 +2802,40 @@ void ProcessClient(SOCKET clientSocket) {
             closesocket(clientSocket);
             return;
 
+        } else if (request.find("GET /manifest.json") != std::string::npos) {
+            std::string manifest = "{\n"
+                "  \"name\": \"PanicCTRL Cyber Node\",\n"
+                "  \"short_name\": \"PanicCTRL\",\n"
+                "  \"start_url\": \"/?key=imran2024\",\n"
+                "  \"display\": \"standalone\",\n"
+                "  \"background_color\": \"#020408\",\n"
+                "  \"theme_color\": \"#00f0ff\",\n"
+                "  \"orientation\": \"any\",\n"
+                "  \"icons\": [\n"
+                "    {\n"
+                "      \"src\": \"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%23020408' stroke='%2300f0ff' stroke-width='6'/><text x='50' y='64' font-size='42' font-weight='bold' fill='%2300f0ff' text-anchor='middle' font-family='sans-serif'>⚡</text></svg>\",\n"
+                "      \"sizes\": \"192x192 512x512\",\n"
+                "      \"type\": \"image/svg+xml\",\n"
+                "      \"purpose\": \"any maskable\"\n"
+                "    }\n"
+                "  ]\n"
+                "}";
+            std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/manifest+json\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: " + std::to_string(manifest.size()) + "\r\nConnection: close\r\n\r\n" + manifest;
+            send(clientSocket, res.c_str(), (int)res.size(), 0);
+            shutdown(clientSocket, SD_SEND);
+            closesocket(clientSocket);
+            return;
+
+        } else if (request.find("GET /sw.js") != std::string::npos) {
+            std::string sw = "self.addEventListener('install', e => { self.skipWaiting(); });\n"
+                "self.addEventListener('activate', e => { clients.claim(); });\n"
+                "self.addEventListener('fetch', e => { e.respondWith(fetch(e.request).catch(() => caches.match(e.request))); });\n";
+            std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/javascript\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: " + std::to_string(sw.size()) + "\r\nConnection: close\r\n\r\n" + sw;
+            send(clientSocket, res.c_str(), (int)res.size(), 0);
+            shutdown(clientSocket, SD_SEND);
+            closesocket(clientSocket);
+            return;
+
         } else if (request.find("GET /api/exec") != std::string::npos) {
             // 💻 Cyber Terminal Remote Command Execution (PowerShell / System)
             size_t cmdPos = request.find("cmd=");
@@ -3697,8 +3731,11 @@ void ProcessClient(SOCKET clientSocket) {
   
   <!-- Header Branding -->
   <div class="brand-bar">
-    <div class="brand-title">PANIC CTRL</div>
-    <div class="brand-tag">v2.0 CYBER NODE</div>
+    <div style="display:flex; align-items:center; gap:8px;">
+      <div class="brand-title">PANIC CTRL</div>
+      <div class="brand-tag">v2.0 CYBER NODE</div>
+    </div>
+    <button id="pwaInstallBtn" onclick="installPWA()" style="display:none; background:linear-gradient(135deg, #00f0ff, #0088ff); color:#000; border:none; border-radius:6px; font-family:'Orbitron',sans-serif; font-size:10px; font-weight:800; padding:5px 10px; cursor:pointer; box-shadow:0 0 12px rgba(0,240,255,0.4);">📲 INSTALL APP</button>
   </div>
 
   <!-- 🧠 GEMINI 3.1 CYBER LIVE VOICE HUD & SANDBOX TERMINAL -->
@@ -5368,6 +5405,34 @@ if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", initVoiceDropdown);
 } else {
   initVoiceDropdown();
+}
+
+// 📱 PWA 1-Click Install Engine & Service Worker Registration
+var deferredPwaPrompt = null;
+window.addEventListener('beforeinstallprompt', function(e) {
+  e.preventDefault();
+  deferredPwaPrompt = e;
+  var btn = document.getElementById('pwaInstallBtn');
+  if (btn) btn.style.display = 'inline-block';
+});
+
+function installPWA() {
+  if (deferredPwaPrompt) {
+    deferredPwaPrompt.prompt();
+    deferredPwaPrompt.userChoice.then(function(choiceResult) {
+      if (choiceResult.outcome === 'accepted') {
+        var btn = document.getElementById('pwaInstallBtn');
+        if (btn) btn.style.display = 'none';
+      }
+      deferredPwaPrompt = null;
+    });
+  } else {
+    alert("To install PanicCTRL as an App:\n1. Tap Chrome 3-dot menu (⋮)\n2. Tap 'Install app' or 'Add to Home screen'");
+  }
+}
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(function(){});
 }
 
 function toggleGeminiKeyModal() {
