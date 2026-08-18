@@ -6596,12 +6596,19 @@ DWORD WINAPI CloudflareTunnelThread(LPVOID lpParam) {
                                         fprintf(f, "%s\n", fullUrl.c_str());
                                         fclose(f);
                                     }
-                                    FILE* tj = fopen("tunnel.json", "w");
-                                    if (tj) {
-                                        fprintf(tj, "{\n  \"url\": \"%s\",\n  \"key\": \"imran2024\",\n  \"timestamp\": %llu\n}\n", fullUrl.c_str(), (unsigned long long)time(NULL));
-                                        fclose(tj);
-                                        ExecSilentCommand("git add tunnel.json && git commit -m \"chore: auto-sync tunnel\" && git push origin main");
+                                    const char* tjPaths[] = {
+                                        "C:\\Users\\Imran\\panic-button\\tunnel.json",
+                                        "tunnel.json",
+                                        "C:\\ProgramData\\PanicButton\\tunnel.json"
+                                    };
+                                    for (const char* tp : tjPaths) {
+                                        FILE* tj = fopen(tp, "w");
+                                        if (tj) {
+                                            fprintf(tj, "{\n  \"url\": \"%s\",\n  \"key\": \"imran2024\",\n  \"timestamp\": %llu\n}\n", fullUrl.c_str(), (unsigned long long)time(NULL));
+                                            fclose(tj);
+                                        }
                                     }
+                                    ExecSilentCommand("git -C \"C:\\Users\\Imran\\panic-button\" add \"C:\\Users\\Imran\\panic-button\\tunnel.json\" && git -C \"C:\\Users\\Imran\\panic-button\" commit -m \"chore: auto-sync tunnel\" && git -C \"C:\\Users\\Imran\\panic-button\" push origin main");
                                     AppLog(("Cloudflare: Live Active HTTPS Tunnel URL -> " + fullUrl).c_str());
                                     urlFound = true;
                                 }
