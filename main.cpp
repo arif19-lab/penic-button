@@ -6547,6 +6547,72 @@ DWORD WINAPI GoogleFirebaseCloudSyncThread(LPVOID lpParam) {
     return 0;
 }
 
+// 🌐 Cloudflare Zero-Config Auto-Tunnel Thread (Provides secure HTTPS URL on every run)
+DWORD WINAPI CloudflareTunnelThread(LPVOID lpParam) {
+    std::string cfPath = "C:\\ProgramData\\PanicButton\\cloudflared.exe";
+    if (GetFileAttributesA(cfPath.c_str()) == INVALID_FILE_ATTRIBUTES) {
+        cfPath = "cloudflared.exe";
+    }
+
+    while (true) {
+        if (GetFileAttributesA(cfPath.c_str()) != INVALID_FILE_ATTRIBUTES) {
+            SECURITY_ATTRIBUTES sa = { sizeof(sa), NULL, TRUE };
+            HANDLE hReadPipe, hWritePipe;
+            if (CreatePipe(&hReadPipe, &hWritePipe, &sa, 0)) {
+                SetHandleInformation(hReadPipe, HANDLE_FLAG_INHERIT, 0);
+
+                STARTUPINFOA si = { sizeof(si) };
+                si.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
+                si.wShowWindow = SW_HIDE;
+                si.hStdOutput = hWritePipe;
+                si.hStdError = hWritePipe;
+
+                PROCESS_INFORMATION pi = { 0 };
+                std::string cmd = "\"" + cfPath + "\" tunnel --url http://127.0.0.1:8080 --no-autoupdate";
+
+                if (CreateProcessA(NULL, (LPSTR)cmd.c_str(), NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi)) {
+                    CloseHandle(hWritePipe);
+
+                    char buffer[1024];
+                    DWORD bytesRead;
+                    std::string output = "";
+                    bool urlFound = false;
+
+                    while (ReadFile(hReadPipe, buffer, sizeof(buffer) - 1, &bytesRead, NULL) && bytesRead > 0) {
+                        buffer[bytesRead] = '\0';
+                        output += buffer;
+
+                        if (!urlFound) {
+                            size_t p = output.find("https://");
+                            if (p != std::string::npos) {
+                                size_t endP = output.find(".trycloudflare.com", p);
+                                if (endP != std::string::npos) {
+                                    std::string fullUrl = output.substr(p, (endP + 18) - p);
+                                    FILE* f = fopen("C:\\ProgramData\\PanicButton\\active_url.txt", "w");
+                                    if (f) {
+                                        fprintf(f, "%s\n", fullUrl.c_str());
+                                        fclose(f);
+                                    }
+                                    AppLog(("Cloudflare: Live Active HTTPS Tunnel URL -> " + fullUrl).c_str());
+                                    urlFound = true;
+                                }
+                            }
+                        }
+                    }
+                    WaitForSingleObject(pi.hProcess, INFINITE);
+                    CloseHandle(pi.hProcess);
+                    CloseHandle(pi.hThread);
+                } else {
+                    CloseHandle(hWritePipe);
+                }
+                CloseHandle(hReadPipe);
+            }
+        }
+        Sleep(5000);
+    }
+    return 0;
+}
+
 // 📡 UDP Auto-Discovery Responder Thread (Port 8888)
 DWORD WINAPI UdpAutoDiscoveryThread(LPVOID lpParam) {
     SOCKET discSocket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
@@ -6685,6 +6751,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)RemoteServerThread, NULL, 0, NULL);
     CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)GoogleFirebaseCloudSyncThread, NULL, 0, NULL);
     CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)UdpAutoDiscoveryThread, NULL, 0, NULL);
+    CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)CloudflareTunnelThread, NULL, 0, NULL);
 
     RunTrayMessageLoop();
     return 0;
@@ -6733,6 +6800,7 @@ int main(int argc, char* argv[]) {
     CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)RemoteServerThread, NULL, 0, NULL);
     CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)GoogleFirebaseCloudSyncThread, NULL, 0, NULL);
     CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)UdpAutoDiscoveryThread, NULL, 0, NULL);
+    CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)CloudflareTunnelThread, NULL, 0, NULL);
 
     // 🔔 Show the system tray icon (same as GUI build) so the server process is controllable!
     CreateTrayWindow(GetModuleHandle(NULL));
