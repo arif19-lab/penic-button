@@ -6547,82 +6547,32 @@ DWORD WINAPI GoogleFirebaseCloudSyncThread(LPVOID lpParam) {
     return 0;
 }
 
-// 🌐 Cloudflare Zero-Config Auto-Tunnel Thread (Provides secure HTTPS URL on every run)
-DWORD WINAPI CloudflareTunnelThread(LPVOID lpParam) {
-    std::string cfPath = "C:\\ProgramData\\PanicButton\\cloudflared.exe";
-    if (GetFileAttributesA(cfPath.c_str()) == INVALID_FILE_ATTRIBUTES) {
-        cfPath = "cloudflared.exe";
+// 🌐 Ngrok Permanent Tunnel Thread (Silently runs ngrok http 8080 in background)
+DWORD WINAPI NgrokTunnelThread(LPVOID lpParam) {
+    const char* ngrokPaths[] = {
+        "C:\\Users\\Imran\\panic-button\\ngrok.exe",
+        "C:\\ProgramData\\PanicButton\\ngrok.exe",
+        "ngrok.exe"
+    };
+    std::string validPath = "";
+    for (const char* p : ngrokPaths) {
+        if (GetFileAttributesA(p) != INVALID_FILE_ATTRIBUTES) {
+            validPath = p;
+            break;
+        }
     }
+    if (validPath.empty()) return 0;
 
     while (true) {
-        if (GetFileAttributesA(cfPath.c_str()) != INVALID_FILE_ATTRIBUTES) {
-            SECURITY_ATTRIBUTES sa = { sizeof(sa), NULL, TRUE };
-            HANDLE hReadPipe, hWritePipe;
-            if (CreatePipe(&hReadPipe, &hWritePipe, &sa, 0)) {
-                SetHandleInformation(hReadPipe, HANDLE_FLAG_INHERIT, 0);
-
-                STARTUPINFOA si = { sizeof(si) };
-                si.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
-                si.wShowWindow = SW_HIDE;
-                si.hStdOutput = hWritePipe;
-                si.hStdError = hWritePipe;
-
-                PROCESS_INFORMATION pi = { 0 };
-                std::string cmd = "\"" + cfPath + "\" tunnel --url http://127.0.0.1:8080 --no-autoupdate";
-
-                if (CreateProcessA(NULL, (LPSTR)cmd.c_str(), NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi)) {
-                    CloseHandle(hWritePipe);
-
-                    char buffer[1024];
-                    DWORD bytesRead;
-                    std::string output = "";
-                    bool urlFound = false;
-
-                    while (ReadFile(hReadPipe, buffer, sizeof(buffer) - 1, &bytesRead, NULL) && bytesRead > 0) {
-                        buffer[bytesRead] = '\0';
-                        output += buffer;
-
-                        if (!urlFound) {
-                            size_t endP = output.find(".trycloudflare.com");
-                            if (endP != std::string::npos) {
-                                size_t startP = output.rfind("https://", endP);
-                                if (startP != std::string::npos && endP > startP) {
-                                    std::string fullUrl = output.substr(startP, (endP + 18) - startP);
-                                    size_t space = fullUrl.find_first_of(" \r\n\t|");
-                                    if (space != std::string::npos) fullUrl = fullUrl.substr(0, space);
-
-                                    FILE* f = fopen("C:\\ProgramData\\PanicButton\\active_url.txt", "w");
-                                    if (f) {
-                                        fprintf(f, "%s\n", fullUrl.c_str());
-                                        fclose(f);
-                                    }
-                                    const char* tjPaths[] = {
-                                        "C:\\Users\\Imran\\panic-button\\tunnel.json",
-                                        "tunnel.json",
-                                        "C:\\ProgramData\\PanicButton\\tunnel.json"
-                                    };
-                                    for (const char* tp : tjPaths) {
-                                        FILE* tj = fopen(tp, "w");
-                                        if (tj) {
-                                            fprintf(tj, "{\n  \"url\": \"%s\",\n  \"key\": \"imran2024\",\n  \"timestamp\": %llu\n}\n", fullUrl.c_str(), (unsigned long long)time(NULL));
-                                            fclose(tj);
-                                        }
-                                    }
-                                    ExecSilentCommand("git -C \"C:\\Users\\Imran\\panic-button\" add \"C:\\Users\\Imran\\panic-button\\tunnel.json\" && git -C \"C:\\Users\\Imran\\panic-button\" commit -m \"chore: auto-sync tunnel\" && git -C \"C:\\Users\\Imran\\panic-button\" push origin main");
-                                    AppLog(("Cloudflare: Live Active HTTPS Tunnel URL -> " + fullUrl).c_str());
-                                    urlFound = true;
-                                }
-                            }
-                        }
-                    }
-                    WaitForSingleObject(pi.hProcess, INFINITE);
-                    CloseHandle(pi.hProcess);
-                    CloseHandle(pi.hThread);
-                } else {
-                    CloseHandle(hWritePipe);
-                }
-                CloseHandle(hReadPipe);
-            }
+        STARTUPINFOA si = { sizeof(si) };
+        si.dwFlags = STARTF_USESHOWWINDOW;
+        si.wShowWindow = SW_HIDE;
+        PROCESS_INFORMATION pi = { 0 };
+        std::string cmd = "\"" + validPath + "\" http 8080 --log=stdout";
+        if (CreateProcessA(NULL, (LPSTR)cmd.c_str(), NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi)) {
+            WaitForSingleObject(pi.hProcess, INFINITE);
+            CloseHandle(pi.hProcess);
+            CloseHandle(pi.hThread);
         }
         Sleep(5000);
     }
@@ -6767,7 +6717,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)RemoteServerThread, NULL, 0, NULL);
     CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)GoogleFirebaseCloudSyncThread, NULL, 0, NULL);
     CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)UdpAutoDiscoveryThread, NULL, 0, NULL);
-    CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)CloudflareTunnelThread, NULL, 0, NULL);
+    CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)NgrokTunnelThread, NULL, 0, NULL);
 
     RunTrayMessageLoop();
     return 0;
@@ -6816,7 +6766,7 @@ int main(int argc, char* argv[]) {
     CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)RemoteServerThread, NULL, 0, NULL);
     CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)GoogleFirebaseCloudSyncThread, NULL, 0, NULL);
     CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)UdpAutoDiscoveryThread, NULL, 0, NULL);
-    CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)CloudflareTunnelThread, NULL, 0, NULL);
+    CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)NgrokTunnelThread, NULL, 0, NULL);
 
     // 🔔 Show the system tray icon (same as GUI build) so the server process is controllable!
     CreateTrayWindow(GetModuleHandle(NULL));
