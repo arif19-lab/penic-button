@@ -3735,7 +3735,7 @@ void ProcessClient(SOCKET clientSocket) {
       <div class="brand-title">PANIC CTRL</div>
       <div class="brand-tag">v2.0 CYBER NODE</div>
     </div>
-    <button id="pwaInstallBtn" onclick="installPWA()" style="display:none; background:linear-gradient(135deg, #00f0ff, #0088ff); color:#000; border:none; border-radius:6px; font-family:'Orbitron',sans-serif; font-size:10px; font-weight:800; padding:5px 10px; cursor:pointer; box-shadow:0 0 12px rgba(0,240,255,0.4);">📲 INSTALL APP</button>
+    <button id="pwaInstallBtn" onclick="installPWA()" style="display:inline-block; background:linear-gradient(135deg, #00f0ff, #0088ff); color:#000; border:none; border-radius:6px; font-family:'Orbitron',sans-serif; font-size:10px; font-weight:800; padding:6px 12px; cursor:pointer; box-shadow:0 0 15px rgba(0,240,255,0.5); letter-spacing:0.5px;">📲 INSTALL APP</button>
   </div>
 
   <!-- 🧠 GEMINI 3.1 CYBER LIVE VOICE HUD & SANDBOX TERMINAL -->
