@@ -180,57 +180,21 @@
     }
   }
 
+  var PERMANENT_TARGET = "https://ungodly-immature-share.ngrok-free.dev/?key=imran2024";
+
   function resolveCloudNode() {
     var badge = document.getElementById("badgeText");
     var msg = document.getElementById("msgBox");
     var directBtn = document.getElementById("directLinkBtn");
 
-    // ⚡ GitHub Official REST API has ZERO CDN cache (updates the exact millisecond a push happens)
-    var apiUrl = "https://api.github.com/repos/arif19-lab/penic-button/contents/tunnel.json?nocache=" + Date.now();
-    var rawUrl = "https://raw.githubusercontent.com/arif19-lab/penic-button/main/tunnel.json?nocache=" + Date.now();
+    badge.textContent = "CONNECTED TO PC!";
+    msg.innerHTML = "Opening your live dashboard...<br><b style='color:#00f0ff; font-size:12px;'>ungodly-immature-share.ngrok-free.dev</b>";
+    
+    directBtn.href = PERMANENT_TARGET;
+    directBtn.style.display = "block";
 
-    function processPayload(jsonObj) {
-      if (jsonObj && jsonObj.url) {
-        var target = jsonObj.url + "/?key=" + (jsonObj.key || "imran2024");
-        badge.textContent = "PC LOCATED!";
-        msg.innerHTML = "Connecting to <b style='color:#00f0ff; font-size:12px;'>" + jsonObj.url.replace('https://','') + "</b>";
-        
-        directBtn.href = target;
-        directBtn.style.display = "block";
-
-        setTimeout(function() {
-          window.location.href = target;
-        }, 300);
-      } else {
-        throw new Error("Invalid payload format");
-      }
-    }
-
-    fetch(apiUrl, { cache: "no-store", headers: { "Accept": "application/vnd.github.v3+json" } })
-      .then(function(res) {
-        if (!res.ok) throw new Error("API status " + res.status);
-        return res.json();
-      })
-      .then(function(apiData) {
-        if (apiData && apiData.content) {
-          var decodedStr = decodeURIComponent(escape(atob(apiData.content.replace(/\s/g, ''))));
-          var parsed = JSON.parse(decodedStr);
-          processPayload(parsed);
-        } else {
-          throw new Error("No content field in API response");
-        }
-      })
-      .catch(function(apiErr) {
-        // Fallback to raw github
-        fetch(rawUrl, { cache: "no-store" })
-          .then(function(r) { return r.json(); })
-          .then(function(rawData) { processPayload(rawData); })
-          .catch(function(err) {
-            badge.textContent = "SEARCHING PC NODE...";
-            msg.innerHTML = "Make sure <b style='color:#00ff41;'>PanicButton.exe</b> is running on your PC.<br><small style='color:#666;'>Auto-retrying in 2s...</small>";
-            setTimeout(resolveCloudNode, 2000);
-          });
-      });
+    // Instant redirection
+    window.location.href = PERMANENT_TARGET;
   }
 
   resolveCloudNode();
