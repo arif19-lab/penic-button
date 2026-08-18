@@ -8,11 +8,12 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>PanicCTRL Cloud Gateway</title>
   <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;900&family=Share+Tech+Mono&family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       background: radial-gradient(circle at 50% 30%, #06101e 0%, #020408 100%);
       color: #fff;
@@ -26,11 +27,11 @@
       overflow: hidden;
     }
     .node-card {
-      background: rgba(8, 14, 24, 0.85);
+      background: rgba(8, 14, 24, 0.9);
       border: 1.5px solid rgba(0, 240, 255, 0.4);
       border-radius: 20px;
-      box-shadow: 0 0 50px rgba(0, 240, 255, 0.2), inset 0 0 30px rgba(0, 0, 0, 0.8);
-      padding: 36px 28px;
+      box-shadow: 0 0 50px rgba(0, 240, 255, 0.25), inset 0 0 30px rgba(0, 0, 0, 0.8);
+      padding: 36px 24px;
       width: 100%;
       max-width: 420px;
       text-align: center;
@@ -75,7 +76,7 @@
       font-size: 11px;
       color: #00f0ff;
       letter-spacing: 2px;
-      margin-bottom: 24px;
+      margin-bottom: 20px;
     }
     .status-badge {
       display: inline-flex;
@@ -104,24 +105,31 @@
       font-size: 13px;
       color: #aaa;
       line-height: 1.5;
-      min-height: 42px;
+      min-height: 48px;
     }
-    .install-bar {
-      margin-top: 24px;
-      display: none;
-    }
-    .btn-install {
+    .btn-action {
+      display: inline-block;
+      text-decoration: none;
       background: linear-gradient(135deg, #00f0ff, #0088ff);
       color: #000;
-      border: none;
-      border-radius: 10px;
       font-family: 'Orbitron', sans-serif;
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 900;
-      padding: 12px 24px;
-      cursor: pointer;
+      padding: 14px 24px;
+      border-radius: 10px;
       box-shadow: 0 0 20px rgba(0, 240, 255, 0.5);
+      margin-top: 20px;
       width: 100%;
+      cursor: pointer;
+      border: none;
+    }
+    .install-btn {
+      background: transparent;
+      border: 1px solid rgba(0, 240, 255, 0.5);
+      color: #00f0ff;
+      font-size: 11px;
+      padding: 10px 18px;
+      margin-top: 12px;
     }
   </style>
 </head>
@@ -142,66 +150,77 @@
   </div>
 
   <div class="msg-box" id="msgBox">
-    Locating your active PC stream from GitHub Cloud...
+    Locating your live PC stream from GitHub Cloud...
   </div>
 
-  <div class="install-bar" id="installBar">
-    <button class="btn-install" onclick="installGatewayPWA()">📲 INSTALL PERMANENT APP</button>
-  </div>
+  <a id="directLinkBtn" class="btn-action" style="display:none;" href="#">
+    ⚡ OPEN DASHBOARD NOW 🚀
+  </a>
+
+  <button id="pwaBtn" class="btn-action install-btn" style="display:none;" onclick="installGatewayApp()">
+    📲 INSTALL AS APP (HOME SCREEN)
+  </button>
 </div>
 
 <script>
-  // 📱 PWA Install handling
   var deferredPrompt = null;
   window.addEventListener('beforeinstallprompt', function(e) {
     e.preventDefault();
     deferredPrompt = e;
-    var ib = document.getElementById('installBar');
-    if (ib) ib.style.display = 'block';
+    var btn = document.getElementById('pwaBtn');
+    if (btn) btn.style.display = 'block';
   });
 
-  function installGatewayPWA() {
+  function installGatewayApp() {
     if (deferredPrompt) {
       deferredPrompt.prompt();
       deferredPrompt.userChoice.then(function() { deferredPrompt = null; });
     } else {
-      alert("To install as permanent App:\nTap Chrome menu (⋮) -> 'Install app' or 'Add to Home screen'");
+      alert("Tap Chrome 3-dot menu (⋮) -> 'Install app' or 'Add to Home screen'");
     }
   }
 
-  // 🚀 Auto Cloud URL Resolver & Instant Redirector
-  var cloudUrl = "https://raw.githubusercontent.com/arif19-lab/penic-button/main/tunnel.json?t=" + Date.now();
-
-  function resolveAndConnect() {
-    var msg = document.getElementById("msgBox");
-    var badge = document.getElementById("badgeText");
-
-    fetch(cloudUrl, { cache: "no-store" })
+  function tryFetch(url) {
+    return fetch(url, { cache: "no-store" })
       .then(function(res) {
-        if (!res.ok) throw new Error("Status " + res.status);
+        if (!res.ok) throw new Error("HTTP " + res.status);
         return res.json();
-      })
+      });
+  }
+
+  function resolveCloudNode() {
+    var badge = document.getElementById("badgeText");
+    var msg = document.getElementById("msgBox");
+    var directBtn = document.getElementById("directLinkBtn");
+
+    var localUrl = "tunnel.json?t=" + Date.now();
+    var rawUrl = "https://raw.githubusercontent.com/arif19-lab/penic-button/main/tunnel.json?t=" + Date.now();
+
+    tryFetch(localUrl)
+      .catch(function() { return tryFetch(rawUrl); })
       .then(function(data) {
         if (data && data.url) {
-          badge.textContent = "NODE LOCATED! REDIRECTING...";
-          msg.innerHTML = "Connecting to <b style='color:#00f0ff;'>" + data.url.replace('https://','') + "</b>";
-          var targetUrl = data.url + "/?key=" + (data.key || "imran2024");
-          setTimeout(function() {
-            window.location.replace(targetUrl);
-          }, 300);
+          var target = data.url + "/?key=" + (data.key || "imran2024");
+          badge.textContent = "CONNECTED TO PC!";
+          msg.innerHTML = "Redirecting to your live stream...<br><span style='font-size:11px; color:#00f0ff;'>" + data.url + "</span>";
+          
+          directBtn.href = target;
+          directBtn.style.display = "block";
+
+          // Instant redirection
+          window.location.replace(target);
         } else {
-          throw new Error("Invalid URL payload");
+          throw new Error("No URL in JSON");
         }
       })
       .catch(function(err) {
         badge.textContent = "PC OFFLINE / WAITING";
-        msg.innerHTML = "Please start <b style='color:#00ff41;'>PanicButton.exe</b> on your PC.<br><small style='color:#666;'>Auto-retrying in 3s...</small>";
-        setTimeout(resolveAndConnect, 3000);
+        msg.innerHTML = "Make sure <b style='color:#00ff41;'>PanicButton.exe</b> is running on your PC.<br><small style='color:#666;'>Auto-retrying in 2s...</small>";
+        setTimeout(resolveCloudNode, 2000);
       });
   }
 
-  // Run instant resolver on open
-  resolveAndConnect();
+  resolveCloudNode();
 </script>
 
 </body>
