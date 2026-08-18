@@ -3090,12 +3090,14 @@ void ProcessClient(SOCKET clientSocket) {
   }
   
   .screen-img {
-    width: 100%;
-    height: auto;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
     display: block;
     cursor: pointer;
     border-radius: 4px;
-    object-fit: contain;
+    object-fit: contain !important;
     image-rendering: -webkit-optimize-contrast;
   }
 
@@ -4878,6 +4880,7 @@ function startCanvasStream() {
           _cachedFsCanvas.height = bitmap.height;
           _cachedFsCtx.imageSmoothingEnabled = true;
           _cachedFsCtx.imageSmoothingQuality = "high";
+          applyFSTransform();
         }
         _cachedFsCtx.drawImage(bitmap, 0, 0);
       }
