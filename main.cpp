@@ -3078,12 +3078,15 @@ void ProcessClient(SOCKET clientSocket) {
   /* Screen Display Box */
   .screen-display {
     width: 100%;
-    min-height: 230px;
-    background: #04060a;
+    aspect-ratio: 16/9;
+    min-height: 200px;
+    background: #000;
     display: flex;
     align-items: center;
     justify-content: center;
     position: relative;
+    overflow: hidden;
+    border-radius: 6px;
   }
   
   .screen-img {
@@ -4861,7 +4864,7 @@ function startCanvasStream() {
     _latestBlob = null;
     createImageBitmap(currentBlob, { premultiplyAlpha: 'none', colorSpaceConversion: 'none' }).then(function(bitmap) {
       if (_canvasCtx && _canvasEl) {
-        if (_canvasEl.width !== bitmap.width) {
+        if (_canvasEl.width !== bitmap.width || _canvasEl.height !== bitmap.height) {
           _canvasEl.width  = bitmap.width;
           _canvasEl.height = bitmap.height;
           _canvasCtx.imageSmoothingEnabled = true;
@@ -4870,7 +4873,7 @@ function startCanvasStream() {
         _canvasCtx.drawImage(bitmap, 0, 0);
       }
       if (_cachedFsOverlay && _cachedFsOverlay.style.display !== "none" && _cachedFsCtx && _cachedFsCanvas) {
-        if (_cachedFsCanvas.width !== bitmap.width) {
+        if (_cachedFsCanvas.width !== bitmap.width || _cachedFsCanvas.height !== bitmap.height) {
           _cachedFsCanvas.width  = bitmap.width;
           _cachedFsCanvas.height = bitmap.height;
           _cachedFsCtx.imageSmoothingEnabled = true;
