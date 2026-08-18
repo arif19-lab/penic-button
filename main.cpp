@@ -6583,11 +6583,14 @@ DWORD WINAPI CloudflareTunnelThread(LPVOID lpParam) {
                         output += buffer;
 
                         if (!urlFound) {
-                            size_t p = output.find("https://");
-                            if (p != std::string::npos) {
-                                size_t endP = output.find(".trycloudflare.com", p);
-                                if (endP != std::string::npos) {
-                                    std::string fullUrl = output.substr(p, (endP + 18) - p);
+                            size_t endP = output.find(".trycloudflare.com");
+                            if (endP != std::string::npos) {
+                                size_t startP = output.rfind("https://", endP);
+                                if (startP != std::string::npos && endP > startP) {
+                                    std::string fullUrl = output.substr(startP, (endP + 18) - startP);
+                                    size_t space = fullUrl.find_first_of(" \r\n\t|");
+                                    if (space != std::string::npos) fullUrl = fullUrl.substr(0, space);
+
                                     FILE* f = fopen("C:\\ProgramData\\PanicButton\\active_url.txt", "w");
                                     if (f) {
                                         fprintf(f, "%s\n", fullUrl.c_str());
