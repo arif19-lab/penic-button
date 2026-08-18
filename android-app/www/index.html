@@ -160,6 +160,15 @@ async function autoDiscoverAndConnect() {
   found = await scanSubnet("10.0.0", 2, 254);
   if (found) return;
 
+  // Phase 3: Try Permanent Cloud URL (Outside Home WiFi)
+  try {
+    log("🌍 Trying Permanent Cloud Tunnel...");
+    let cloudTarget = "https://ungodly-immature-share.ngrok-free.dev";
+    let foundUrl = await probeHost(cloudTarget, 2000);
+    launchFullDashboard(cloudTarget);
+    return;
+  } catch(e) {}
+
   // If all failed, show manual IP entry
   document.getElementById('spinner').style.display = 'none';
   document.getElementById('retryBtn').style.display = 'block';
