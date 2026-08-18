@@ -2933,7 +2933,7 @@ void ProcessClient(SOCKET clientSocket) {
             closesocket(clientSocket);
             return;
 
-                } else if (request.find("GET /h264") != std::string::npos || request.find("GET /ws") != std::string::npos || request.find("GET /mjpeg") != std::string::npos) {
+                } else if (request.find("GET /h264") != std::string::npos || request.find("GET /mjpeg") != std::string::npos) {
             // 🎬 SUNSHINE/PARSEC LOW-LATENCY VIDEO BROADCASTER
             // Single DXGI/H.264 GPU pipeline fan-out to all connected clients.
             std::string header =
