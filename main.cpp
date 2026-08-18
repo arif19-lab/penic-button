@@ -2357,14 +2357,19 @@ void ProcessClient(SOCKET clientSocket) {
             closesocket(clientSocket);
             return;
 
-        } else if (request.find("GET /ws") != std::string::npos || request.find("Upgrade: websocket") != std::string::npos) {
-            // ⚡ WEBSOCKET HIGH-SPEED BINARY FRAME STREAMER — JpegBroadcaster fan-out
-            size_t keyPos = request.find("Sec-WebSocket-Key: ");
+        } else if (request.find("GET /ws") != std::string::npos || request.find("Upgrade: websocket") != std::string::npos || request.find("upgrade: websocket") != std::string::npos) {
+            // ⚡ WEBSOCKET HIGH-SPEED BINARY FRAME STREAMER — Case-Insensitive Key Extraction
             std::string wsKey = "";
+            std::string reqLower = request;
+            for (char& c : reqLower) c = (char)tolower(c);
+            size_t keyPos = reqLower.find("sec-websocket-key:");
             if (keyPos != std::string::npos) {
-                size_t endPos = request.find("\r\n", keyPos);
+                size_t valStart = keyPos + 18;
+                while (valStart < request.size() && (request[valStart] == ' ' || request[valStart] == '\t')) valStart++;
+                size_t endPos = request.find("\r\n", valStart);
                 if (endPos != std::string::npos) {
-                    wsKey = request.substr(keyPos + 19, endPos - (keyPos + 19));
+                    wsKey = request.substr(valStart, endPos - valStart);
+                    while (!wsKey.empty() && (wsKey.back() == ' ' || wsKey.back() == '\r')) wsKey.pop_back();
                 }
             }
 
@@ -3850,10 +3855,8 @@ void ProcessClient(SOCKET clientSocket) {
         <div class="matrix-title">PC MONITOR OFFLINE</div>
         <div class="matrix-sub">Tap '▶ PLAY LIVE STREAM' to start real-time desktop view.</div>
       </div>
-      <!-- 🚀 GPU ACCELERATED HARDWARE CANVAS (Instant zero-copy render) -->
-      <canvas id="gpuCanvas" class="screen-img" onclick="openFS()" style="display:none; width:100%; border-radius:6px; object-fit:contain; cursor:pointer; touch-action:none;"></canvas>
-      <!-- 📷 MJPEG fallback -->
-      <img id="liveImg" class="screen-img" onclick="openFS()" style="display:none; width:100%; border-radius:6px; object-fit:contain; cursor:pointer; touch-action:none;">
+      <!-- 🚀 SINGLE UNIFIED GPU CANVAS (Handles WS, Fetch & Fallbacks) -->
+      <canvas id="gpuCanvas" class="screen-img" onclick="openFS()" style="display:none; width:100%; height:100%; border-radius:6px; object-fit:contain; cursor:pointer; touch-action:none;"></canvas>
     </div>
 
     <div class="player-controls">
@@ -4756,50 +4759,234 @@ function fallbackToMJPEG(){
   }, 600);
 }
 
-function startMJPEG(){
-  var liveImg = document.getElementById("liveImg");
-  if (!liveImg) return;
-  var wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-  var wsUrl = wsProtocol + '//' + location.host + '/ws?key=' + KEY;
-  try {
-    window.__wsStream = new WebSocket(wsUrl);
-    window.__wsStream.binaryType = "arraybuffer";
-    window.__wsStream.onmessage = function(e) {
-      if (!isStreaming) { try{window.__wsStream.close();}catch(c){} return; }
-      var blob = new Blob([e.data], {type: "image/jpeg"});
-      var oldUrl = liveImg.src;
-      liveImg.src = URL.createObjectURL(blob);
-      if (oldUrl && oldUrl.startsWith("blob:")) URL.revokeObjectURL(oldUrl);
-    };
-    window.__wsStream.onerror = function() {
-      liveImg.src = "/mjpeg?key=" + KEY + "&t=" + Date.now();
-    };
-  } catch(err) {
-    liveImg.src = "/mjpeg?key=" + KEY + "&t=" + Date.now();
+// ── UNIFIED ROCK-SOLID STREAMING & RENDERING ENGINE ─────────────
+var isStreaming = false;
+var _canvasWS = null;
+var _canvasEl = null;
+var _canvasCtx = null;
+var _fsCanvasEl = null;
+var _fsCanvasCtx = null;
+var _fsOverlayEl = null;
+var _frameCount = 0;
+var _fpsTimer = null;
+var _fallbackActive = false;
+var _fallbackAbortCtrl = null;
+var _reconnectTimeout = null;
+
+// 🎨 Centralized Dual-Canvas Frame Dispatcher (Updates Dashboard Canvas + Fullscreen Canvas in 1 shot)
+function renderFrame(sourceBitmap) {
+  if (!isStreaming) return;
+  _frameCount++;
+
+  // 1. Render to Dashboard Canvas
+  if (_canvasEl && _canvasCtx) {
+    if (_canvasEl.width !== sourceBitmap.width || _canvasEl.height !== sourceBitmap.height) {
+      _canvasEl.width  = sourceBitmap.width;
+      _canvasEl.height = sourceBitmap.height;
+      _canvasCtx.imageSmoothingEnabled = true;
+      _canvasCtx.imageSmoothingQuality = "high";
+    }
+    _canvasCtx.drawImage(sourceBitmap, 0, 0);
+  }
+
+  // 2. Render to Fullscreen Canvas if Overlay is Visible
+  if (_fsOverlayEl && _fsOverlayEl.style.display !== "none" && _fsCanvasEl && _fsCanvasCtx) {
+    if (_fsCanvasEl.width !== sourceBitmap.width || _fsCanvasEl.height !== sourceBitmap.height) {
+      _fsCanvasEl.width  = sourceBitmap.width;
+      _fsCanvasEl.height = sourceBitmap.height;
+      _fsCanvasCtx.imageSmoothingEnabled = true;
+      _fsCanvasCtx.imageSmoothingQuality = "high";
+      applyFSTransform();
+    }
+    _fsCanvasCtx.drawImage(sourceBitmap, 0, 0);
   }
 }
 
-function stopMJPEG(){
-  var liveImg = document.getElementById("liveImg");
-  if (liveImg) { liveImg.onerror = null; liveImg.removeAttribute("src"); }
-  if (window.__wsStream) { try{ window.__wsStream.close(); }catch(e){} }
-  clearTimeout(mjpegTimer);
+// 🚀 Primary: WebSocket Binary Frame Decoder
+function startCanvasStream() {
+  _canvasEl = document.getElementById("gpuCanvas");
+  _fsCanvasEl = document.getElementById("fsCanvas");
+  _fsOverlayEl = document.getElementById("fsOverlay");
+
+  if (_canvasEl) {
+    _canvasEl.style.display = "block";
+    _canvasCtx = _canvasEl.getContext("2d", { alpha: false, desynchronized: true });
+  }
+  if (_fsCanvasEl) {
+    _fsCanvasCtx = _fsCanvasEl.getContext("2d", { alpha: false, desynchronized: true });
+  }
+
+  // FPS Monitor
+  _frameCount = 0;
+  clearInterval(_fpsTimer);
+  _fpsTimer = setInterval(function() {
+    if (!isStreaming) { clearInterval(_fpsTimer); return; }
+    var q = document.querySelector('.stream-quality');
+    if (q) {
+      var modeTag = _fallbackActive ? "⚡ HTTP TURBO" : "⚡ DIRECT GPU WS";
+      q.textContent = "720P • " + _frameCount + " FPS • " + modeTag;
+    }
+    if (window.Telemetry) {
+      Telemetry.log("STREAM_HEARTBEAT", { fps: _frameCount, fallback: _fallbackActive, zoom: fsZoom });
+    }
+    _frameCount = 0;
+  }, 3000);
+
+  _connectWebSocket();
 }
 
-function toggleStream(){
+function _connectWebSocket() {
+  if (!isStreaming) return;
+  _fallbackActive = false;
+
+  var wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  var wsUrl = wsProto + "//" + window.location.host + "/ws?key=" + KEY;
+
+  var _latestBlob = null;
+  var _isDecoding = false;
+
+  function _drainDecode() {
+    if (!_latestBlob || !isStreaming) { _isDecoding = false; return; }
+    _isDecoding = true;
+    var blob = _latestBlob;
+    _latestBlob = null;
+
+    createImageBitmap(blob, { premultiplyAlpha: 'none', colorSpaceConversion: 'none' })
+      .then(function(bitmap) {
+        renderFrame(bitmap);
+        bitmap.close();
+        if (_canvasWS && _canvasWS.readyState === 1) {
+          try { _canvasWS.send("A"); } catch(x){}
+        }
+        if (_latestBlob) _drainDecode();
+        else _isDecoding = false;
+      })
+      .catch(function() {
+        if (_canvasWS && _canvasWS.readyState === 1) {
+          try { _canvasWS.send("A"); } catch(x){}
+        }
+        _isDecoding = false;
+      });
+  }
+
+  try {
+    _canvasWS = new WebSocket(wsUrl);
+    _canvasWS.binaryType = "arraybuffer";
+
+    _canvasWS.onopen = function() {
+      _fallbackActive = false;
+      var q = document.querySelector('.stream-quality');
+      if (q) q.textContent = "720P • 60 FPS • ⚡ DIRECT GPU WS";
+      try { _canvasWS.send("A"); } catch(e){}
+    };
+
+    _canvasWS.onmessage = function(e) {
+      if (!isStreaming) { try { _canvasWS.close(); } catch(x){} return; }
+      _latestBlob = new Blob([e.data], { type: "image/jpeg" });
+      if (!_isDecoding) _drainDecode();
+    };
+
+    _canvasWS.onerror = function() {
+      if (isStreaming && !_fallbackActive) {
+        _startCanvasFetchFallback();
+      }
+    };
+
+    _canvasWS.onclose = function() {
+      if (isStreaming && !_fallbackActive) {
+        _startCanvasFetchFallback();
+      }
+    };
+  } catch(err) {
+    if (isStreaming && !_fallbackActive) {
+      _startCanvasFetchFallback();
+    }
+  }
+}
+
+// 🛡️ Fallback: Unified Fetch-to-Canvas Stream (Zero DOM Shifts)
+function _startCanvasFetchFallback() {
+  if (_fallbackActive || !isStreaming) return;
+  _fallbackActive = true;
+  if (_canvasWS) { try { _canvasWS.close(); } catch(e){} _canvasWS = null; }
+
+  var q = document.querySelector('.stream-quality');
+  if (q) q.textContent = "720P • AUTO-RECOVERING • ⚡ HTTP TURBO";
+
+  _fallbackAbortCtrl = window.AbortController ? new AbortController() : null;
+  var streamRunning = true;
+
+  function pullFrameLoop() {
+    if (!isStreaming || !_fallbackActive || !streamRunning) return;
+
+    var frameUrl = "/rawframe?key=" + KEY + "&t=" + Date.now();
+    var fetchOpts = {
+      cache: "no-store",
+      headers: { "Bypass-Tunnel-Reminder": "true" },
+      signal: _fallbackAbortCtrl ? _fallbackAbortCtrl.signal : undefined
+    };
+
+    fetch(frameUrl, fetchOpts)
+      .then(function(res) {
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return res.blob();
+      })
+      .then(function(blob) {
+        return createImageBitmap(blob, { premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
+      })
+      .then(function(bitmap) {
+        renderFrame(bitmap);
+        bitmap.close();
+        if (isStreaming && _fallbackActive) {
+          requestAnimationFrame(pullFrameLoop);
+        }
+      })
+      .catch(function(err) {
+        if (isStreaming && _fallbackActive) {
+          setTimeout(pullFrameLoop, 100);
+        }
+      });
+  }
+
+  pullFrameLoop();
+
+  // Retry WebSocket upgrade in background every 8 seconds
+  clearTimeout(_reconnectTimeout);
+  _reconnectTimeout = setTimeout(function() {
+    if (isStreaming && _fallbackActive) {
+      _connectWebSocket();
+    }
+  }, 8000);
+}
+
+function stopCanvasStream() {
+  isStreaming = false;
+  _fallbackActive = false;
+  clearInterval(_fpsTimer);
+  clearTimeout(_reconnectTimeout);
+
+  if (_fallbackAbortCtrl) {
+    try { _fallbackAbortCtrl.abort(); } catch(e){}
+    _fallbackAbortCtrl = null;
+  }
+  if (_canvasWS) {
+    try { _canvasWS.close(); } catch(e){}
+    _canvasWS = null;
+  }
+}
+
+function toggleStream() {
   isStreaming = !isStreaming;
   var holder = document.getElementById("mirrorPlaceholder");
   var canvas = document.getElementById("gpuCanvas");
-  var liveImg = document.getElementById("liveImg");
   var btn = document.getElementById("toggleBtn");
   var q = document.querySelector('.stream-quality');
 
-  if(isStreaming){
+  if (isStreaming) {
     if (btn) btn.textContent = "⏸ PAUSE MONITOR";
     if (holder) holder.style.display = "none";
-    if (liveImg) liveImg.style.display = "none";
     if (canvas) canvas.style.display = "block";
-    if (q) q.textContent = "720P • 60 FPS • ⚡ DIRECT GPU SPEED";
+    if (q) q.textContent = "720P • INITIALIZING...";
 
     if (window.AndroidNativeStream && typeof window.AndroidNativeStream.setNativeInput === 'function') {
       try { window.AndroidNativeStream.setNativeInput(true); } catch(e) {}
@@ -4811,151 +4998,10 @@ function toggleStream(){
     }
     stopCanvasStream();
     if (canvas) canvas.style.display = "none";
-    if (liveImg) liveImg.style.display = "none";
     if (holder) holder.style.display = "block";
     if (btn) btn.textContent = "▶ PLAY LIVE STREAM";
     if (q) q.textContent = "1080P • 30 FPS • ENCRYPTED";
   }
-}
-
-// ── Canvas GPU Stream Engine ────────────────────────────────────
-// Uses WebSocket binary JPEG → createImageBitmap() → Canvas GPU draw
-// Zero-copy, GPU hardware decoded, runs at screen refresh rate
-var _canvasWS = null;
-var _canvasEl = null;
-var _canvasCtx = null;
-var _pendingFrame = null;
-var _rafId = null;
-var _frameCount = 0;
-var _fpsTimer = null;
-var _webrtcPC = null;
-var _webrtcDC = null;
-
-function startCanvasStream() {
-  _canvasEl = document.getElementById("gpuCanvas");
-  if (!_canvasEl) return;
-  _canvasEl.style.display = "block";
-  _canvasCtx = _canvasEl.getContext("2d");
-
-  var _cachedFsCanvas = document.getElementById("fsCanvas");
-  var _cachedFsOverlay = document.getElementById("fsOverlay");
-  var _cachedFsCtx = _cachedFsCanvas ? _cachedFsCanvas.getContext("2d") : null;
-
-  // FPS ticker
-  _frameCount = 0;
-  clearInterval(_fpsTimer);
-  _fpsTimer = setInterval(function() {
-    if (!isStreaming) { clearInterval(_fpsTimer); return; }
-    var q = document.querySelector('.stream-quality');
-    if (q) {
-      q.textContent = "720P • " + _frameCount + " FPS • ⚡ DIRECT GPU SPEED";
-    }
-    if (window.Telemetry) {
-      Telemetry.log("STREAM_HEARTBEAT", { fps: _frameCount, zoom: fsZoom });
-    }
-    _frameCount = 0;
-  }, 3000);
-
-  var _latestBlob = null;
-  var _isDecoding = false;
-
-  function _drainDecode() {
-    if (!_latestBlob || !isStreaming) { _isDecoding = false; return; }
-    _isDecoding = true;
-    var currentBlob = _latestBlob;
-    _latestBlob = null;
-    createImageBitmap(currentBlob, { premultiplyAlpha: 'none', colorSpaceConversion: 'none' }).then(function(bitmap) {
-      if (_canvasCtx && _canvasEl) {
-        if (_canvasEl.width !== bitmap.width || _canvasEl.height !== bitmap.height) {
-          _canvasEl.width  = bitmap.width;
-          _canvasEl.height = bitmap.height;
-          _canvasCtx.imageSmoothingEnabled = true;
-          _canvasCtx.imageSmoothingQuality = "high";
-        }
-        _canvasCtx.drawImage(bitmap, 0, 0);
-      }
-      if (_cachedFsOverlay && _cachedFsOverlay.style.display !== "none" && _cachedFsCtx && _cachedFsCanvas) {
-        if (_cachedFsCanvas.width !== bitmap.width || _cachedFsCanvas.height !== bitmap.height) {
-          _cachedFsCanvas.width  = bitmap.width;
-          _cachedFsCanvas.height = bitmap.height;
-          _cachedFsCtx.imageSmoothingEnabled = true;
-          _cachedFsCtx.imageSmoothingQuality = "high";
-          applyFSTransform();
-        }
-        _cachedFsCtx.drawImage(bitmap, 0, 0);
-      }
-      bitmap.close();
-      if (_canvasWS && _canvasWS.readyState === 1) {
-        try { _canvasWS.send("A"); } catch(x){}
-      }
-
-      if (_latestBlob) {
-        _drainDecode();
-      } else {
-        _isDecoding = false;
-      }
-    }).catch(function() {
-      if (_canvasWS && _canvasWS.readyState === 1) {
-        try { _canvasWS.send("A"); } catch(x){}
-      }
-      _isDecoding = false;
-    });
-  }
-
-  var wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-  var wsUrl = wsProto + "//" + window.location.host + "/ws?key=" + KEY;
-  try {
-    _canvasWS = new WebSocket(wsUrl);
-    _canvasWS.binaryType = "arraybuffer";
-
-    _canvasWS.onopen = function() {
-      var q = document.querySelector('.stream-quality');
-      if (q) q.textContent = "720P • 60 FPS • ⚡ DIRECT GPU SPEED";
-      try { _canvasWS.send("A"); } catch(e){}
-    };
-
-    _canvasWS.onmessage = function(e) {
-      if (!isStreaming) { try { _canvasWS.close(); } catch(x){} return; }
-      _frameCount++;
-      _latestBlob = new Blob([e.data], { type: "image/jpeg" });
-      if (!_isDecoding) {
-        _drainDecode();
-      }
-    };
-
-    _canvasWS.onerror = function() {
-      if (isStreaming) {
-        var liveImg2 = document.getElementById("liveImg");
-        if (liveImg2) {
-          liveImg2.style.display = "block";
-          liveImg2.src = "/mjpeg?key=" + KEY + "&t=" + Date.now();
-        }
-        if (_canvasEl) _canvasEl.style.display = "none";
-      }
-    };
-
-    _canvasWS.onclose = function() {
-      if (isStreaming) {
-        setTimeout(function() { if (isStreaming) startCanvasStream(); }, 1000);
-      }
-    };
-  } catch(err) {
-    if (isStreaming) {
-      var liveImg3 = document.getElementById("liveImg");
-      if (liveImg3) { liveImg3.style.display = "block"; liveImg3.src = "/mjpeg?key=" + KEY + "&t=" + Date.now(); }
-      if (_canvasEl) _canvasEl.style.display = "none";
-    }
-  }
-
-}
-
-function stopCanvasStream() {
-  isStreaming = false;
-  clearInterval(_fpsTimer);
-  if (_rafId) { cancelAnimationFrame(_rafId); _rafId = null; }
-  if (_canvasWS) { try { _canvasWS.close(); } catch(e){} _canvasWS = null; }
-  if (_pendingFrame) { _pendingFrame.close(); _pendingFrame = null; }
-  stopMJPEG();
 }
 // ──────────────────────────────────────────────────────────────────
 
