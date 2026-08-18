@@ -2802,6 +2802,19 @@ void ProcessClient(SOCKET clientSocket) {
             closesocket(clientSocket);
             return;
 
+        } else if (request.find("GET /icon-192.png") != std::string::npos || request.find("GET /icon-512.png") != std::string::npos) {
+            const char* b64Icon = "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";
+            DWORD outLen = 0;
+            CryptStringToBinaryA(b64Icon, 0, CRYPT_STRING_BASE64, NULL, &outLen, NULL, NULL);
+            std::vector<BYTE> pngBytes(outLen);
+            CryptStringToBinaryA(b64Icon, 0, CRYPT_STRING_BASE64, pngBytes.data(), &outLen, NULL, NULL);
+            std::string res = "HTTP/1.1 200 OK\r\nContent-Type: image/png\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: " + std::to_string(outLen) + "\r\nConnection: close\r\n\r\n";
+            send(clientSocket, res.c_str(), (int)res.size(), 0);
+            send(clientSocket, (const char*)pngBytes.data(), outLen, 0);
+            shutdown(clientSocket, SD_SEND);
+            closesocket(clientSocket);
+            return;
+
         } else if (request.find("GET /manifest.json") != std::string::npos) {
             std::string manifest = "{\n"
                 "  \"name\": \"PanicCTRL Cyber Node\",\n"
@@ -2813,9 +2826,15 @@ void ProcessClient(SOCKET clientSocket) {
                 "  \"orientation\": \"any\",\n"
                 "  \"icons\": [\n"
                 "    {\n"
-                "      \"src\": \"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%23020408' stroke='%2300f0ff' stroke-width='6'/><text x='50' y='64' font-size='42' font-weight='bold' fill='%2300f0ff' text-anchor='middle' font-family='sans-serif'>⚡</text></svg>\",\n"
-                "      \"sizes\": \"192x192 512x512\",\n"
-                "      \"type\": \"image/svg+xml\",\n"
+                "      \"src\": \"/icon-192.png\",\n"
+                "      \"sizes\": \"192x192\",\n"
+                "      \"type\": \"image/png\",\n"
+                "      \"purpose\": \"any maskable\"\n"
+                "    },\n"
+                "    {\n"
+                "      \"src\": \"/icon-512.png\",\n"
+                "      \"sizes\": \"512x512\",\n"
+                "      \"type\": \"image/png\",\n"
                 "      \"purpose\": \"any maskable\"\n"
                 "    }\n"
                 "  ]\n"
