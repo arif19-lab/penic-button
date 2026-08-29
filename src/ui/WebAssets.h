@@ -761,7 +761,14 @@ static const char* DASHBOARD_HTML = R"HTML(<!DOCTYPE html>
     font-weight: 800;
     cursor: pointer;
   }
+
+/* ⚡ CYBER LINK PAIRING & QR SCANNER STYLES */
+@keyframes spinRadar { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes pulseRadar { 0%, 100% { transform: scale(0.9); opacity: 0.6; } 50% { transform: scale(1.15); opacity: 1; } }
+@keyframes laserScan { 0% { top: 5%; } 50% { top: 90%; } 100% { top: 5%; } }
+
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 </head>
 <body>
 
@@ -814,6 +821,7 @@ static const char* DASHBOARD_HTML = R"HTML(<!DOCTYPE html>
   
   <!-- Header Branding -->
   <div class="brand-bar">
+      <button onclick="openPairingModal()" style="background:rgba(0,240,255,0.15); border:1px solid #00f0ff; color:#00f0ff; border-radius:6px; font-family:'Share Tech Mono',monospace; font-size:10px; font-weight:bold; padding:3px 8px; cursor:pointer; letter-spacing:1px; margin-right:8px;">🔗 PAIR</button>
     <div style="display:flex; align-items:center; gap:8px;">
       <div class="brand-title">PANIC CTRL</div>
       <div class="brand-tag">v2.0 CYBER NODE</div>
@@ -3248,6 +3256,219 @@ window.addEventListener("DOMContentLoaded", function() {
   initGeminiBlobVisualizer();
 });
 setTimeout(initGeminiBlobVisualizer, 100);
+</script>
+
+<!-- ⚡ CYBER LINK PAIRING ONBOARDING MODAL -->
+<div id="cyberPairingModal" class="modal-overlay" style="display:none; z-index:99999; background:rgba(2,4,8,0.96); backdrop-filter:blur(15px);">
+  <div class="modal-card" style="max-width:420px; text-align:center; border:1px solid rgba(0,240,255,0.5); box-shadow:0 0 35px rgba(0,240,255,0.25); border-radius:16px; padding:24px;">
+    <div style="position:relative; width:80px; height:80px; margin:0 auto 16px auto;">
+      <div style="position:absolute; inset:0; border-radius:50%; border:2px dashed #00f0ff; animation:spinRadar 6s linear infinite;"></div>
+      <div style="position:absolute; inset:8px; border-radius:50%; background:radial-gradient(circle, rgba(0,240,255,0.3) 0%, transparent 70%); animation:pulseRadar 2s infinite;"></div>
+      <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:32px;">📱</div>
+    </div>
+
+    <h2 style="font-family:'Orbitron',sans-serif; font-size:18px; font-weight:900; color:#fff; letter-spacing:2px; margin-bottom:6px; text-shadow:0 0 15px rgba(0,240,255,0.8);">
+      CYBER LINK PAIRING
+    </h2>
+    <p style="font-family:'Share Tech Mono',monospace; font-size:11px; color:#8892b0; margin-bottom:20px; line-height:1.5;">
+      PAIR WITH YOUR HOST PC IN 1-SECOND.<br><span style="color:#00ff41;">SAVES PERMANENTLY AFTER FIRST SCAN.</span>
+    </p>
+
+    <!-- Scan QR Button -->
+    <button onclick="startInAppQrScanner()" style="width:100%; padding:15px; background:linear-gradient(135deg, #00f0ff 0%, #0077ff 100%); color:#000; border:none; border-radius:10px; font-family:'Orbitron',sans-serif; font-size:13px; font-weight:900; letter-spacing:1.5px; cursor:pointer; box-shadow:0 0 25px rgba(0,240,255,0.4); margin-bottom:12px; display:flex; align-items:center; justify-content:center; gap:8px;">
+      <span>📷</span> SCAN PC QR CODE
+    </button>
+
+    <!-- Auto Detect Button -->
+    <button onclick="triggerAutoDetectPc()" id="autoDetectBtn" style="width:100%; padding:13px; background:rgba(0,255,65,0.1); color:#00ff41; border:1px solid rgba(0,255,65,0.4); border-radius:10px; font-family:'Share Tech Mono',monospace; font-size:12px; font-weight:bold; letter-spacing:1px; cursor:pointer; margin-bottom:16px;">
+      📡 AUTO-DETECT WI-FI PC
+    </button>
+
+    <!-- Manual IP Collapsible -->
+    <div style="border-top:1px solid rgba(255,255,255,0.1); padding-top:12px;">
+      <a href="javascript:void(0)" onclick="toggleManualSetup()" style="font-family:'Share Tech Mono',monospace; font-size:11px; color:#64748b; text-decoration:none;">
+        ⚙️ Manual IP / Advanced Setup ▾
+      </a>
+      <div id="manualSetupBox" style="display:none; margin-top:12px;">
+        <input type="text" id="manualIpInput" placeholder="e.g. 192.168.0.104:8080" style="width:100%; padding:10px; background:#000; border:1px solid rgba(0,240,255,0.3); border-radius:6px; color:#fff; font-family:'Share Tech Mono',monospace; font-size:12px; margin-bottom:8px; outline:none;">
+        <input type="text" id="manualKeyInput" placeholder="Session Key (e.g. imran2024)" style="width:100%; padding:10px; background:#000; border:1px solid rgba(0,240,255,0.3); border-radius:6px; color:#fff; font-family:'Share Tech Mono',monospace; font-size:12px; margin-bottom:8px; outline:none;">
+        <button onclick="saveManualPairing()" style="width:100%; padding:10px; background:rgba(255,255,255,0.1); color:#fff; border:1px solid rgba(255,255,255,0.3); border-radius:6px; font-family:'Orbitron',sans-serif; font-size:11px; font-weight:bold; cursor:pointer;">
+          CONNECT MANUALLY
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 📷 IN-APP LIVE CAMERA QR SCANNER MODAL -->
+<div id="qrCameraScannerModal" class="modal-overlay" style="display:none; z-index:100000; background:#000;">
+  <div style="position:relative; width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+    <!-- Scanner Header -->
+    <div style="position:absolute; top:20px; left:0; width:100%; display:flex; justify-content:space-between; align-items:center; padding:0 20px; z-index:10;">
+      <span style="font-family:'Orbitron',sans-serif; font-size:14px; font-weight:900; color:#00f0ff; letter-spacing:2px; text-shadow:0 0 10px rgba(0,240,255,0.8);">
+        📷 SCAN PC QR CODE
+      </span>
+      <button onclick="stopInAppQrScanner()" style="background:rgba(255,0,85,0.2); border:1px solid rgba(255,0,85,0.5); color:#ff0055; width:36px; height:36px; border-radius:50%; font-size:18px; font-weight:bold; cursor:pointer;">
+        ✕
+      </button>
+    </div>
+
+    <!-- Live Video Viewport Container -->
+    <div id="qrVideoContainer" style="width:280px; height:280px; position:relative; border-radius:16px; overflow:hidden; border:2px solid #00f0ff; box-shadow:0 0 30px rgba(0,240,255,0.4);">
+      <div id="qrReader" style="width:100%; height:100%;"></div>
+      <!-- Animated Laser Scan Line -->
+      <div style="position:absolute; left:0; width:100%; height:3px; background:#00f0ff; box-shadow:0 0 15px #00f0ff; animation:laserScan 2s ease-in-out infinite; z-index:5; pointer-events:none;"></div>
+    </div>
+
+    <p style="font-family:'Share Tech Mono',monospace; font-size:12px; color:#8892b0; margin-top:24px; text-align:center;">
+      Point camera at PC tray icon:<br><span style="color:#00ff41;">"📱 Scan in Mobile (QR)"</span>
+    </p>
+  </div>
+</div>
+
+<script>
+
+// ⚡ CYBER LINK ONBOARDING & CAMERA QR SCANNER CONTROLLER
+var _html5QrCode = null;
+
+function checkOnboardingPairing() {
+  var savedEndpoint = localStorage.getItem('panic_pc_endpoint');
+  var savedKey = localStorage.getItem('panic_key');
+  if (!savedEndpoint || savedEndpoint.indexOf('127.0.0.1') > -1 || !savedKey) {
+    var modal = document.getElementById('cyberPairingModal');
+    if (modal) modal.style.display = 'flex';
+  }
+}
+
+function openPairingModal() {
+  var modal = document.getElementById('cyberPairingModal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function closePairingModal() {
+  var modal = document.getElementById('cyberPairingModal');
+  if (modal) modal.style.display = 'none';
+}
+
+function startInAppQrScanner() {
+  closePairingModal();
+  var scanModal = document.getElementById('qrCameraScannerModal');
+  if (scanModal) scanModal.style.display = 'flex';
+
+  if (!window.Html5Qrcode) {
+    // Dynamic load html5-qrcode if not already in DOM
+    var script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js';
+    script.onload = function() { initScannerInstance(); };
+    document.head.appendChild(script);
+  } else {
+    initScannerInstance();
+  }
+}
+
+function initScannerInstance() {
+  try {
+    if (_html5QrCode) {
+      _html5QrCode.stop().catch(function(){}).finally(function() {
+        _html5QrCode = null;
+        startCameraStream();
+      });
+    } else {
+      startCameraStream();
+    }
+  } catch(e) {}
+}
+
+function startCameraStream() {
+  _html5QrCode = new Html5Qrcode("qrReader");
+  var config = { fps: 15, qrbox: { width: 250, height: 250 } };
+  _html5QrCode.start(
+    { facingMode: "environment" },
+    config,
+    onQrCodeSuccess,
+    function(err) {}
+  ).catch(function(err) {
+    alert("Camera permission required to scan QR code: " + err);
+    stopInAppQrScanner();
+    openPairingModal();
+  });
+}
+
+function onQrCodeSuccess(decodedText) {
+  if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
+  stopInAppQrScanner();
+
+  try {
+    var parsedUrl = new URL(decodedText);
+    var key = parsedUrl.searchParams.get("key") || "imran2024";
+    var endpoint = parsedUrl.origin;
+
+    localStorage.setItem('panic_pc_endpoint', endpoint);
+    localStorage.setItem('panic_key', key);
+    PC_ENDPOINT = endpoint;
+    KEY = key;
+
+    var inp = document.getElementById('pcIpInput');
+    if (inp) inp.value = endpoint;
+
+    closePairingModal();
+    if (typeof checkPcConnection === 'function') checkPcConnection();
+    if (typeof startLiveStream === 'function') startLiveStream();
+  } catch(e) {
+    if (decodedText.indexOf('http') === 0) {
+      localStorage.setItem('panic_pc_endpoint', decodedText);
+      PC_ENDPOINT = decodedText;
+      closePairingModal();
+      if (typeof checkPcConnection === 'function') checkPcConnection();
+    }
+  }
+}
+
+function stopInAppQrScanner() {
+  if (_html5QrCode) {
+    _html5QrCode.stop().catch(function(){}).finally(function() {
+      _html5QrCode = null;
+    });
+  }
+  var scanModal = document.getElementById('qrCameraScannerModal');
+  if (scanModal) scanModal.style.display = 'none';
+}
+
+function toggleManualSetup() {
+  var box = document.getElementById('manualSetupBox');
+  if (box) box.style.display = box.style.display === 'none' ? 'block' : 'none';
+}
+
+function saveManualPairing() {
+  var ip = document.getElementById('manualIpInput').value.trim();
+  var key = document.getElementById('manualKeyInput').value.trim() || 'imran2024';
+  if (!ip) { alert('Please enter PC IP address'); return; }
+  if (!ip.startsWith('http://') && !ip.startsWith('https://')) ip = 'http://' + ip;
+
+  localStorage.setItem('panic_pc_endpoint', ip);
+  localStorage.setItem('panic_key', key);
+  PC_ENDPOINT = ip;
+  KEY = key;
+
+  closePairingModal();
+  if (typeof checkPcConnection === 'function') checkPcConnection();
+  if (typeof startLiveStream === 'function') startLiveStream();
+}
+
+function triggerAutoDetectPc() {
+  var btn = document.getElementById('autoDetectBtn');
+  if (btn) btn.textContent = '🔍 SCANNING LOCAL WI-FI...';
+  if (typeof probeBestEndpoint === 'function') probeBestEndpoint();
+  setTimeout(function() {
+    if (btn) btn.textContent = '📡 AUTO-DETECT WI-FI PC';
+    if (localStorage.getItem('panic_pc_endpoint')) {
+      closePairingModal();
+    }
+  }, 2500);
+}
+
+window.addEventListener('DOMContentLoaded', checkOnboardingPairing);
+
 </script>
 </body>
 </html>)HTML";
