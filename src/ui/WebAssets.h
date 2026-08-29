@@ -3405,21 +3405,13 @@ function onQrCodeSuccess(decodedText) {
 
     localStorage.setItem('panic_pc_endpoint', endpoint);
     localStorage.setItem('panic_key', key);
-    PC_ENDPOINT = endpoint;
-    KEY = key;
-
-    var inp = document.getElementById('pcIpInput');
-    if (inp) inp.value = endpoint;
-
-    closePairingModal();
-    if (typeof checkPcConnection === 'function') checkPcConnection();
-    if (typeof startLiveStream === 'function') startLiveStream();
+    
+    // ⚡ Direct navigation to PC Host Dashboard (100% same as Chrome browser!)
+    window.location.href = decodedText;
   } catch(e) {
     if (decodedText.indexOf('http') === 0) {
       localStorage.setItem('panic_pc_endpoint', decodedText);
-      PC_ENDPOINT = decodedText;
-      closePairingModal();
-      if (typeof checkPcConnection === 'function') checkPcConnection();
+      window.location.href = decodedText;
     }
   }
 }

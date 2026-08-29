@@ -98,7 +98,7 @@ public class MainActivity extends BridgeActivity {
                     settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
                 }
 
-                // ⚡ Grant microphone and media permissions to WebView automatically
+                // ⚡ Grant camera, microphone and media permissions to WebView automatically
                 this.bridge.getWebView().setWebChromeClient(new android.webkit.WebChromeClient() {
                     @Override
                     public void onPermissionRequest(final android.webkit.PermissionRequest request) {
@@ -110,16 +110,39 @@ public class MainActivity extends BridgeActivity {
                 this.bridge.getWebView().addJavascriptInterface(new NativeStreamBridge(), "AndroidNativeStream");
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                    requestPermissions(new String[]{android.Manifest.permission.RECORD_AUDIO}, 101);
+                String[] perms = {
+                    android.Manifest.permission.CAMERA,
+                    android.Manifest.permission.RECORD_AUDIO
+                };
+                boolean needReq = false;
+                for (String p : perms) {
+                    if (checkSelfPermission(p) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                        needReq = true;
+                        break;
+                    }
+                }
+                if (needReq) {
+                    requestPermissions(perms, 101);
                 }
             }
         } catch (Exception e) {}
 
-        // 🚀 3. Inject Native SurfaceView Directly Beneath WebView
+        // 🚀 3. Check if PC was previously paired, otherwise start Discovery
+        try {
+            String savedUrl = getSharedPreferences("panic_prefs", MODE_PRIVATE).getString("saved_pc_url", null);
+            if (savedUrl != null && !savedUrl.isEmpty()) {
+                if (this.bridge != null && this.bridge.getWebView() != null) {
+                    this.bridge.getWebView().post(() -> {
+                        this.bridge.getWebView().loadUrl(savedUrl);
+                    });
+                }
+            }
+        } catch (Exception e) {}
+
+        // 🚀 4. Inject Native SurfaceView Directly Beneath WebView
         initNativeSurface();
 
-        // 🚀 4. Launch Instant Native UDP Auto-Discovery for Zero-Config PC Connection
+        // 🚀 5. Launch Instant Native UDP Auto-Discovery for Zero-Config PC Connection
         startAutoDiscovery();
     }
 
@@ -148,14 +171,8 @@ public class MainActivity extends BridgeActivity {
                     String cleanUrl = resp.substring("PANIC_DISCOVER_RESP:".length()).split(";")[0].trim();
                     runOnUiThread(() -> {
                         if (bridge != null && bridge.getWebView() != null) {
-                            bridge.getWebView().evaluateJavascript(
-                                "(function(){" +
-                                "  localStorage.setItem('panic_pc_endpoint', '" + cleanUrl + "');" +
-                                "  var inp = document.getElementById('pcIpInput');" +
-                                "  if (inp) inp.value = '" + cleanUrl + "';" +
-                                "  if (typeof saveAndConnectPc === 'function') saveAndConnectPc();" +
-                                "})();", null
-                            );
+                            getSharedPreferences("panic_prefs", MODE_PRIVATE).edit().putString("saved_pc_url", cleanUrl).apply();
+                            bridge.getWebView().loadUrl(cleanUrl);
                         }
                     });
                 }
