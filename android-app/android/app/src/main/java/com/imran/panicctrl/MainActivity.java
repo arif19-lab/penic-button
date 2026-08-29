@@ -83,7 +83,7 @@ public class MainActivity extends BridgeActivity {
 
             if (this.bridge != null && this.bridge.getWebView() != null) {
                 this.bridge.getWebView().setLayerType(View.LAYER_TYPE_HARDWARE, null);
-                this.bridge.getWebView().setBackgroundColor(Color.TRANSPARENT);
+                this.bridge.getWebView().setBackgroundColor(Color.parseColor("#07090e"));
 
                 WebSettings settings = this.bridge.getWebView().getSettings();
                 settings.setJavaScriptEnabled(true);
@@ -94,6 +94,9 @@ public class MainActivity extends BridgeActivity {
                 settings.setAllowContentAccess(true);
                 settings.setRenderPriority(WebSettings.RenderPriority.HIGH);
                 settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+                }
 
                 // ⚡ Grant microphone and media permissions to WebView automatically
                 this.bridge.getWebView().setWebChromeClient(new android.webkit.WebChromeClient() {
@@ -115,11 +118,56 @@ public class MainActivity extends BridgeActivity {
 
         // 🚀 3. Inject Native SurfaceView Directly Beneath WebView
         initNativeSurface();
+
+        // 🚀 4. Launch Instant Native UDP Auto-Discovery for Zero-Config PC Connection
+        startAutoDiscovery();
+    }
+
+    private void startAutoDiscovery() {
+        new Thread(() -> {
+            try {
+                DatagramSocket socket = new DatagramSocket();
+                socket.setBroadcast(true);
+                socket.setSoTimeout(2500);
+
+                byte[] reqData = "PANIC_DISCOVER_REQ".getBytes();
+                String[] targets = {"255.255.255.255", "10.72.151.255", "192.168.0.255", "192.168.1.255", "10.72.151.59", "127.0.0.1"};
+                for (String t : targets) {
+                    try {
+                        DatagramPacket packet = new DatagramPacket(reqData, reqData.length, InetAddress.getByName(t), 8888);
+                        socket.send(packet);
+                    } catch (Exception ignored) {}
+                }
+
+                byte[] buf = new byte[512];
+                DatagramPacket recvPacket = new DatagramPacket(buf, buf.length);
+                socket.receive(recvPacket);
+
+                String resp = new String(recvPacket.getData(), 0, recvPacket.getLength());
+                if (resp.startsWith("PANIC_DISCOVER_RESP:")) {
+                    String cleanUrl = resp.substring("PANIC_DISCOVER_RESP:".length()).split(";")[0].trim();
+                    runOnUiThread(() -> {
+                        if (bridge != null && bridge.getWebView() != null) {
+                            bridge.getWebView().evaluateJavascript(
+                                "(function(){" +
+                                "  localStorage.setItem('panic_pc_endpoint', '" + cleanUrl + "');" +
+                                "  var inp = document.getElementById('pcIpInput');" +
+                                "  if (inp) inp.value = '" + cleanUrl + "';" +
+                                "  if (typeof saveAndConnectPc === 'function') saveAndConnectPc();" +
+                                "})();", null
+                            );
+                        }
+                    });
+                }
+                socket.close();
+            } catch (Exception e) {}
+        }).start();
     }
 
     private void initNativeSurface() {
         try {
             mSurfaceView = new SurfaceView(this);
+            mSurfaceView.setVisibility(View.GONE); // Hidden until streaming starts
             mSurfaceView.getHolder().addCallback(new SurfaceHolder.Callback() {
                 @Override
                 public void surfaceCreated(SurfaceHolder holder) {
@@ -187,6 +235,13 @@ public class MainActivity extends BridgeActivity {
     private void startNativeStream(final String streamUrl) {
         stopNativeStream();
         mIsStreaming.set(true);
+
+        runOnUiThread(() -> {
+            if (mSurfaceView != null) mSurfaceView.setVisibility(View.VISIBLE);
+            if (this.bridge != null && this.bridge.getWebView() != null) {
+                this.bridge.getWebView().setBackgroundColor(Color.TRANSPARENT);
+            }
+        });
 
         mStreamThread = new Thread(new Runnable() {
             @Override
@@ -323,6 +378,12 @@ public class MainActivity extends BridgeActivity {
             mStreamThread.interrupt();
             mStreamThread = null;
         }
+        runOnUiThread(() -> {
+            if (mSurfaceView != null) mSurfaceView.setVisibility(View.GONE);
+            if (this.bridge != null && this.bridge.getWebView() != null) {
+                this.bridge.getWebView().setBackgroundColor(Color.parseColor("#07090e"));
+            }
+        });
     }
 
     public class NativeStreamBridge {
