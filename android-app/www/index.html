@@ -3518,7 +3518,7 @@ setTimeout(initGeminiBlobVisualizer, 100);
     </p>
 
     <!-- 1. Live Camera Scanner -->
-    <button onclick="startInAppQrScanner()" style="width:100%; padding:13px; background:linear-gradient(135deg, #00f0ff 0%, #0077ff 100%); color:#000; border:none; border-radius:10px; font-family:'Orbitron',sans-serif; font-size:12px; font-weight:900; letter-spacing:1.5px; cursor:pointer; box-shadow:0 0 25px rgba(0,240,255,0.4); margin-bottom:10px; display:flex; align-items:center; justify-content:center; gap:8px;">
+    <button onclick="triggerNativeQrScan()" style="width:100%; padding:13px; background:linear-gradient(135deg, #00f0ff 0%, #0077ff 100%); color:#000; border:none; border-radius:10px; font-family:'Orbitron',sans-serif; font-size:12px; font-weight:900; letter-spacing:1.5px; cursor:pointer; box-shadow:0 0 25px rgba(0,240,255,0.4); margin-bottom:10px; display:flex; align-items:center; justify-content:center; gap:8px;">
       <span>📷</span> SCAN PC QR CODE (LIVE)
     </button>
 
@@ -3640,42 +3640,37 @@ function closePairingModal() {
 }
 
 function startInAppQrScanner() {
+  triggerNativeQrScan();
+}
+
+function triggerNativeQrScan() {
+  // Native Android scanner - 100% reliable, bypasses browser security
+  if (window.AndroidNativeStream && typeof window.AndroidNativeStream.startQrScan === 'function') {
+    window.AndroidNativeStream.startQrScan();
+    closePairingModal();
+    return;
+  }
+  // Browser fallback for non-Android (PC browser)
   closePairingModal();
   var scanModal = document.getElementById('qrCameraScannerModal');
   if (scanModal) scanModal.style.display = 'flex';
   var fb = document.getElementById('qrCameraFallback');
   if (fb) fb.style.display = 'none';
-
   var video = document.getElementById('qrVideo');
   if (!video) return;
-
-  var getMedia = navigator.mediaDevices && navigator.mediaDevices.getUserMedia ? 
-                 function(c) { return navigator.mediaDevices.getUserMedia(c); } :
-                 (navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia);
-
-  if (!getMedia) {
-    if (fb) fb.style.display = 'block';
-    return;
-  }
-
   var constraints = { video: { facingMode: 'environment' }, audio: false };
-
-  var promise = (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) ? 
-                navigator.mediaDevices.getUserMedia(constraints) : 
-                new Promise(function(resolve, reject) {
-                  getMedia.call(navigator, constraints, resolve, reject);
-                });
-
-  promise.then(function(stream) {
-    _qrStream = stream;
-    video.srcObject = stream;
-    video.setAttribute('playsinline', true);
-    video.play();
-    _qrAnimFrame = requestAnimationFrame(scanQrVideoTick);
-  }).catch(function(err) {
-    console.warn('Camera stream rejected or unavailable:', err);
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    navigator.mediaDevices.getUserMedia(constraints).then(function(stream) {
+      _qrStream = stream;
+      video.srcObject = stream;
+      video.play();
+      _qrAnimFrame = requestAnimationFrame(scanQrVideoTick);
+    }).catch(function() {
+      if (fb) fb.style.display = 'block';
+    });
+  } else {
     if (fb) fb.style.display = 'block';
-  });
+  }
 }
 
 function scanQrVideoTick() {

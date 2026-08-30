@@ -1,6 +1,8 @@
 package com.imran.panicctrl;
 
 import android.graphics.Color;
+import android.app.Activity;
+import android.content.Intent;
 import android.media.MediaCodec;
 import android.media.MediaFormat;
 import android.os.Build;
@@ -453,6 +455,35 @@ public class MainActivity extends BridgeActivity {
                     stopNativeStream();
                 }
             });
+        }
+
+        @JavascriptInterface
+        public void startQrScan() {
+            // ⚡ Launch Native QR Scanner Activity (bypasses all browser camera restrictions!)
+            runOnUiThread(() -> {
+                Intent intent = new Intent(MainActivity.this, QrScannerActivity.class);
+                startActivityForResult(intent, 1337);
+            });
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == 1337 && resultCode == Activity.RESULT_OK && data != null) {
+            String qrValue = data.getStringExtra(QrScannerActivity.RESULT_KEY);
+            if (qrValue != null && !qrValue.isEmpty()) {
+                final String escapedValue = qrValue.replace("'", "\\'");
+                // ⚡ Pass result back to JavaScript
+                if (bridge != null && bridge.getWebView() != null) {
+                    bridge.getWebView().post(() ->
+                        bridge.getWebView().evaluateJavascript(
+                            "if(typeof onQrCodeSuccess==='function') onQrCodeSuccess('" + escapedValue + "');",
+                            null
+                        )
+                    );
+                }
+            }
         }
     }
 }
