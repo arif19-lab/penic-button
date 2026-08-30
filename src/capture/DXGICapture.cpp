@@ -78,6 +78,7 @@ bool CaptureDXGIFrame(HDC hTargetDC, int targetW, int targetH) {
     if (FAILED(hr)) {
         if (hr == DXGI_ERROR_ACCESS_LOST) {
             CleanupDXGI();
+            SwitchToActiveDesktop();
             return false;
         }
         if ((hr == DXGI_ERROR_WAIT_TIMEOUT || hr == (HRESULT)0x887A0027L) && g_stagingTexture) {

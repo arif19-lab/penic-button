@@ -11,20 +11,22 @@ DWORD WINAPI HotkeyListenerThread(LPVOID lpParam) {
 
                 // Wait for user to RELEASE physical Alt key so Windows receives pure Win+Ctrl+D!
                 while ((GetAsyncKeyState(VK_RMENU) & 0x8000) || (GetAsyncKeyState(VK_LMENU) & 0x8000) || (GetAsyncKeyState(VK_MENU) & 0x8000)) {
-                    // If they press ANY OTHER KEY (like Tab, F4, etc) while holding Alt, CANCEL the panic trigger!
-                    for (int i = 8; i < 256; i++) {
-                        if (i != VK_RMENU && i != VK_LMENU && i != VK_MENU && i != VK_SHIFT && i != VK_LSHIFT && i != VK_RSHIFT) {
-                            if (GetAsyncKeyState(i) & 0x8000) {
-                                otherKeyPressed = true;
-                            }
-                        }
+                    // Fast check for common combination keys (Tab, Ctrl, Esc, Del, F4, etc.) without looping 256 syscalls
+                    if ((GetAsyncKeyState(VK_TAB) & 0x8000) ||
+                        (GetAsyncKeyState(VK_CONTROL) & 0x8000) ||
+                        (GetAsyncKeyState(VK_LCONTROL) & 0x8000) ||
+                        (GetAsyncKeyState(VK_RCONTROL) & 0x8000) ||
+                        (GetAsyncKeyState(VK_ESCAPE) & 0x8000) ||
+                        (GetAsyncKeyState(VK_DELETE) & 0x8000) ||
+                        (GetAsyncKeyState(VK_F4) & 0x8000) ||
+                        (GetAsyncKeyState(VK_LWIN) & 0x8000) ||
+                        (GetAsyncKeyState(VK_RWIN) & 0x8000)) {
+                        otherKeyPressed = true;
                     }
-                    Sleep(10);
+                    Sleep(15);
                 }
 
                 // ONLY trigger Panic if they pressed Alt and ONLY Alt!
-                // Direct call is more reliable than PostMessage - a hung UI thread can never drop it.
-                // (Safe here: SendInput/CreateProcess/hooks need no COM; TriggerPanic's 250ms debounce guards it.)
                 if (!otherKeyPressed) {
                     TriggerPanic();
                 }

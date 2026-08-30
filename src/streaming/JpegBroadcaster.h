@@ -251,11 +251,6 @@ private:
 
             auto tStart = std::chrono::steady_clock::now();
 
-            static int loopCounter = 0;
-            if (++loopCounter % 180 == 0) {
-                SwitchToActiveDesktop();
-            }
-
             // Capture frame: Pure DirectX 11 GPU Duplication
             if (!CaptureDXGIFrame(hDC, targetW, targetH)) {
                 if (!g_dxgiDuplication) {
