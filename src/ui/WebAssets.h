@@ -3459,36 +3459,48 @@ setTimeout(initGeminiBlobVisualizer, 100);
 
 <!-- ⚡ CYBER LINK PAIRING ONBOARDING MODAL -->
 <div id="cyberPairingModal" class="modal-overlay" style="display:none; z-index:99999; background:rgba(2,4,8,0.96); backdrop-filter:blur(15px);">
-  <div class="modal-card" style="max-width:420px; text-align:center; border:1px solid rgba(0,240,255,0.5); box-shadow:0 0 35px rgba(0,240,255,0.25); border-radius:16px; padding:24px;">
-    <div style="position:relative; width:80px; height:80px; margin:0 auto 16px auto;">
+  <div class="modal-card" style="position:relative; max-width:420px; text-align:center; border:1px solid rgba(0,240,255,0.5); box-shadow:0 0 35px rgba(0,240,255,0.25); border-radius:16px; padding:24px;">
+    
+    <!-- Top-Right Close Button -->
+    <button onclick="closePairingModal()" style="position:absolute; top:14px; right:14px; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); color:#fff; width:32px; height:32px; border-radius:50%; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; z-index:10;">
+      ✕
+    </button>
+
+    <div style="position:relative; width:72px; height:72px; margin:0 auto 14px auto;">
       <div style="position:absolute; inset:0; border-radius:50%; border:2px dashed #00f0ff; animation:spinRadar 6s linear infinite;"></div>
       <div style="position:absolute; inset:8px; border-radius:50%; background:radial-gradient(circle, rgba(0,240,255,0.3) 0%, transparent 70%); animation:pulseRadar 2s infinite;"></div>
-      <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:32px;">📱</div>
+      <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:28px;">📱</div>
     </div>
 
     <h2 style="font-family:'Orbitron',sans-serif; font-size:18px; font-weight:900; color:#fff; letter-spacing:2px; margin-bottom:6px; text-shadow:0 0 15px rgba(0,240,255,0.8);">
       CYBER LINK PAIRING
     </h2>
-    <p style="font-family:'Share Tech Mono',monospace; font-size:11px; color:#8892b0; margin-bottom:20px; line-height:1.5;">
-      PAIR WITH YOUR HOST PC IN 1-SECOND.<br><span style="color:#00ff41;">SAVES PERMANENTLY AFTER FIRST SCAN.</span>
+    <p style="font-family:'Share Tech Mono',monospace; font-size:11px; color:#8892b0; margin-bottom:18px; line-height:1.5;">
+      PAIR WITH YOUR HOST PC IN 1-SECOND.<br><span style="color:#00ff41;">STAYS 100% INSIDE THIS APP AFTER SCAN.</span>
     </p>
 
     <!-- Scan QR Button -->
-    <button onclick="startInAppQrScanner()" style="width:100%; padding:15px; background:linear-gradient(135deg, #00f0ff 0%, #0077ff 100%); color:#000; border:none; border-radius:10px; font-family:'Orbitron',sans-serif; font-size:13px; font-weight:900; letter-spacing:1.5px; cursor:pointer; box-shadow:0 0 25px rgba(0,240,255,0.4); margin-bottom:12px; display:flex; align-items:center; justify-content:center; gap:8px;">
+    <button onclick="startInAppQrScanner()" style="width:100%; padding:14px; background:linear-gradient(135deg, #00f0ff 0%, #0077ff 100%); color:#000; border:none; border-radius:10px; font-family:'Orbitron',sans-serif; font-size:13px; font-weight:900; letter-spacing:1.5px; cursor:pointer; box-shadow:0 0 25px rgba(0,240,255,0.4); margin-bottom:10px; display:flex; align-items:center; justify-content:center; gap:8px;">
       <span>📷</span> SCAN PC QR CODE
     </button>
 
+    <!-- Pick Image / File QR Button -->
+    <input type="file" id="qrFileInput" accept="image/*" style="display:none;" onchange="scanQrFromFile(event)">
+    <button onclick="document.getElementById('qrFileInput').click()" style="width:100%; padding:11px; background:rgba(0,240,255,0.1); color:var(--neon-cyan); border:1px solid rgba(0,240,255,0.4); border-radius:10px; font-family:'Share Tech Mono',monospace; font-size:12px; font-weight:bold; letter-spacing:1px; cursor:pointer; margin-bottom:10px; display:flex; align-items:center; justify-content:center; gap:8px;">
+      <span>🖼️</span> SCAN FROM PHOTO / GALLERY
+    </button>
+
     <!-- Auto Detect Button -->
-    <button onclick="triggerAutoDetectPc()" id="autoDetectBtn" style="width:100%; padding:13px; background:rgba(0,255,65,0.1); color:#00ff41; border:1px solid rgba(0,255,65,0.4); border-radius:10px; font-family:'Share Tech Mono',monospace; font-size:12px; font-weight:bold; letter-spacing:1px; cursor:pointer; margin-bottom:16px;">
-      📡 AUTO-DETECT WI-FI PC
+    <button onclick="triggerAutoDetectPc()" id="autoDetectBtn" style="width:100%; padding:11px; background:rgba(0,255,65,0.1); color:#00ff41; border:1px solid rgba(0,255,65,0.4); border-radius:10px; font-family:'Share Tech Mono',monospace; font-size:12px; font-weight:bold; letter-spacing:1px; cursor:pointer; margin-bottom:14px; display:flex; align-items:center; justify-content:center; gap:8px;">
+      <span>📡</span> AUTO-DETECT WI-FI PC
     </button>
 
     <!-- Manual IP Collapsible -->
-    <div style="border-top:1px solid rgba(255,255,255,0.1); padding-top:12px;">
+    <div style="border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
       <a href="javascript:void(0)" onclick="toggleManualSetup()" style="font-family:'Share Tech Mono',monospace; font-size:11px; color:#64748b; text-decoration:none;">
         ⚙️ Manual IP / Advanced Setup ▾
       </a>
-      <div id="manualSetupBox" style="display:none; margin-top:12px;">
+      <div id="manualSetupBox" style="display:none; margin-top:10px;">
         <input type="text" id="manualIpInput" placeholder="e.g. 192.168.0.104:8080" style="width:100%; padding:10px; background:#000; border:1px solid rgba(0,240,255,0.3); border-radius:6px; color:#fff; font-family:'Share Tech Mono',monospace; font-size:12px; margin-bottom:8px; outline:none;">
         <input type="text" id="manualKeyInput" placeholder="Session Key (e.g. imran2024)" style="width:100%; padding:10px; background:#000; border:1px solid rgba(0,240,255,0.3); border-radius:6px; color:#fff; font-family:'Share Tech Mono',monospace; font-size:12px; margin-bottom:8px; outline:none;">
         <button onclick="saveManualPairing()" style="width:100%; padding:10px; background:rgba(255,255,255,0.1); color:#fff; border:1px solid rgba(255,255,255,0.3); border-radius:6px; font-family:'Orbitron',sans-serif; font-size:11px; font-weight:bold; cursor:pointer;">
@@ -3501,115 +3513,47 @@ setTimeout(initGeminiBlobVisualizer, 100);
 
 <!-- 📷 IN-APP LIVE CAMERA QR SCANNER MODAL -->
 <div id="qrCameraScannerModal" class="modal-overlay" style="display:none; z-index:100000; background:#000;">
-  <div style="position:relative; width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+  <div style="position:relative; width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px; box-sizing:border-box;">
+    
     <!-- Scanner Header -->
-    <div style="position:absolute; top:20px; left:0; width:100%; display:flex; justify-content:space-between; align-items:center; padding:0 20px; z-index:10;">
+    <div style="position:absolute; top:20px; left:0; width:100%; display:flex; justify-content:space-between; align-items:center; padding:0 20px; box-sizing:border-box; z-index:10;">
       <span style="font-family:'Orbitron',sans-serif; font-size:14px; font-weight:900; color:#00f0ff; letter-spacing:2px; text-shadow:0 0 10px rgba(0,240,255,0.8);">
         📷 SCAN PC QR CODE
       </span>
-      <button onclick="stopInAppQrScanner()" style="background:rgba(255,0,85,0.2); border:1px solid rgba(255,0,85,0.5); color:#ff0055; width:36px; height:36px; border-radius:50%; font-size:18px; font-weight:bold; cursor:pointer;">
+      <button onclick="stopInAppQrScanner()" style="background:rgba(255,0,85,0.2); border:1px solid rgba(255,0,85,0.5); color:#ff0055; width:36px; height:36px; border-radius:50%; font-size:18px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center;">
         ✕
       </button>
     </div>
 
     <!-- Live Video Viewport Container -->
-    <div id="qrVideoContainer" style="width:280px; height:280px; position:relative; border-radius:16px; overflow:hidden; border:2px solid #00f0ff; box-shadow:0 0 30px rgba(0,240,255,0.4);">
+    <div id="qrVideoContainer" style="width:280px; height:280px; position:relative; border-radius:16px; overflow:hidden; border:2px solid #00f0ff; box-shadow:0 0 30px rgba(0,240,255,0.4); margin-bottom:20px;">
       <div id="qrReader" style="width:100%; height:100%;"></div>
-  </div>
-
-  <!-- ==================== TAB 2: 🧠 GEMINI AI (VOICE HUD & SANDBOX) ==================== -->
-  <div id="tab-gemini" class="tab-content">
-    <!-- 🧠 GEMINI 3.1 CYBER LIVE VOICE HUD & SANDBOX TERMINAL -->
-  <div class="gemini-hud-card" id="geminiHudCard">
-    <!-- Top Bar -->
-    <div class="gemini-top-bar">
-      <div style="display:flex; align-items:center; gap:8px;">
-        <span class="gemini-badge">🧠 GEMINI 3.1 LIVE</span>
-        <span id="geminiStatusPill" class="gemini-status-pill status-disc">DISCONNECTED</span>
-      </div>
-      <div style="display:flex; align-items:center; gap:6px;">
-        <select id="geminiVoiceSelect" onchange="changeGeminiVoice(this.value)" style="background:#030816; color:var(--neon-cyan); border:1px solid rgba(0,240,255,0.4); border-radius:4px; font-family:'Share Tech Mono',monospace; font-size:10px; padding:3px 6px; outline:none; cursor:pointer;">
-          <option value="Puck">🎙️ Puck (Natural Male - Default)</option>
-          <option value="Aoede">🎙️ Aoede (Smooth Female)</option>
-          <option value="Charon">🎙️ Charon (Deep Male)</option>
-          <option value="Fenrir">🎙️ Fenrir (Dynamic Male)</option>
-          <option value="Kore">🎙️ Kore (Warm Female)</option>
-          <option value="Zephyr">🎙️ Zephyr (Calm Bright)</option>
-        </select>
-        <button class="gemini-btn-icon" onclick="toggleGeminiKeyModal()" title="Gemini API Key">🔑 KEY</button>
-        <button class="gemini-btn-icon" onclick="toggleGeminiTerminal()" title="Toggle Sandbox Terminal">📟 LOGS</button>
-        <button id="geminiConnectBtn" class="gemini-btn-connect" onclick="toggleGeminiLiveConnection()">⚡ CONNECT AI</button>
-      </div>
     </div>
 
-    <!-- Center Stage: Audio Blob Visualizer & Controls -->
-    <div class="gemini-stage">
-      <div class="gemini-blob-wrapper">
-        <canvas id="geminiBlobCanvas" width="220" height="220"></canvas>
-        <div class="gemini-blob-center-icon" id="geminiBlobIcon">🎙️</div>
-      </div>
-      <div class="gemini-hud-info">
-        <div class="gemini-hud-title" id="geminiVoiceTitle">VOICE ASSISTANT READY</div>
-        <div class="gemini-hud-sub" id="geminiVoiceSub">Tap '⚡ CONNECT AI' to start real-time full-duplex voice control.</div>
-      </div>
+    <!-- Camera Fallback Info Box (Displayed if Camera Streaming Fails) -->
+    <div id="qrCameraFallback" style="display:none; width:100%; max-width:320px; text-align:center; margin-bottom:15px; background:rgba(7,9,14,0.9); border:1px solid rgba(0,240,255,0.3); border-radius:12px; padding:15px;">
+      <p style="font-family:'Share Tech Mono',monospace; font-size:11px; color:#ffcc00; margin-bottom:10px;">
+        💡 Camera Stream note: Tap below to pick QR image or take photo:
+      </p>
+      <button onclick="document.getElementById('qrFileInput').click()" style="width:100%; padding:10px; background:var(--neon-cyan); color:#000; border:none; border-radius:8px; font-family:'Orbitron',sans-serif; font-size:11px; font-weight:bold; cursor:pointer; margin-bottom:8px;">
+        🖼️ SELECT QR IMAGE / TAKE PHOTO
+      </button>
+      <button onclick="triggerAutoDetectPc()" style="width:100%; padding:10px; background:rgba(0,255,65,0.15); color:#00ff41; border:1px solid rgba(0,255,65,0.4); border-radius:8px; font-family:'Share Tech Mono',monospace; font-size:11px; font-weight:bold; cursor:pointer;">
+        📡 AUTO-DETECT WI-FI PC
+      </button>
     </div>
 
-    <!-- Collapsible Cyber Sandbox Terminal Console -->
-    <div id="geminiTerminalBox" class="gemini-terminal" style="display:none;">
-      <div class="terminal-header">
-        <span class="terminal-title">📟 CYBER SANDBOX TERMINAL &bull; LIVE EXECUTION HUB</span>
-        <button class="terminal-clear-btn" onclick="clearGeminiTerminal()">CLEAR</button>
-      </div>
-      <div id="geminiTerminalLogs" class="terminal-logs">
-        <div class="t-log sys">[SYSTEM] Gemini 3.1 Live Terminal initialized. Standby for voice commands...</div>
-      </div>
-      <div class="terminal-input-bar">
-        <span style="color:var(--neon-green); font-family:monospace; font-weight:bold;">PS &gt;</span>
-        <input type="text" id="manualTerminalInput" placeholder="Manual command (e.g. Get-Process, ipconfig)..." onkeydown="if(event.key==='Enter')executeManualTerminalCmd()">
-        <button class="terminal-run-btn" onclick="executeManualTerminalCmd()">RUN</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- 🔑 GEMINI API KEY MODAL -->
-  <div id="geminiKeyModal" class="modal-overlay" style="display:none;">
-    <div class="modal-card" style="border-color:var(--neon-cyan); box-shadow:0 0 30px rgba(0,240,255,0.3);">
-      <div class="modal-header">
-        <span class="modal-icon">🔑</span>
-        <span class="modal-title">GEMINI LIVE API KEY</span>
-      </div>
-      <p class="modal-sub">ENTER YOUR GOOGLE AI STUDIO API KEY</p>
-      <div class="input-wrapper">
-        <input type="password" id="geminiApiKeyInput" placeholder="AIzaSy..." autocomplete="off">
-      </div>
-      <div style="font-size:10px; color:#888; margin-bottom:14px; font-family:'Share Tech Mono',monospace;">
-        Get your free API key at: <b style="color:var(--neon-cyan);">aistudio.google.com</b>
-      </div>
-      <div class="modal-actions">
-        <button class="modal-btn btn-cancel" onclick="closeGeminiKeyModal()">CANCEL</button>
-        <button class="modal-btn btn-confirm" style="background:var(--neon-cyan); color:#000;" onclick="saveGeminiApiKey()">SAVE KEY 💾</button>
-      </div>
-    </div>
-  </div>
-  </div>
-
-  <!-- ==================== TAB 3: ⚡ CONTROLS (SYSTEM DEFENSE & POWER) ==================== -->
-  <div id="tab-controls" class="tab-content">
-    <!-- Animated Laser Scan Line -->
-      <div style="position:absolute; left:0; width:100%; height:3px; background:#00f0ff; box-shadow:0 0 15px #00f0ff; animation:laserScan 2s ease-in-out infinite; z-index:5; pointer-events:none;"></div>
-    </div>
-
-    <p style="font-family:'Share Tech Mono',monospace; font-size:12px; color:#8892b0; margin-top:24px; text-align:center;">
+    <p style="font-family:'Share Tech Mono',monospace; font-size:11px; color:#8892b0; text-align:center; margin-bottom:15px;">
       Point camera at PC tray icon:<br><span style="color:#00ff41;">"📱 Scan in Mobile (QR)"</span>
     </p>
-  </div>
-  </div>
 
+    <!-- Bottom Cancel Button -->
+    <button onclick="stopInAppQrScanner()" style="padding:10px 24px; background:rgba(255,255,255,0.1); color:#fff; border:1px solid rgba(255,255,255,0.25); border-radius:20px; font-family:'Share Tech Mono',monospace; font-size:12px; cursor:pointer;">
+      ✕ CANCEL & RETURN
+    </button>
+
+  </div>
 </div>
-
-
-
-
 
 <script>
 
@@ -3650,11 +3594,17 @@ function startInAppQrScanner() {
   closePairingModal();
   var scanModal = document.getElementById('qrCameraScannerModal');
   if (scanModal) scanModal.style.display = 'flex';
+  var errBox = document.getElementById('qrCameraFallback');
+  if (errBox) errBox.style.display = 'none';
 
   if (!window.Html5Qrcode) {
     var script = document.createElement('script');
     script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js';
     script.onload = function() { initScannerInstance(); };
+    script.onerror = function() {
+      var fb = document.getElementById('qrCameraFallback');
+      if (fb) fb.style.display = 'block';
+    };
     document.head.appendChild(script);
   } else {
     initScannerInstance();
@@ -3665,7 +3615,7 @@ function initScannerInstance() {
   try {
     if (_html5QrCode) {
       _html5QrCode.stop().then(function() {
-        _html5QrCode.clear();
+        try { _html5QrCode.clear(); } catch(e){}
         _html5QrCode = null;
         startCameraStream();
       }).catch(function() {
@@ -3682,26 +3632,58 @@ function initScannerInstance() {
 
 function startCameraStream() {
   try {
-    _html5QrCode = new Html5Qrcode("qrReader");
-    var config = { fps: 15, qrbox: { width: 250, height: 250 } };
+    if (!_html5QrCode) {
+      _html5QrCode = new Html5Qrcode("qrReader");
+    }
+    var config = { fps: 20, qrbox: { width: 250, height: 250 } };
     _html5QrCode.start(
       { facingMode: "environment" },
       config,
       onQrCodeSuccess,
       function(err) {}
     ).catch(function(err) {
-      alert("Camera error: " + err);
-      stopInAppQrScanner();
-      openPairingModal();
+      console.warn("Live camera stream error:", err);
+      var errBox = document.getElementById('qrCameraFallback');
+      if (errBox) errBox.style.display = 'block';
     });
   } catch(e) {
-    alert("Camera init failed: " + e);
+    console.warn("Camera init exception:", e);
+    var errBox = document.getElementById('qrCameraFallback');
+    if (errBox) errBox.style.display = 'block';
+  }
+}
+
+function scanQrFromFile(event) {
+  if (!event.target.files || !event.target.files[0]) return;
+  var file = event.target.files[0];
+  
+  function doScan() {
+    if (!_html5QrCode) {
+      _html5QrCode = new Html5Qrcode("qrReader");
+    }
+    _html5QrCode.scanFile(file, true)
+      .then(function(decodedText) {
+        onQrCodeSuccess(decodedText);
+      })
+      .catch(function(err) {
+        alert("⚠️ Could not detect QR code in this image. Please try taking a closer photo or use Auto-Detect.");
+      });
+  }
+
+  if (!window.Html5Qrcode) {
+    var script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js';
+    script.onload = function() { doScan(); };
+    document.head.appendChild(script);
+  } else {
+    doScan();
   }
 }
 
 function onQrCodeSuccess(decodedText) {
   if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
   stopInAppQrScanner();
+  closePairingModal();
 
   try {
     var parsedUrl = new URL(decodedText);
@@ -3716,16 +3698,14 @@ function onQrCodeSuccess(decodedText) {
       window.AndroidNativeStream.savePcUrl(decodedText);
     }
 
-    closePairingModal();
-    // ⚡ Direct navigation to PC Host Dashboard (100% full live session!)
+    // ⚡ Direct navigation to PC Host Dashboard (100% full live session inside WebView!)
     window.location.href = decodedText;
   } catch(e) {
-    if (decodedText.indexOf('http') === 0) {
+    if (decodedText.startsWith('http')) {
       localStorage.setItem('panic_pc_endpoint', decodedText);
       if (window.AndroidNativeStream && typeof window.AndroidNativeStream.savePcUrl === 'function') {
         window.AndroidNativeStream.savePcUrl(decodedText);
       }
-      closePairingModal();
       window.location.href = decodedText;
     }
   }
@@ -3733,12 +3713,16 @@ function onQrCodeSuccess(decodedText) {
 
 function stopInAppQrScanner() {
   if (_html5QrCode) {
-    _html5QrCode.stop().then(function() {
-      _html5QrCode.clear();
+    try {
+      _html5QrCode.stop().then(function() {
+        try { _html5QrCode.clear(); } catch(e){}
+        _html5QrCode = null;
+      }).catch(function() {
+        _html5QrCode = null;
+      });
+    } catch(e) {
       _html5QrCode = null;
-    }).catch(function() {
-      _html5QrCode = null;
-    });
+    }
   }
   var scanModal = document.getElementById('qrCameraScannerModal');
   if (scanModal) scanModal.style.display = 'none';
@@ -3775,6 +3759,7 @@ function triggerAutoDetectPc() {
     if (btn) btn.textContent = '📡 AUTO-DETECT WI-FI PC';
     var ep = localStorage.getItem('panic_pc_endpoint');
     if (ep && ep.indexOf('127.0.0.1') === -1) {
+      stopInAppQrScanner();
       closePairingModal();
       var k = localStorage.getItem('panic_key') || 'imran2024';
       var targetUrl = ep + (ep.includes('?') ? '&' : '/?') + 'key=' + k;
@@ -3805,8 +3790,6 @@ window.addEventListener('DOMContentLoaded', checkOnboardingPairing);
   setTimeout(hideIfNative, 500);
 })();
 
-
-
 // 📱 TAB CONTROLLER ENGINE
 function switchTab(tabId) {
   if (navigator.vibrate) navigator.vibrate(25);
@@ -3825,7 +3808,9 @@ function switchTab(tabId) {
   try {
     sessionStorage.setItem('panic_active_tab', tabId);
   } catch(e) {}
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  
+  var container = document.querySelector('.container');
+  if (container) container.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 window.addEventListener('DOMContentLoaded', function() {
@@ -3839,4 +3824,5 @@ window.addEventListener('DOMContentLoaded', function() {
 
 </script>
 </body>
-</html>)HTML";
+</html>
+)HTML";
