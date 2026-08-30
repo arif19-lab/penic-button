@@ -790,12 +790,12 @@ static const char* DASHBOARD_HTML = R"HTML(<!DOCTYPE html>
     left: 0 !important;
     right: 0 !important;
     width: 100% !important;
-    height: calc(56px + env(safe-area-inset-bottom, 0px)) !important;
-    background: rgba(10, 14, 23, 0.45) !important;
+    height: calc(58px + env(safe-area-inset-bottom, 0px)) !important;
+    background: rgba(7, 9, 14, 0.65) !important;
     backdrop-filter: blur(28px) saturate(200%) !important;
     -webkit-backdrop-filter: blur(28px) saturate(200%) !important;
-    border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
-    box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.6) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.7) !important;
     display: flex !important;
     justify-content: space-around !important;
     align-items: flex-start !important;
@@ -806,7 +806,7 @@ static const char* DASHBOARD_HTML = R"HTML(<!DOCTYPE html>
   }
   .cyber-nav-tab {
     flex: 1 !important;
-    height: 100% !important;
+    height: 48px !important;
     max-width: 85px !important;
     display: flex !important;
     flex-direction: column !important;
@@ -817,35 +817,33 @@ static const char* DASHBOARD_HTML = R"HTML(<!DOCTYPE html>
     border: none !important;
     border-radius: 0 !important;
     box-shadow: none !important;
-    color: rgba(255, 255, 255, 0.45) !important;
+    color: #64748b !important;
     font-family: 'Orbitron', sans-serif !important;
     font-size: 8.5px !important;
     font-weight: 700 !important;
     letter-spacing: 0.5px !important;
     cursor: pointer !important;
-    transition: all 0.15s ease !important;
+    transition: all 0.2s ease !important;
     user-select: none !important;
     -webkit-tap-highlight-color: transparent !important;
-    padding: 4px 0 !important;
+    padding: 0 !important;
   }
   .cyber-nav-tab .nav-icon-img {
     width: 22px !important;
     height: 22px !important;
     object-fit: contain !important;
-    filter: brightness(0) invert(1) !important;
-    opacity: 0.45 !important;
-    transition: all 0.15s ease !important;
+    opacity: 0.8 !important;
+    transition: all 0.2s ease !important;
   }
   .cyber-nav-tab.active {
-    color: #ffffff !important;
+    color: var(--neon-cyan) !important;
     background: transparent !important;
     box-shadow: none !important;
     border: none !important;
   }
   .cyber-nav-tab.active .nav-icon-img {
-    filter: brightness(0) invert(1) !important;
     opacity: 1 !important;
-    transform: scale(1.08) !important;
+    transform: scale(1.12) !important;
   }
   .cyber-nav-tab:active {
     transform: scale(0.92) !important;
