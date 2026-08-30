@@ -5,32 +5,17 @@
 #include <winhttp.h>
 #include <shellapi.h>
 
-// 🛑 FULL SYSTEM SHUTDOWN (tray Exit): stop services first (so the watchdog can't relaunch the agent),
-// then kill the Cloudflare tunnel and all Panic processes.
+// 🛑 Clean shutdown only stops external watchdog/service processes.
+// We never taskkill the current app itself, otherwise the shutdown becomes recursive and hangs.
 void KillAllPanicProcesses() {
-    // 1. Send HTTP stop request to PanicService / PanicButton so it stops itself cleanly from inside
-    HINTERNET hSession = WinHttpOpen(L"PanicShutdown/1.0", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
-    if (hSession) {
-        HINTERNET hConnect = WinHttpConnect(hSession, L"127.0.0.1", 8080, 0);
-        if (hConnect) {
-            HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"GET", L"/api/exit?key=imran2024", NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, 0);
-            if (hRequest) {
-                WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0, WINHTTP_NO_REQUEST_DATA, 0, 0, 0);
-                WinHttpReceiveResponse(hRequest, NULL);
-                WinHttpCloseHandle(hRequest);
-            }
-            WinHttpCloseHandle(hConnect);
-        }
-        WinHttpCloseHandle(hSession);
-    }
-    // 2. Stop watchdog services via SCM
+    // 1. Stop watchdog services via SCM.
     ExecSilentCommand("sc stop PanicMasterService");
     ExecSilentCommand("sc stop PanicButtonService");
-    Sleep(800);
-    // 3. Force kill any remaining processes
+    Sleep(200);
+
+    // 2. Force kill only external helper processes that may be left behind.
     ExecSilentCommand("taskkill /F /IM cloudflared.exe");
     ExecSilentCommand("taskkill /F /IM PanicService.exe");
-    ExecSilentCommand("taskkill /F /IM PanicButton.exe");
 }
 
 // Window Procedure for the System Tray Icon
@@ -88,9 +73,10 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                 ShellExecute(NULL, "open", "http://127.0.0.1:8080/qr", NULL, NULL, SW_SHOWNORMAL);
                 break;
             case IDM_EXIT:
-                    KillAllPanicProcesses(); // 🔴 Full shutdown: services + tunnel + all processes
+                    KillAllPanicProcesses();
+                    Shell_NotifyIcon(NIM_DELETE, &nid);
                     DestroyWindow(hwnd);
-                    ExitProcess(0);
+                    PostQuitMessage(0);
                     break;
             }
             break;
@@ -98,7 +84,6 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         case WM_DESTROY:
             Shell_NotifyIcon(NIM_DELETE, &nid);
             PostQuitMessage(0);
-            ExitProcess(0);
             break;
 
         default:

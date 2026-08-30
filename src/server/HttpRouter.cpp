@@ -807,8 +807,16 @@ void ProcessClient(SOCKET clientSocket) {
             send(clientSocket, jsonResponse.c_str(), (int)jsonResponse.size(), 0);
             shutdown(clientSocket, SD_SEND);
             closesocket(clientSocket);
-            KillAllPanicProcesses();
-            ExitProcess(0);
+
+            // Graceful shutdown: let TrayIcon WndProc handle KillAllPanicProcesses() once.
+            // Do NOT call KillAllPanicProcesses() here — TrayIcon IDM_EXIT does it already.
+            if (hMainWnd) {
+                PostMessage(hMainWnd, WM_COMMAND, IDM_EXIT, 0);
+            } else {
+                // No tray window, do the full cleanup here
+                KillAllPanicProcesses();
+                PostQuitMessage(0);
+            }
             return;
 
         } else if (request.find("GET /api/tunnel-url") != std::string::npos) {
