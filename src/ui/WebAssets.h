@@ -2084,20 +2084,29 @@ function getStatus(){
       var txt=document.getElementById("statusText");
       var icon=document.getElementById("statusIcon");
       if(!txt) return;
-      if(d && d.panic){
+      if(d && (d.state === 1 || (d.panic && d.state === undefined))){
         box.className="status-card panic";
         txt.className="status-text panic";
-        txt.textContent="🚨 PANIC MODE ACTIVE";
-        if(icon) icon.textContent="🔴";
-      }else{
+        txt.textContent="🚨 INTRUDER TRAP (INPUT BLOCKED)";
+        if(icon) icon.textContent="🚨";
+      } else if(d && d.state === 2){
         box.className="status-card";
+        box.style.borderColor = "var(--neon-amber)";
         txt.className="status-text";
+        txt.style.color = "var(--neon-amber)";
+        txt.textContent="🛡️ SAFE WORKING (DECOY DESKTOP)";
+        if(icon) icon.textContent="🛡️";
+      } else {
+        box.className="status-card";
+        box.style.borderColor = "";
+        txt.className="status-text";
+        txt.style.color = "";
         txt.textContent="🟢 SYSTEM SECURE";
         if(icon) icon.textContent="🟢";
       }
     }).catch(function(err){
       var txt=document.getElementById("statusText");
-      if(txt && txt.textContent.indexOf("ACTIVE") === -1) {
+      if(txt && txt.textContent.indexOf("ACTIVE") === -1 && txt.textContent.indexOf("TRAP") === -1) {
         txt.textContent="🟢 SYSTEM ONLINE";
       }
     });

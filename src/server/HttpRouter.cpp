@@ -778,7 +778,7 @@ void ProcessClient(SOCKET clientSocket) {
         } else if (request.find("GET /api/status") != std::string::npos) {
             // JSON API for real-time status polling
             bool isLocked = IsWorkstationLocked();
-            responseBody = "{\"panic\":" + std::string(isPanicMode ? "true" : "false") + ",\"locked\":" + std::string(isLocked ? "true" : "false") + "}";
+            responseBody = "{\"panic\":" + std::string(isPanicMode ? "true" : "false") + ",\"locked\":" + std::string(isLocked ? "true" : "false") + ",\"state\":" + std::to_string(panicState) + "}";
             std::string jsonResponse =
                 "HTTP/1.1 200 OK\r\n"
                 "Content-Type: application/json\r\n"

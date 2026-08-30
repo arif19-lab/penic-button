@@ -1,5 +1,6 @@
 #include "HotkeyListener.h"
 #include "PanicEngine.h"
+#include "../core/Config.h"
 
 // Thread to run the Hotkey Listener independently of the GUI
 DWORD WINAPI HotkeyListenerThread(LPVOID lpParam) {
@@ -27,8 +28,13 @@ DWORD WINAPI HotkeyListenerThread(LPVOID lpParam) {
                 }
 
                 // ONLY trigger Panic if they pressed Alt and ONLY Alt!
+                // Dispatched to main UI thread so SetWindowsHookEx runs in the thread with active Win32 message pump!
                 if (!otherKeyPressed) {
-                    TriggerPanic();
+                    if (hMainWnd) {
+                        PostMessage(hMainWnd, WM_COMMAND, IDM_TRIGGER, 0);
+                    } else {
+                        TriggerPanic();
+                    }
                 }
             }
         } catch (...) {}
