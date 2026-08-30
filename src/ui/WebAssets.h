@@ -826,7 +826,7 @@ static const char* DASHBOARD_HTML = R"HTML(<!DOCTYPE html>
       <div class="brand-title">PANIC CTRL</div>
       <div class="brand-tag">v2.0 CYBER NODE</div>
     </div>
-    <button id="pwaInstallBtn" onclick="installPWA()" style="display:inline-block; background:linear-gradient(135deg, #00f0ff, #0088ff); color:#000; border:none; border-radius:6px; font-family:'Orbitron',sans-serif; font-size:10px; font-weight:800; padding:6px 12px; cursor:pointer; box-shadow:0 0 15px rgba(0,240,255,0.5); letter-spacing:0.5px;">📲 INSTALL APP</button>
+    <a id="pwaInstallBtn" href="/download/app.apk" style="display:inline-block; text-decoration:none; background:linear-gradient(135deg, #00ff41, #00f0ff); color:#000; border:none; border-radius:6px; font-family:'Orbitron',sans-serif; font-size:10px; font-weight:800; padding:6px 12px; cursor:pointer; box-shadow:0 0 15px rgba(0,255,65,0.4); letter-spacing:0.5px;">📥 GET APK</a>
   </div>
 
   <!-- 🧠 GEMINI 3.1 CYBER LIVE VOICE HUD & SANDBOX TERMINAL -->
@@ -974,19 +974,7 @@ static const char* DASHBOARD_HTML = R"HTML(<!DOCTYPE html>
     </div>
   </div>
 
-  <!-- 📱 NATIVE ANDROID APK INSTALLATION BANNER -->
-  <div id="pwaInstallBanner" style="display:block; width:100%; margin-bottom:12px; background:linear-gradient(135deg, rgba(0,255,65,0.15), rgba(0,240,255,0.15)); border:1px solid var(--neon-green); border-radius:10px; padding:12px; text-align:center;">
-    <div style="font-family:'Orbitron',sans-serif; font-size:12px; font-weight:800; color:var(--neon-green); margin-bottom:4px;">📱 NATIVE ANDROID APK READY!</div>
-    <div style="font-size:11px; color:#ccc; margin-bottom:8px;">Download and install PanicCTRL.apk directly for 100% standalone native full-screen experience!</div>
-    <a href="/download/app.apk" style="display:inline-block; text-decoration:none; padding:11px 22px; background:var(--neon-green); color:#000; font-family:'Orbitron',sans-serif; font-weight:900; font-size:11px; border-radius:6px;">📥 DOWNLOAD NATIVE ANDROID APK</a>
-  </div>
-
-  <!-- 🟢 SYSTEM STATUS CARD -->
-  <div class="status-card" id="statusBox">
-    <div class="status-info">
-      <div class="status-title">SYSTEM DEFENSE STATUS</div>
-      <div class="status-text" id="statusText">CHECKING...</div>
-    </div>
+  
     <div style="font-size: 22px;" id="statusIcon">🟢</div>
   </div>
 
@@ -3502,6 +3490,24 @@ function triggerAutoDetectPc() {
 }
 
 window.addEventListener('DOMContentLoaded', checkOnboardingPairing);
+
+// Hide install/download button if already running in native Android App or standalone PWA
+(function() {
+  function hideIfNative() {
+    var isNative = window.AndroidNativeStream || 
+                   window.matchMedia('(display-mode: standalone)').matches ||
+                   window.navigator.standalone === true;
+    if (isNative) {
+      var btn = document.getElementById('pwaInstallBtn');
+      if (btn) btn.style.display = 'none';
+      var banner = document.getElementById('pwaInstallBanner');
+      if (banner) banner.style.display = 'none';
+    }
+  }
+  window.addEventListener('DOMContentLoaded', hideIfNative);
+  setTimeout(hideIfNative, 500);
+})();
+
 
 </script>
 </body>
