@@ -892,12 +892,6 @@ static const char* DASHBOARD_HTML = R"HTML(<!DOCTYPE html>
 </div>
 
 <div class="container">
-  <!-- 📡 GLOBAL CLOUD STATUS BADGE -->
-  <div style="display:flex; justify-content:center; align-items:center; margin: 8px 0 16px 0; padding: 6px 12px; background: rgba(0,255,65,0.05); border: 1px solid rgba(0,255,65,0.2); border-radius: 20px; font-family: 'Share Tech Mono', monospace; font-size: 11px; color: #00ff41; letter-spacing: 1px; gap: 8px; box-shadow: 0 0 10px rgba(0,255,65,0.1);">
-    <span id="pcStatusDot" style="width:8px; height:8px; border-radius:50%; background:#00ff41; box-shadow:0 0 10px #00ff41; display:inline-block;"></span>
-    <span id="pcPingBadge">📡 AUTO-CONNECTING...</span>
-  </div>
-  
   <!-- Header Branding -->
   <div class="brand-bar">
     <button onclick="openPairingModal()" style="background:rgba(0,240,255,0.15); border:1px solid #00f0ff; color:#00f0ff; border-radius:6px; font-family:'Share Tech Mono',monospace; font-size:10px; font-weight:bold; padding:3px 8px; cursor:pointer; letter-spacing:1px; margin-right:8px;">🔗 PAIR</button>
