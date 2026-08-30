@@ -1019,9 +1019,10 @@ static const char* DASHBOARD_HTML = R"HTML(<!DOCTYPE html>
 </div>
 
 <div class="container">
-  <!-- Top Header Branding: Clean Left PANIC Title -->
-  <div style="display:flex; align-items:center; justify-content:flex-start; margin: 4px 0 14px 0;">
+  <!-- Top Header Branding: Left PANIC Title + Right GET APK Button -->
+  <div style="display:flex; align-items:center; justify-content:space-between; margin: 4px 0 14px 0;">
     <div style="font-family:'Orbitron',sans-serif; font-size:20px; font-weight:900; color:var(--neon-cyan); letter-spacing:2.5px; text-shadow:0 0 15px rgba(0,240,255,0.4);">PANIC</div>
+    <a id="pwaInstallBtn" href="/download/app.apk" style="display:inline-block; text-decoration:none; background:linear-gradient(135deg, #00ff41, #00f0ff); color:#000; border:none; border-radius:6px; font-family:'Orbitron',sans-serif; font-size:10px; font-weight:800; padding:6px 12px; cursor:pointer; box-shadow:0 0 15px rgba(0,255,65,0.4); letter-spacing:0.5px;">📥 GET APK</a>
   </div>
 
   <!-- ==================== TAB 1: 🖥️ MONITOR (1st: Monitor, 2nd: Trackpad, 3rd: Keyboard) ==================== -->
@@ -1225,21 +1226,7 @@ static const char* DASHBOARD_HTML = R"HTML(<!DOCTYPE html>
   </div>
 </div>
 
-<!-- 📱 FUTURISTIC CYBER BOTTOM NAVIGATION BAR -->
-<nav class="cyber-bottom-nav">
-  <button id="nav-home" class="cyber-nav-tab active" onclick="switchTab('home')">
-    <span class="tab-icon">🖥️</span>
-    <span>MONITOR</span>
-  </button>
-  <button id="nav-gemini" class="cyber-nav-tab" onclick="switchTab('gemini')">
-    <span class="tab-icon">🧠</span>
-    <span>GEMINI AI</span>
-  </button>
-  <button id="nav-controls" class="cyber-nav-tab" onclick="switchTab('controls')">
-    <span class="tab-icon">⚡</span>
-    <span>CONTROLS</span>
-  </button>
-</nav>
+
 
 <script>
 var KEY="imran2024";
@@ -3632,21 +3619,7 @@ setTimeout(initGeminiBlobVisualizer, 100);
 
 </div>
 
-<!-- 📱 FUTURISTIC CYBER BOTTOM NAVIGATION BAR -->
-<nav class="cyber-bottom-nav">
-  <button id="nav-home" class="cyber-nav-tab active" onclick="switchTab('home')">
-    <span class="tab-icon">🖥️</span>
-    <span>MONITOR</span>
-  </button>
-  <button id="nav-gemini" class="cyber-nav-tab" onclick="switchTab('gemini')">
-    <span class="tab-icon">🧠</span>
-    <span>GEMINI AI</span>
-  </button>
-  <button id="nav-controls" class="cyber-nav-tab" onclick="switchTab('controls')">
-    <span class="tab-icon">⚡</span>
-    <span>CONTROLS</span>
-  </button>
-</nav>
+
 
 
 
