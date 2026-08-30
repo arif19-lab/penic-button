@@ -415,6 +415,18 @@ public class MainActivity extends BridgeActivity {
         }
 
         @JavascriptInterface
+        public void savePcUrl(String url) {
+            if (url != null && !url.isEmpty()) {
+                getSharedPreferences("panic_prefs", MODE_PRIVATE).edit().putString("saved_pc_url", url).apply();
+            }
+        }
+
+        @JavascriptInterface
+        public void clearSavedPc() {
+            getSharedPreferences("panic_prefs", MODE_PRIVATE).edit().remove("saved_pc_url").apply();
+        }
+
+        @JavascriptInterface
         public void start(String url) {
             runOnUiThread(new Runnable() {
                 @Override

@@ -3332,6 +3332,17 @@ setTimeout(initGeminiBlobVisualizer, 100);
 var _html5QrCode = null;
 
 function checkOnboardingPairing() {
+  // If already loaded directly on PC host or key is present, NEVER show onboarding modal!
+  var isDirectHost = (window.location.hostname !== 'localhost' && 
+                      window.location.hostname !== '127.0.0.1' && 
+                      !window.location.hostname.includes('web.app') && 
+                      !window.location.hostname.includes('firebaseapp.com') &&
+                      window.location.protocol.startsWith('http'));
+  if (isDirectHost || window.location.search.indexOf('key=') > -1) {
+    var modal = document.getElementById('cyberPairingModal');
+    if (modal) modal.style.display = 'none';
+    return;
+  }
   var savedEndpoint = localStorage.getItem('panic_pc_endpoint');
   var savedKey = localStorage.getItem('panic_key');
   if (!savedEndpoint || savedEndpoint.indexOf('127.0.0.1') > -1 || !savedKey) {
@@ -3356,7 +3367,6 @@ function startInAppQrScanner() {
   if (scanModal) scanModal.style.display = 'flex';
 
   if (!window.Html5Qrcode) {
-    // Dynamic load html5-qrcode if not already in DOM
     var script = document.createElement('script');
     script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js';
     script.onload = function() { initScannerInstance(); };
@@ -3369,29 +3379,39 @@ function startInAppQrScanner() {
 function initScannerInstance() {
   try {
     if (_html5QrCode) {
-      _html5QrCode.stop().catch(function(){}).finally(function() {
+      _html5QrCode.stop().then(function() {
+        _html5QrCode.clear();
+        _html5QrCode = null;
+        startCameraStream();
+      }).catch(function() {
         _html5QrCode = null;
         startCameraStream();
       });
     } else {
       startCameraStream();
     }
-  } catch(e) {}
+  } catch(e) {
+    startCameraStream();
+  }
 }
 
 function startCameraStream() {
-  _html5QrCode = new Html5Qrcode("qrReader");
-  var config = { fps: 15, qrbox: { width: 250, height: 250 } };
-  _html5QrCode.start(
-    { facingMode: "environment" },
-    config,
-    onQrCodeSuccess,
-    function(err) {}
-  ).catch(function(err) {
-    alert("Camera permission required to scan QR code: " + err);
-    stopInAppQrScanner();
-    openPairingModal();
-  });
+  try {
+    _html5QrCode = new Html5Qrcode("qrReader");
+    var config = { fps: 15, qrbox: { width: 250, height: 250 } };
+    _html5QrCode.start(
+      { facingMode: "environment" },
+      config,
+      onQrCodeSuccess,
+      function(err) {}
+    ).catch(function(err) {
+      alert("Camera error: " + err);
+      stopInAppQrScanner();
+      openPairingModal();
+    });
+  } catch(e) {
+    alert("Camera init failed: " + e);
+  }
 }
 
 function onQrCodeSuccess(decodedText) {
@@ -3406,11 +3426,21 @@ function onQrCodeSuccess(decodedText) {
     localStorage.setItem('panic_pc_endpoint', endpoint);
     localStorage.setItem('panic_key', key);
     
-    // ⚡ Direct navigation to PC Host Dashboard (100% same as Chrome browser!)
+    // Save natively to Android SharedPreferences if running in APK
+    if (window.AndroidNativeStream && typeof window.AndroidNativeStream.savePcUrl === 'function') {
+      window.AndroidNativeStream.savePcUrl(decodedText);
+    }
+
+    closePairingModal();
+    // ⚡ Direct navigation to PC Host Dashboard (100% full live session!)
     window.location.href = decodedText;
   } catch(e) {
     if (decodedText.indexOf('http') === 0) {
       localStorage.setItem('panic_pc_endpoint', decodedText);
+      if (window.AndroidNativeStream && typeof window.AndroidNativeStream.savePcUrl === 'function') {
+        window.AndroidNativeStream.savePcUrl(decodedText);
+      }
+      closePairingModal();
       window.location.href = decodedText;
     }
   }
@@ -3418,7 +3448,10 @@ function onQrCodeSuccess(decodedText) {
 
 function stopInAppQrScanner() {
   if (_html5QrCode) {
-    _html5QrCode.stop().catch(function(){}).finally(function() {
+    _html5QrCode.stop().then(function() {
+      _html5QrCode.clear();
+      _html5QrCode = null;
+    }).catch(function() {
       _html5QrCode = null;
     });
   }
@@ -3437,14 +3470,16 @@ function saveManualPairing() {
   if (!ip) { alert('Please enter PC IP address'); return; }
   if (!ip.startsWith('http://') && !ip.startsWith('https://')) ip = 'http://' + ip;
 
+  var fullUrl = ip + (ip.includes('?') ? '&' : '/?') + 'key=' + key;
   localStorage.setItem('panic_pc_endpoint', ip);
   localStorage.setItem('panic_key', key);
-  PC_ENDPOINT = ip;
-  KEY = key;
+
+  if (window.AndroidNativeStream && typeof window.AndroidNativeStream.savePcUrl === 'function') {
+    window.AndroidNativeStream.savePcUrl(fullUrl);
+  }
 
   closePairingModal();
-  if (typeof checkPcConnection === 'function') checkPcConnection();
-  if (typeof startLiveStream === 'function') startLiveStream();
+  window.location.href = fullUrl;
 }
 
 function triggerAutoDetectPc() {
@@ -3453,8 +3488,15 @@ function triggerAutoDetectPc() {
   if (typeof probeBestEndpoint === 'function') probeBestEndpoint();
   setTimeout(function() {
     if (btn) btn.textContent = '📡 AUTO-DETECT WI-FI PC';
-    if (localStorage.getItem('panic_pc_endpoint')) {
+    var ep = localStorage.getItem('panic_pc_endpoint');
+    if (ep && ep.indexOf('127.0.0.1') === -1) {
       closePairingModal();
+      var k = localStorage.getItem('panic_key') || 'imran2024';
+      var targetUrl = ep + (ep.includes('?') ? '&' : '/?') + 'key=' + k;
+      if (window.AndroidNativeStream && typeof window.AndroidNativeStream.savePcUrl === 'function') {
+        window.AndroidNativeStream.savePcUrl(targetUrl);
+      }
+      window.location.href = targetUrl;
     }
   }, 2500);
 }
