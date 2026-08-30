@@ -1226,7 +1226,25 @@ static const char* DASHBOARD_HTML = R"HTML(<!DOCTYPE html>
   </div>
 </div>
 
-
+<!-- 📱 FUTURISTIC CYBER 4-TAB BOTTOM NAVIGATION BAR -->
+<nav class="cyber-bottom-nav">
+  <button id="nav-home" class="cyber-nav-tab active" onclick="switchTab('home')">
+    <span class="tab-icon">🖥️</span>
+    <span>MONITOR</span>
+  </button>
+  <button id="nav-gemini" class="cyber-nav-tab" onclick="switchTab('gemini')">
+    <span class="tab-icon">🧠</span>
+    <span>GEMINI AI</span>
+  </button>
+  <button id="nav-qr" class="cyber-nav-tab" onclick="openPairingModal()">
+    <span class="tab-icon">📷</span>
+    <span>QR</span>
+  </button>
+  <button id="nav-controls" class="cyber-nav-tab" onclick="switchTab('controls')">
+    <span class="tab-icon">⚡</span>
+    <span>CONTROLS</span>
+  </button>
+</nav>
 
 <script>
 var KEY="imran2024";
