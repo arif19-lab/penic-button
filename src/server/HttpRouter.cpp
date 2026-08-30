@@ -179,14 +179,11 @@ void ProcessClient(SOCKET clientSocket) {
 
         } else if (request.find("GET /unlock") != std::string::npos) {
             // 🔓 Unlock Workstation Engine
-            // 🛡️ GUARD: If PC is ALREADY unlocked, ignore request completely!
-            if (!IsWorkstationLocked()) {
-                responseBody = "{\"status\":\"already_unlocked\"}";
-                std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n\r\n" + responseBody;
-                send(clientSocket, res.c_str(), (int)res.size(), 0);
-                closesocket(clientSocket);
-                return;
-            }
+            // 1. ⚡ Auto-wake Lock Screen display & dismiss clock splash screen!
+            keybd_event(VK_SPACE, 0, 0, 0);
+            Sleep(30);
+            keybd_event(VK_SPACE, 0, KEYEVENTF_KEYUP, 0);
+            Sleep(80);
 
             std::string pin = "";
             size_t pinPos = request.find("pin=");
@@ -212,11 +209,11 @@ void ProcessClient(SOCKET clientSocket) {
                 }
             }
 
-            // Step 1: Send Password to the Custom Credential Provider via Named Pipe
+            // Step 2: Send Password to the Custom Credential Provider via Named Pipe
             HANDLE hPipe = CreateFileA("\\\\.\\pipe\\PanicUnlockPipe", GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
             if (hPipe != INVALID_HANDLE_VALUE) {
                 DWORD dwWritten;
-                WriteFile(hPipe, pin.c_str(), pin.length(), &dwWritten, NULL);
+                WriteFile(hPipe, pin.c_str(), (DWORD)pin.length(), &dwWritten, NULL);
                 CloseHandle(hPipe);
             }
 

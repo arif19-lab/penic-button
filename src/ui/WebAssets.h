@@ -2163,27 +2163,13 @@ function wakePC() {
 // 🔓 Modern Cyberpunk Unlock Modal Functions
 function unlockPC(){
   vibratePhone(50);
-  // Smart Check: Verify if PC is actually locked before prompting for password!
-  fetch("/api/status?key=" + KEY, { cache: "no-store" })
-    .then(function(r) { return r.json(); })
-    .then(function(d) {
-      if (d && d.locked === false) {
-        alert("ℹ️ PC is ALREADY UNLOCKED!\nNo password needed.");
-        return;
-      }
-      var modal = document.getElementById("unlockModal");
-      var input = document.getElementById("pinInput");
-      modal.style.display = "flex";
-      input.value = "";
-      setTimeout(function(){ input.focus(); }, 100);
-    })
-    .catch(function() {
-      var modal = document.getElementById("unlockModal");
-      var input = document.getElementById("pinInput");
-      modal.style.display = "flex";
-      input.value = "";
-      setTimeout(function(){ input.focus(); }, 100);
-    });
+  var modal = document.getElementById("unlockModal");
+  var input = document.getElementById("pinInput");
+  if (modal) modal.style.display = "flex";
+  if (input) {
+    input.value = "";
+    setTimeout(function(){ input.focus(); }, 100);
+  }
 }
 function closeUnlockModal(){
   document.getElementById("unlockModal").style.display = "none";
