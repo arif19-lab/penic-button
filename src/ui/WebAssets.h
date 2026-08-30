@@ -28,20 +28,22 @@ static const char* DASHBOARD_HTML = R"HTML(<!DOCTYPE html>
 
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   
-  body {
+  html, body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     background: var(--bg-dark);
     color: #e6edf3;
     font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    padding: 15px 12px 30px 12px;
-    overflow-x: hidden;
-    background-image: 
-      radial-gradient(circle at 50% 0%, rgba(0, 240, 255, 0.08) 0%, transparent 60%),
-      radial-gradient(circle at 50% 100%, rgba(255, 0, 85, 0.05) 0%, transparent 60%);
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
   }
 
   /* Scanline & Grid Effect */
@@ -55,12 +57,23 @@ static const char* DASHBOARD_HTML = R"HTML(<!DOCTYPE html>
   }
 
   .container {
-    position: relative;
-    z-index: 2;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     width: 100%;
-    max-width: 100%;
-    padding: 0 4px;
-    margin: 0 auto;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+    padding: 15px 12px calc(72px + env(safe-area-inset-bottom, 0px)) 12px;
+    box-sizing: border-box;
+    z-index: 2;
+    background-image: 
+      radial-gradient(circle at 50% 0%, rgba(0, 240, 255, 0.08) 0%, transparent 60%),
+      radial-gradient(circle at 50% 100%, rgba(255, 0, 85, 0.05) 0%, transparent 60%);
   }
 
   /* Header Branding */
@@ -791,7 +804,7 @@ static const char* DASHBOARD_HTML = R"HTML(<!DOCTYPE html>
     right: 0 !important;
     width: 100% !important;
     height: calc(58px + env(safe-area-inset-bottom, 0px)) !important;
-    background: rgba(7, 9, 14, 0.65) !important;
+    background: rgba(7, 9, 14, 0.85) !important;
     backdrop-filter: blur(28px) saturate(200%) !important;
     -webkit-backdrop-filter: blur(28px) saturate(200%) !important;
     border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
@@ -803,6 +816,10 @@ static const char* DASHBOARD_HTML = R"HTML(<!DOCTYPE html>
     margin: 0 !important;
     padding: 6px 0 env(safe-area-inset-bottom, 0px) 0 !important;
     box-sizing: border-box !important;
+    transform: translateZ(0) !important;
+    -webkit-transform: translateZ(0) !important;
+    touch-action: none !important;
+    will-change: transform !important;
   }
   .cyber-nav-tab {
     flex: 1 !important;
