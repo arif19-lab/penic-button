@@ -783,63 +783,12 @@ static const char* DASHBOARD_HTML = R"HTML(<!DOCTYPE html>
     from { opacity: 0; transform: translateY(8px) scale(0.99); }
     to { opacity: 1; transform: translateY(0) scale(1); }
   }
-  .cyber-bottom-nav {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 66px;
-    background: rgba(7, 10, 18, 0.94);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border-top: 1.5px solid rgba(0, 240, 255, 0.28);
-    box-shadow: 0 -8px 35px rgba(0, 0, 0, 0.8), 0 0 15px rgba(0, 240, 255, 0.15);
-    display: flex;
-    justify-content: space-around;
-    align-items: center;
-    z-index: 99998;
-    padding: 0 12px;
-    padding-bottom: env(safe-area-inset-bottom, 0);
-  }
-  .cyber-nav-tab {
-    flex: 1;
-    max-width: 120px;
-    height: 50px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 3px;
-    background: transparent;
-    border: 1px solid transparent;
-    border-radius: 12px;
-    color: #64748b;
-    font-family: 'Orbitron', sans-serif;
-    font-size: 9.5px;
-    font-weight: 700;
-    letter-spacing: 0.8px;
-    cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    user-select: none;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .cyber-nav-tab .tab-icon {
-    font-size: 18px;
-    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  }
-  .cyber-nav-tab.active {
-    color: var(--neon-cyan);
-    background: rgba(0, 240, 255, 0.12);
-    border-color: rgba(0, 240, 255, 0.4);
-    box-shadow: 0 0 20px rgba(0, 240, 255, 0.25), inset 0 0 10px rgba(0, 240, 255, 0.1);
-  }
-  .cyber-nav-tab.active .tab-icon {
-    transform: scale(1.18) translateY(-2px);
-    filter: drop-shadow(0 0 8px var(--neon-cyan));
-  }
-  .cyber-nav-tab:active {
-    transform: scale(0.94);
-  }
+  
+  
+  
+  
+  
+  
 
 
   /* 📱 CYBER 2-COLUMN CONTROLS & RESPONSIVE TABS */
@@ -857,63 +806,12 @@ static const char* DASHBOARD_HTML = R"HTML(<!DOCTYPE html>
     from { opacity: 0; transform: translateY(8px) scale(0.99); }
     to { opacity: 1; transform: translateY(0) scale(1); }
   }
-  .cyber-bottom-nav {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 66px;
-    background: rgba(7, 10, 18, 0.94);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border-top: 1.5px solid rgba(0, 240, 255, 0.28);
-    box-shadow: 0 -8px 35px rgba(0, 0, 0, 0.8), 0 0 15px rgba(0, 240, 255, 0.15);
-    display: flex;
-    justify-content: space-around;
-    align-items: center;
-    z-index: 99998;
-    padding: 0 12px;
-    padding-bottom: env(safe-area-inset-bottom, 0);
-  }
-  .cyber-nav-tab {
-    flex: 1;
-    max-width: 120px;
-    height: 50px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 3px;
-    background: transparent;
-    border: 1px solid transparent;
-    border-radius: 12px;
-    color: #64748b;
-    font-family: 'Orbitron', sans-serif;
-    font-size: 9.5px;
-    font-weight: 700;
-    letter-spacing: 0.8px;
-    cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    user-select: none;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .cyber-nav-tab .tab-icon {
-    font-size: 18px;
-    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  }
-  .cyber-nav-tab.active {
-    color: var(--neon-cyan);
-    background: rgba(0, 240, 255, 0.12);
-    border-color: rgba(0, 240, 255, 0.4);
-    box-shadow: 0 0 20px rgba(0, 240, 255, 0.25), inset 0 0 10px rgba(0, 240, 255, 0.1);
-  }
-  .cyber-nav-tab.active .tab-icon {
-    transform: scale(1.18) translateY(-2px);
-    filter: drop-shadow(0 0 8px var(--neon-cyan));
-  }
-  .cyber-nav-tab:active {
-    transform: scale(0.94);
-  }
+  
+  
+  
+  
+  
+  
 
   /* 2-COLUMN CONTROL BUTTONS (NO ICONS) */
   .btn-ctrl-2col {
@@ -970,323 +868,86 @@ static const char* DASHBOARD_HTML = R"HTML(<!DOCTYPE html>
 
 
   /* 🧊 FROSTED GLASS CLEAN BOTTOM NAVIGATION BAR */
+  
+  
+  
+  
+  
+  
+
+
+  /* 🧊 CLEAN FROSTED GLASS BOTTOM NAVIGATION BAR */
   .cyber-bottom-nav {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 64px;
-    background: rgba(10, 14, 23, 0.65);
-    backdrop-filter: blur(24px) saturate(180%);
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4);
-    display: flex;
-    justify-content: space-around;
-    align-items: center;
-    z-index: 99998;
-    padding: 0 8px;
-    padding-bottom: env(safe-area-inset-bottom, 0);
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    height: 58px !important;
+    background: rgba(10, 14, 23, 0.45) !important;
+    backdrop-filter: blur(28px) saturate(200%) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(200%) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
+    box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.6) !important;
+    display: flex !important;
+    justify-content: space-around !important;
+    align-items: center !important;
+    z-index: 99999 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
   }
   .cyber-nav-tab {
-    flex: 1;
-    max-width: 90px;
-    height: 52px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    background: transparent;
-    border: none;
-    border-radius: 12px;
-    color: #64748b;
-    font-family: 'Orbitron', sans-serif;
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    user-select: none;
-    -webkit-tap-highlight-color: transparent;
-    padding: 4px 0;
+    flex: 1 !important;
+    height: 100% !important;
+    max-width: 85px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 3px !important;
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    color: rgba(255, 255, 255, 0.45) !important;
+    font-family: 'Orbitron', sans-serif !important;
+    font-size: 8.5px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.5px !important;
+    cursor: pointer !important;
+    transition: all 0.15s ease !important;
+    user-select: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+    padding: 4px 0 !important;
   }
   .cyber-nav-tab .nav-icon-img {
-    width: 22px;
-    height: 22px;
-    object-fit: contain;
-    filter: grayscale(1) opacity(0.45);
-    transition: all 0.2s ease;
+    width: 22px !important;
+    height: 22px !important;
+    object-fit: contain !important;
+    filter: brightness(0) invert(1) !important;
+    opacity: 0.45 !important;
+    transition: all 0.15s ease !important;
   }
   .cyber-nav-tab.active {
-    color: #ffffff;
+    color: #ffffff !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
   }
   .cyber-nav-tab.active .nav-icon-img {
-    filter: none;
-    opacity: 1;
-    transform: scale(1.08);
+    filter: brightness(0) invert(1) !important;
+    opacity: 1 !important;
+    transform: scale(1.08) !important;
   }
   .cyber-nav-tab:active {
-    transform: scale(0.92);
+    transform: scale(0.92) !important;
   }
 
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 </head>
 <body>
-
-<!-- 🔓 REDESIGNED UNLOCK MODAL -->
-<div id="unlockModal" class="modal-overlay">
-  <div class="modal-card">
-    <div class="modal-header">
-      <span class="modal-icon">🔓</span>
-      <span class="modal-title">SECURITY AUTHENTICATION</span>
-    </div>
-    <p class="modal-sub">ENTER WINDOWS PASSWORD OR PIN TO UNLOCK</p>
-    <div class="input-wrapper">
-      <input type="password" id="pinInput" placeholder="Enter Password or PIN" autocomplete="off" onkeydown="if(event.key==='Enter')submitUnlock()">
-      <button class="toggle-pass" onclick="togglePassVisibility()">👁️</button>
-    </div>
-    <div class="modal-actions">
-      <button class="modal-btn btn-cancel" onclick="closeUnlockModal()">CANCEL</button>
-      <button class="modal-btn btn-confirm" onclick="submitUnlock()">UNLOCK 🔓</button>
-    </div>
-  </div>
-</div>
-
-<div class="fullscreen-overlay" id="fsOverlay">
-  <!-- ⚡ PARSEC FLOATING DRAGGABLE BUBBLE -->
-  <div id="parsecBubble" class="parsec-bubble" onclick="toggleParsecMenu(event)">
-    <span class="bubble-icon">⚡</span>
-  </div>
-
-  <!-- 🎮 PARSEC QUICK HUD MENU -->
-  <div id="parsecMenu" class="parsec-menu" style="display:none;">
-    <div class="parsec-menu-header">
-      <span>🎮 PARSEC MONITOR HUD</span>
-      <span class="parsec-menu-close" onclick="toggleParsecMenu(event)">✖</span>
-    </div>
-    <div class="parsec-menu-grid">
-      <button class="parsec-btn" onclick="toggleVirtualKeyboard()"><span class="btn-ic">⌨️</span> KEYBOARD</button>
-      <button class="parsec-btn" id="btnMouseMode" onclick="toggleMouseMode()"><span class="btn-ic">🖱️</span> TOUCH CLICK: ON</button>
-      <button class="parsec-btn danger" onclick="closeFS()"><span class="btn-ic">🚪</span> EXIT TO DASHBOARD</button>
-    </div>
-  </div>
-
-  <!-- ⌨️ INVISIBLE KEYBOARD INPUT PROXY -->
-  <input type="text" id="fsKeyProxy" style="position:fixed; opacity:0; pointer-events:none; top:-100px; left:-100px;" oninput="handleFsType(event)" onkeydown="handleFsKeydown(event)">
-
-  <!-- 🖼️ PARSEC FULLSCREEN GPU CANVAS -->
-  <canvas id="fsCanvas" style="width:100vw; height:100vh; object-fit:contain; background:#000; display:block; touch-action:none;"></canvas>
-</div>
-
-<div class="container">
-  <!-- Top Header Branding: Left PANIC Title + Right GET APK Button -->
-  <div style="display:flex; align-items:center; justify-content:space-between; margin: 4px 0 14px 0;">
-    <div style="font-family:'Orbitron',sans-serif; font-size:20px; font-weight:900; color:var(--neon-cyan); letter-spacing:2.5px; text-shadow:0 0 15px rgba(0,240,255,0.4);">PANIC</div>
-    <a id="pwaInstallBtn" href="/download/app.apk" style="display:inline-block; text-decoration:none; background:linear-gradient(135deg, #00ff41, #00f0ff); color:#000; border:none; border-radius:6px; font-family:'Orbitron',sans-serif; font-size:10px; font-weight:800; padding:6px 12px; cursor:pointer; box-shadow:0 0 15px rgba(0,255,65,0.4); letter-spacing:0.5px;">📥 GET APK</a>
-  </div>
-
-  <!-- ==================== TAB 1: 🖥️ MONITOR (1st: Monitor, 2nd: Trackpad, 3rd: Keyboard) ==================== -->
-  <div id="tab-home" class="tab-content active">
-    <!-- 1st: FUTURISTIC VIDEO PLAYER MONITOR -->
-    <div class="player-card">
-      <div class="player-hud-top">
-        <div class="rec-badge">
-          <span class="rec-dot"></span> REC LIVE
-        </div>
-        <div class="stream-quality">1080P &bull; 30 FPS &bull; ENCRYPTED</div>
-      </div>
-
-      <div class="screen-display">
-        <div id="mirrorPlaceholder" class="offline-matrix">
-          <div class="matrix-icon">🛡️</div>
-          <div class="matrix-title">PC MONITOR OFFLINE</div>
-          <div class="matrix-sub">Tap '▶ PLAY LIVE STREAM' to start real-time desktop view.</div>
-        </div>
-        <!-- 🚀 SINGLE UNIFIED GPU CANVAS -->
-        <canvas id="gpuCanvas" class="screen-img" onclick="openFS()" style="display:none; width:100%; height:100%; border-radius:6px; object-fit:contain; cursor:pointer; touch-action:none;"></canvas>
-      </div>
-
-      <div class="player-controls">
-        <button id="toggleBtn" class="play-btn" onclick="toggleStream()">▶ PLAY LIVE STREAM</button>
-        <button class="fs-btn" onclick="openFS()">⛶ FULLSCREEN</button>
-      </div>
-    </div>
-
-    <!-- 2nd: MINIMALIST FUTURISTIC TOUCHPAD TRACKPAD PANEL -->
-    <div style="background:rgba(13, 17, 23, 0.9); border:1px solid rgba(0,240,255,0.25); border-radius:14px; padding:12px; margin-bottom:14px; backdrop-filter:blur(12px); box-shadow:0 8px 32px rgba(0,0,0,0.5);">
-      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; padding:0 2px;">
-        <span style="font-family:'Orbitron',sans-serif; font-size:11px; font-weight:700; color:#fff; letter-spacing:1px;">💻 TRACKPAD</span>
-        <div style="display:flex; align-items:center; gap:6px;">
-          <span style="font-family:'Share Tech Mono',monospace; font-size:10px; color:var(--neon-green);">SPEED: <b id="sensValDisplay">3.2x</b></span>
-          <input type="range" id="sensSlider" min="1.0" max="5.0" step="0.2" value="3.2" style="width:100px; accent-color:var(--neon-green); cursor:pointer;" oninput="document.getElementById('sensValDisplay').textContent=this.value+'x'; localStorage.setItem('trackpadSens', this.value);">
-        </div>
-      </div>
-
-      <div id="touchpadPad" style="width:100%; height:160px; background:radial-gradient(circle at 50% 50%, rgba(20,28,45,0.8) 0%, rgba(8,12,20,0.95) 100%); border:1px solid rgba(0,240,255,0.2); border-radius:10px 10px 0 0; display:flex; align-items:center; justify-content:center; touch-action:none; user-select:none; position:relative;">
-        <div style="width:36px; height:36px; border-radius:50%; border:1px dashed rgba(0,240,255,0.3); display:flex; align-items:center; justify-content:center; opacity:0.4;">
-          <span style="font-size:14px; color:var(--neon-cyan);">⊹</span>
-        </div>
-      </div>
-
-      <div style="display:flex; border-top:1px solid rgba(0,240,255,0.25); border-radius:0 0 10px 10px; overflow:hidden;">
-        <button style="flex:1; padding:11px; background:rgba(0,255,65,0.08); color:var(--neon-green); border:none; border-right:1px solid rgba(0,240,255,0.2); font-family:'Orbitron',sans-serif; font-size:11px; font-weight:800; letter-spacing:1px; cursor:pointer;" onclick="sendMouseClick(1)">LEFT CLICK</button>
-        <button style="flex:1; padding:11px; background:rgba(255,170,0,0.08); color:var(--neon-amber); border:none; font-family:'Orbitron',sans-serif; font-size:11px; font-weight:800; letter-spacing:1px; cursor:pointer;" onclick="sendMouseClick(2)">RIGHT CLICK</button>
-      </div>
-    </div>
-
-    <!-- 3rd: REAL-TIME LIVE KEYBOARD CONTROL BAR -->
-    <div style="background:var(--panel-bg); border:1px solid rgba(0,240,255,0.3); border-radius:10px; padding:12px; margin-bottom:14px; display:flex; flex-direction:column; gap:10px;">
-      <div style="display:flex; align-items:center; justify-content:space-between;">
-        <span style="font-family:'Share Tech Mono',monospace; font-size:11px; color:var(--neon-cyan); letter-spacing:1px;">⌨️ KEYBOARD TYPING</span>
-        <span style="font-family:'Share Tech Mono',monospace; font-size:10px; color:var(--neon-green);">● SYNC</span>
-      </div>
-
-      <div style="display:flex; gap:8px;">
-        <input type="text" id="remoteTextInput" placeholder="Type live on PC..." style="flex:1; background:#000; border:1.5px solid var(--neon-cyan); color:#fff; padding:12px 14px; border-radius:8px; font-family:'Inter',sans-serif; font-size:14px; outline:none; box-shadow:0 0 10px rgba(0,240,255,0.2);" oninput="handleLiveInput(event)" onkeydown="handleLiveKeydown(event)">
-        <button class="fs-btn" style="padding:12px 14px; font-size:11px; color:#ff4444; border-color:rgba(255,68,68,0.4);" onclick="clearLiveInput()">CLEAR</button>
-      </div>
-
-      <div style="display:flex; gap:6px;">
-        <button class="fs-btn" style="flex:1; font-size:10px; padding:8px;" onclick="sendSpecialKey('{ENTER}')">ENTER</button>
-        <button class="fs-btn" style="flex:1; font-size:10px; padding:8px;" onclick="sendSpecialKey('{BACKSPACE}')">BACKSPACE</button>
-        <button class="fs-btn" style="flex:1; font-size:10px; padding:8px;" onclick="sendSpecialKey('{ESC}')">ESC</button>
-        <button class="fs-btn" style="flex:1; font-size:10px; padding:8px;" onclick="sendSpecialKey('{TAB}')">TAB</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ==================== TAB 2: 🧠 GEMINI AI (RESPONSIVE NO-OVERFLOW CONTROLS) ==================== -->
-  <div id="tab-gemini" class="tab-content">
-    <div class="gemini-hud-card" id="geminiHudCard">
-      <!-- Responsive Top Bar (Multi-row Wrap Layout - No Button Cutoff!) -->
-      <div style="display:flex; flex-direction:column; gap:10px; padding-bottom:12px; border-bottom:1px solid rgba(0,240,255,0.15);">
-        <!-- Row 1: Title & Status -->
-        <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
-          <span class="gemini-badge">🧠 GEMINI 3.1 LIVE</span>
-          <span id="geminiStatusPill" class="gemini-status-pill status-disc">DISCONNECTED</span>
-        </div>
-        <!-- Row 2: Voice Selector (Full Width on mobile) -->
-        <div style="width:100%;">
-          <select id="geminiVoiceSelect" onchange="changeGeminiVoice(this.value)" style="width:100%; box-sizing:border-box; background:#030816; color:var(--neon-cyan); border:1px solid rgba(0,240,255,0.4); border-radius:6px; font-family:'Share Tech Mono',monospace; font-size:11px; padding:7px 8px; outline:none; cursor:pointer;">
-            <option value="Puck">🎙️ Puck (Natural Male - Default)</option>
-            <option value="Aoede">🎙️ Aoede (Smooth Female)</option>
-            <option value="Charon">🎙️ Charon (Deep Male)</option>
-            <option value="Fenrir">🎙️ Fenrir (Dynamic Male)</option>
-            <option value="Kore">🎙️ Kore (Warm Female)</option>
-            <option value="Zephyr">🎙️ Zephyr (Calm Bright)</option>
-          </select>
-        </div>
-        <!-- Row 3: Action Buttons (KEY, LOGS, CONNECT AI) in fluid row -->
-        <div style="display:flex; gap:6px; width:100%;">
-          <button class="gemini-btn-icon" style="flex:1; padding:8px 4px; font-size:10px; font-weight:700;" onclick="toggleGeminiKeyModal()" title="Gemini API Key">KEY</button>
-          <button class="gemini-btn-icon" style="flex:1; padding:8px 4px; font-size:10px; font-weight:700;" onclick="toggleGeminiTerminal()" title="Toggle Sandbox Terminal">LOGS</button>
-          <button id="geminiConnectBtn" class="gemini-btn-connect" style="flex:2; padding:8px 8px; font-size:11px; font-weight:800;" onclick="toggleGeminiLiveConnection()">CONNECT AI</button>
-        </div>
-      </div>
-
-      <!-- Center Stage: Audio Blob Visualizer & Controls -->
-      <div class="gemini-stage">
-        <div class="gemini-blob-wrapper">
-          <canvas id="geminiBlobCanvas" width="220" height="220"></canvas>
-          <div class="gemini-blob-center-icon" id="geminiBlobIcon">🎙️</div>
-        </div>
-        <div class="gemini-hud-info">
-          <div class="gemini-hud-title" id="geminiVoiceTitle">VOICE ASSISTANT READY</div>
-          <div class="gemini-hud-sub" id="geminiVoiceSub">Tap 'CONNECT AI' to start real-time full-duplex voice control.</div>
-        </div>
-      </div>
-
-      <!-- Collapsible Cyber Sandbox Terminal Console -->
-      <div id="geminiTerminalBox" class="gemini-terminal" style="display:none;">
-        <div class="terminal-header">
-          <span class="terminal-title">📟 CYBER SANDBOX TERMINAL</span>
-          <button class="terminal-clear-btn" onclick="clearGeminiTerminal()">CLEAR</button>
-        </div>
-        <div id="geminiTerminalLogs" class="terminal-logs">
-          <div class="t-log sys">[SYSTEM] Gemini 3.1 Live Terminal initialized. Standby for voice commands...</div>
-        </div>
-        <div class="terminal-input-bar">
-          <span style="color:var(--neon-green); font-family:monospace; font-weight:bold;">PS &gt;</span>
-          <input type="text" id="manualTerminalInput" placeholder="Manual command..." onkeydown="if(event.key==='Enter')executeManualTerminalCmd()">
-          <button class="terminal-run-btn" onclick="executeManualTerminalCmd()">RUN</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 🔑 GEMINI API KEY MODAL -->
-    <div id="geminiKeyModal" class="modal-overlay" style="display:none;">
-      <div class="modal-card" style="border-color:var(--neon-cyan); box-shadow:0 0 30px rgba(0,240,255,0.3);">
-        <div class="modal-header">
-          <span class="modal-icon">🔑</span>
-          <span class="modal-title">GEMINI LIVE API KEY</span>
-        </div>
-        <p class="modal-sub">ENTER YOUR GOOGLE AI STUDIO API KEY</p>
-        <div class="input-wrapper">
-          <input type="password" id="geminiApiKeyInput" placeholder="AIzaSy..." autocomplete="off">
-        </div>
-        <div style="font-size:10px; color:#888; margin-bottom:14px; font-family:'Share Tech Mono',monospace;">
-          Get your free API key at: <b style="color:var(--neon-cyan);">aistudio.google.com</b>
-        </div>
-        <div class="modal-actions">
-          <button class="modal-btn btn-cancel" onclick="closeGeminiKeyModal()">CANCEL</button>
-          <button class="modal-btn btn-confirm" style="background:var(--neon-cyan); color:#000;" onclick="saveGeminiApiKey()">SAVE KEY 💾</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ==================== TAB 3: ⚡ CONTROLS (2-COLUMN GRID, NO ICONS) ==================== -->
-  <div id="tab-controls" class="tab-content">
-    <!-- SYSTEM STATUS CARD -->
-    <div class="status-card" id="statusBox" style="margin-bottom:16px;">
-      <div>
-        <div class="status-title">SYSTEM DEFENSE STATUS</div>
-        <div class="status-text" id="statusText">SYSTEM SECURE</div>
-      </div>
-      <div style="font-size: 22px;" id="statusIcon">●</div>
-    </div>
-
-    <!-- ⚡ 2-COLUMN ACTION BUTTONS GRID (1. PANIC, 2. LOCK, 3. UNLOCK, 4. SLEEP, 5. WAKE UP, 6. SHUTDOWN, 7. RESTART) -->
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-      <!-- 1. PANIC MODE -->
-      <button class="btn-ctrl-2col btn-panic-col" onclick="triggerPanic()">
-        PANIC MODE
-      </button>
-      
-      <!-- 2. LOCK -->
-      <button class="btn-ctrl-2col" onclick="lockPC()">
-        LOCK
-      </button>
-
-      <!-- 3. UNLOCK -->
-      <button class="btn-ctrl-2col btn-unlock-col" onclick="unlockPC()">
-        UNLOCK
-      </button>
-      
-      <!-- 4. SLEEP MODE -->
-      <button class="btn-ctrl-2col btn-sleep-col" onclick="sleepPC()">
-        SLEEP MODE
-      </button>
-
-      <!-- 5. WAKE UP -->
-      <button class="btn-ctrl-2col btn-wake-col" onclick="wakePC()">
-        WAKE UP
-      </button>
-
-      <!-- 6. SHUTDOWN -->
-      <button class="btn-ctrl-2col btn-shutdown-col" onclick="if(confirm('Shutdown PC?'))shutdownPC()">
-        SHUTDOWN
-      </button>
-
-      <!-- 7. RESTART -->
-      <button class="btn-ctrl-2col btn-restart-col" style="grid-column: span 2;" onclick="if(confirm('Restart PC?'))restartPC()">
-        RESTART
-      </button>
-    </div>
-  </div>
-</div>
 
 <!-- 📱 FROSTED GLASS 4-TAB BOTTOM NAVIGATION BAR -->
 <nav class="cyber-bottom-nav">
