@@ -252,6 +252,15 @@ void ProcessClient(SOCKET clientSocket) {
             SetSystemPowerState(TRUE, FALSE);
             return;
 
+        } else if (request.find("GET /restart") != std::string::npos) {
+            // 🔄 Restart PC remotely!
+            system("shutdown /r /t 5 /c \"Remote restart initiated.\"");
+            responseBody = "{\"status\":\"restarting\"}";
+            std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n\r\n" + responseBody;
+            send(clientSocket, res.c_str(), (int)res.size(), 0);
+            shutdown(clientSocket, SD_SEND);
+            closesocket(clientSocket);
+            return;
         } else if (request.find("GET /shutdown") != std::string::npos) {
             // ⏻ Shutdown PC remotely!
             system("shutdown /s /t 10 /c \"Remote shutdown initiated.\"");
