@@ -73,13 +73,23 @@ public class MainActivity extends BridgeActivity {
             mDisplayH = p.y;
         } catch (Exception e) {}
 
-        // 🚀 2. Enforce Hardware Acceleration & Prevent Screen Sleep
+        // 🚀 2. Enforce Hardware Acceleration & Edge-to-Edge Immersive Display
         try {
             getWindow().setFlags(
                 WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
                 WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
             );
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                getWindow().getDecorView().setSystemUiVisibility(
+                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                    | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                    | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                );
+                getWindow().setStatusBarColor(Color.TRANSPARENT);
+                getWindow().setNavigationBarColor(Color.TRANSPARENT);
+            }
 
             if (this.bridge != null && this.bridge.getWebView() != null) {
                 this.bridge.getWebView().setLayerType(View.LAYER_TYPE_HARDWARE, null);

@@ -7,7 +7,7 @@ static const char* DASHBOARD_HTML = R"HTML(<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <link rel="manifest" href="/manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -790,7 +790,7 @@ static const char* DASHBOARD_HTML = R"HTML(<!DOCTYPE html>
     left: 0 !important;
     right: 0 !important;
     width: 100% !important;
-    height: 56px !important;
+    height: calc(56px + env(safe-area-inset-bottom, 0px)) !important;
     background: rgba(10, 14, 23, 0.45) !important;
     backdrop-filter: blur(28px) saturate(200%) !important;
     -webkit-backdrop-filter: blur(28px) saturate(200%) !important;
@@ -798,10 +798,10 @@ static const char* DASHBOARD_HTML = R"HTML(<!DOCTYPE html>
     box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.6) !important;
     display: flex !important;
     justify-content: space-around !important;
-    align-items: center !important;
+    align-items: flex-start !important;
     z-index: 99999 !important;
     margin: 0 !important;
-    padding: 0 !important;
+    padding: 6px 0 env(safe-area-inset-bottom, 0px) 0 !important;
     box-sizing: border-box !important;
   }
   .cyber-nav-tab {
