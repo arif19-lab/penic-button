@@ -5,25 +5,70 @@
 
 std::string g_dynamicKey = "imran2024";
 
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <iphlpapi.h>
+#include <vector>
+
 std::string GetLocalIP() {
-    char ac[80];
-    if (gethostname(ac, sizeof(ac)) == SOCKET_ERROR) return "127.0.0.1";
-    struct hostent *phe = gethostbyname(ac);
-    if (phe == 0) return "127.0.0.1";
-    
-    std::string fallback = "";
-    for (int i = 0; phe->h_addr_list[i] != 0; ++i) {
-        struct in_addr addr;
-        memcpy(&addr, phe->h_addr_list[i], sizeof(struct in_addr));
-        std::string ip = inet_ntoa(addr);
-        if (ip.find("192.168.") == 0) {
-            if (ip == "192.168.137.1") continue;
-            return ip; 
+    // 🚀 1. Primary Method: Kernel-level UDP socket routing probe
+    // Connects to a standard router/gateway target to determine the EXACT active interface selected by Windows kernel routing table
+    SOCKET probeSock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if (probeSock != INVALID_SOCKET) {
+        sockaddr_in remoteAddr = {0};
+        remoteAddr.sin_family = AF_INET;
+        remoteAddr.sin_port = htons(53);
+        inet_pton(AF_INET, "8.8.8.8", &remoteAddr.sin_addr);
+
+        if (connect(probeSock, (sockaddr*)&remoteAddr, sizeof(remoteAddr)) != SOCKET_ERROR) {
+            sockaddr_in localAddr = {0};
+            int addrLen = sizeof(localAddr);
+            if (getsockname(probeSock, (sockaddr*)&localAddr, &addrLen) != SOCKET_ERROR) {
+                char ipStr[INET_ADDRSTRLEN] = {0};
+                inet_ntop(AF_INET, &localAddr.sin_addr, ipStr, sizeof(ipStr));
+                closesocket(probeSock);
+                if (strlen(ipStr) > 0 && strcmp(ipStr, "0.0.0.0") != 0 && strcmp(ipStr, "127.0.0.1") != 0) {
+                    return std::string(ipStr);
+                }
+            }
         }
-        if (ip.find("10.") == 0 || ip.find("172.") == 0) fallback = ip;
+        closesocket(probeSock);
     }
-    
-    if (!fallback.empty()) return fallback;
+
+    // 🚀 2. Secondary Method: GetAdaptersAddresses (filtering only ACTIVE physical up adapters)
+    ULONG outBufLen = 15000;
+    std::vector<BYTE> buffer(outBufLen);
+    PIP_ADAPTER_ADDRESSES pAddresses = (IP_ADAPTER_ADDRESSES*)buffer.data();
+
+    if (GetAdaptersAddresses(AF_INET, GAA_FLAG_INCLUDE_GATEWAYS, NULL, pAddresses, &outBufLen) == ERROR_BUFFER_OVERFLOW) {
+        buffer.resize(outBufLen);
+        pAddresses = (IP_ADAPTER_ADDRESSES*)buffer.data();
+    }
+
+    if (GetAdaptersAddresses(AF_INET, GAA_FLAG_INCLUDE_GATEWAYS, NULL, pAddresses, &outBufLen) == NO_ERROR) {
+        std::string fallback = "";
+        for (PIP_ADAPTER_ADDRESSES pCurr = pAddresses; pCurr != NULL; pCurr = pCurr->Next) {
+            if (pCurr->OperStatus != IfOperStatusUp) continue;
+            if (pCurr->IfType == IF_TYPE_SOFTWARE_LOOPBACK || pCurr->IfType == IF_TYPE_TUNNEL) continue;
+
+            for (PIP_ADAPTER_UNICAST_ADDRESS pUnicast = pCurr->FirstUnicastAddress; pUnicast != NULL; pUnicast = pUnicast->Next) {
+                sockaddr_in* sa_in = (sockaddr_in*)pUnicast->Address.lpSockaddr;
+                if (sa_in && sa_in->sin_family == AF_INET) {
+                    char ipStr[INET_ADDRSTRLEN] = {0};
+                    inet_ntop(AF_INET, &(sa_in->sin_addr), ipStr, sizeof(ipStr));
+                    std::string ip(ipStr);
+                    if (ip.find("192.168.") == 0) {
+                        if (ip != "192.168.137.1") return ip;
+                    }
+                    if (ip.find("10.") == 0 || ip.find("172.") == 0) {
+                        fallback = ip;
+                    }
+                }
+            }
+        }
+        if (!fallback.empty()) return fallback;
+    }
+
     return "127.0.0.1";
 }
 

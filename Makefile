@@ -8,7 +8,7 @@ DLL_SRCS = PanicProvider.cpp PanicCredential.cpp
 DLL_DEF = PanicProvider.def
 RES = resource.o
 
-LDFLAGS = -Isrc -static -static-libgcc -static-libstdc++ -luser32 -lgdi32 -lole32 -luuid -lwinmm -lws2_32 -lgdiplus -lwtsapi32 -ld3d11 -ldxgi -lcrypt32 -lmfplat -lmfreadwrite -lmfuuid -loleaut32 -lstrmiids -lwinhttp
+LDFLAGS = -Isrc -static -static-libgcc -static-libstdc++ -luser32 -lgdi32 -lole32 -luuid -lwinmm -lws2_32 -liphlpapi -lgdiplus -lwtsapi32 -ld3d11 -ldxgi -lcrypt32 -lmfplat -lmfreadwrite -lmfuuid -loleaut32 -lstrmiids -lwinhttp
 SERVICE_LDFLAGS = -static -static-libgcc -static-libstdc++ -lws2_32 -lwtsapi32 -luserenv -ladvapi32
 DLL_LDFLAGS = -shared -static-libgcc -static-libstdc++ -lole32 -luuid -lshlwapi -lsecur32 -lcredui
 
