@@ -2,8 +2,8 @@
 #include <string>
 
 // Full embedded cyber dashboard HTML/JS/CSS
-// Extracted from main.cpp lines 3061-6288
-static const char* DASHBOARD_HTML = R"HTML(<!DOCTYPE html>
+static const char* DASHBOARD_HTML = R"HTML(
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -103,62 +103,73 @@ static const char* DASHBOARD_HTML = R"HTML(<!DOCTYPE html>
     letter-spacing: 1px;
   }
 
-  /* 🎬 FUTURISTIC VIDEO PLAYER MONITOR */
+  /* 🎬 LUXURY FROSTED GLASS VIDEO MONITOR HUD */
   .player-card {
-    background: #000;
-    border: 1px solid rgba(0, 255, 65, 0.4);
-    box-shadow: 0 0 25px rgba(0, 255, 65, 0.15), inset 0 0 15px rgba(0,0,0,0.9);
-    border-radius: 12px;
+    background: rgba(22, 18, 16, 0.65);
+    backdrop-filter: blur(28px) saturate(190%);
+    -webkit-backdrop-filter: blur(28px) saturate(190%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-top: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    border-radius: 22px;
     overflow: hidden;
     margin-bottom: 16px;
     position: relative;
   }
   
-  /* Video Player Top HUD - Non-overlapping header */
+  /* Video Player Top HUD - Sleek ambient glass bar */
   .player-hud-top {
     position: relative;
-    background: rgba(10, 14, 22, 0.95);
-    border-bottom: 1px solid rgba(255,255,255,0.08);
-    padding: 8px 12px;
+    background: rgba(14, 11, 9, 0.85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 10px 14px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 10px;
+    font-size: 11px;
+    font-weight: 600;
   }
   .rec-badge {
-    color: var(--neon-red);
+    color: #ff3366;
     display: flex;
     align-items: center;
-    gap: 6px;
-    font-weight: bold;
+    gap: 7px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
   }
   .rec-dot {
     width: 8px; height: 8px;
-    background: var(--neon-red);
+    background: #ff3366;
     border-radius: 50%;
-    box-shadow: 0 0 8px var(--neon-red);
-    animation: pulseRed 1s infinite;
+    box-shadow: 0 0 10px #ff3366;
+    animation: pulseRed 1.4s infinite;
   }
-  @keyframes pulseRed { 0%,100%{opacity:1;} 50%{opacity:0.2;} }
+  @keyframes pulseRed { 0%,100%{opacity:1; transform:scale(1);} 50%{opacity:0.35; transform:scale(0.85);} }
 
   .stream-quality {
-    color: var(--neon-cyan);
+    color: #ff9500;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10.5px;
     letter-spacing: 1px;
+    background: rgba(255, 149, 0, 0.12);
+    border: 1px solid rgba(255, 149, 0, 0.3);
+    padding: 3px 8px;
+    border-radius: 999px;
   }
 
   /* Screen Display Box */
   .screen-display {
     width: 100%;
     aspect-ratio: 16/9;
-    min-height: 200px;
-    background: #000;
+    min-height: 190px;
+    background: #000000;
     display: flex;
     align-items: center;
     justify-content: center;
     position: relative;
     overflow: hidden;
-    border-radius: 6px;
   }
   
   .screen-img {
@@ -168,73 +179,78 @@ static const char* DASHBOARD_HTML = R"HTML(<!DOCTYPE html>
     max-height: 100% !important;
     display: block;
     cursor: pointer;
-    border-radius: 4px;
     object-fit: contain !important;
     image-rendering: -webkit-optimize-contrast;
   }
 
   .offline-matrix {
-    padding: 35px 20px;
+    padding: 30px 20px;
     text-align: center;
-    font-family: 'Share Tech Mono', monospace;
   }
   .matrix-icon {
-    font-size: 32px;
-    margin-bottom: 10px;
-    text-shadow: 0 0 15px var(--neon-cyan);
+    font-size: 36px;
+    margin-bottom: 8px;
+    filter: drop-shadow(0 0 16px rgba(255, 149, 0, 0.6));
   }
   .matrix-title {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 13px;
+    font-size: 14px;
+    font-weight: 700;
     color: #fff;
-    letter-spacing: 2px;
-    margin-bottom: 6px;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
   }
   .matrix-sub {
-    font-size: 10px;
-    color: rgba(255,255,255,0.6);
-    margin-bottom: 16px;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.65);
+    margin-bottom: 14px;
+    max-width: 280px;
+    line-height: 1.4;
   }
 
   /* Player Bottom Controls Bar */
   .player-controls {
-    background: rgba(10, 14, 22, 0.95);
-    border-top: 1px solid rgba(255,255,255,0.08);
+    background: rgba(14, 11, 9, 0.85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
     padding: 10px 14px;
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 10px;
   }
   
   .play-btn {
-    background: var(--neon-green);
-    color: #000;
+    background: linear-gradient(135deg, #ff7722 0%, #ff9500 100%);
+    color: #ffffff;
     border: none;
-    padding: 8px 16px;
-    border-radius: 6px;
-    font-family: 'Orbitron', sans-serif;
-    font-size: 11px;
+    padding: 10px 18px;
+    border-radius: 999px;
+    font-size: 12px;
     font-weight: 800;
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
     cursor: pointer;
     display: flex;
     align-items: center;
     gap: 6px;
-    box-shadow: 0 0 12px rgba(0, 255, 65, 0.4);
-    transition: transform 0.1s;
+    box-shadow: 0 4px 18px rgba(255, 119, 34, 0.45);
+    transition: transform 0.15s, box-shadow 0.15s;
   }
-  .play-btn:active { transform: scale(0.96); }
+  .play-btn:active { transform: scale(0.96); box-shadow: 0 2px 8px rgba(255, 119, 34, 0.3); }
 
   .fs-btn {
-    background: rgba(255,255,255,0.05);
+    background: rgba(255, 255, 255, 0.08);
     color: #fff;
-    border: 1px solid rgba(255,255,255,0.2);
-    padding: 8px 12px;
-    border-radius: 6px;
-    font-family: 'Orbitron', sans-serif;
-    font-size: 11px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 10px 16px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 600;
     cursor: pointer;
+    backdrop-filter: blur(10px);
+    transition: all 0.15s;
   }
+  .fs-btn:active { transform: scale(0.96); background: rgba(255,255,255,0.15); }
 
   /* 🎮 PARSEC IMMERSIVE FULLSCREEN OVERLAY & FLOATING BUBBLE */
   .fullscreen-overlay {
@@ -407,133 +423,13 @@ static const char* DASHBOARD_HTML = R"HTML(<!DOCTYPE html>
   .status-text { font-family: 'Orbitron', sans-serif; font-size: 15px; font-weight: 800; letter-spacing: 2px; color: var(--neon-green); }
   .status-text.panic { color: var(--neon-red); text-shadow: 0 0 12px var(--neon-red); }
 
-  /* ⚡ BIG TACTILE BUTTONS */
-  .action-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin-bottom: 16px;
-  }
-
-  .btn-huge {
-    width: 100%;
-    padding: 18px 12px;
-    font-family: 'Orbitron', sans-serif;
+  <script>
+  // Direct command WebSocket.
     font-size: 16px;
-    font-weight: 900;
-    letter-spacing: 3px;
-    border-radius: 10px;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    text-transform: uppercase;
-  }
-  .btn-huge:active { transform: scale(0.97); }
-
-  .btn-panic-huge {
-    background: linear-gradient(135deg, #ff0055 0%, #990033 100%);
-    color: #fff;
-    border: 2px solid #ff3377;
-    box-shadow: 0 0 25px rgba(255, 0, 85, 0.4);
-    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-  }
-
-  .btn-secondary {
-    background: rgba(255,255,255,0.03);
-    color: var(--neon-amber);
-    border: 1px solid var(--neon-amber);
-    font-size: 13px;
-    padding: 14px;
-    box-shadow: 0 0 15px rgba(255, 170, 0, 0.1);
-  }
-
-  .btn-danger-sub {
-    background: rgba(255, 0, 85, 0.05);
-    color: var(--neon-red);
-    border: 1px solid rgba(255, 0, 85, 0.4);
-    font-size: 12px;
-    padding: 12px;
-  }
-
-  /* Modern Cyberpunk Unlock Modal */
-  .modal-overlay {
-    display: none;
-    position: fixed;
-    top: 0; left: 0; width: 100vw; height: 100vh;
-    background: rgba(4, 7, 12, 0.88);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    z-index: 10000;
-    align-items: center;
-    justify-content: center;
-    padding: 16px;
-    animation: modalFadeIn 0.2s ease-out;
-  }
-  @keyframes modalFadeIn { from{opacity:0;} to{opacity:1;} }
-
-  .modal-card {
-    background: rgba(13, 18, 28, 0.95);
-    border: 1.5px solid rgba(0, 255, 65, 0.5);
-    box-shadow: 0 0 35px rgba(0, 255, 65, 0.25), inset 0 0 20px rgba(0, 255, 65, 0.05);
-    border-radius: 16px;
-    padding: 24px 20px;
-    width: 100%;
-    max-width: 380px;
-    text-align: center;
-    transform: scale(0.95);
-  }
-  .modal-header {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    margin-bottom: 6px;
-  }
-  .modal-icon { font-size: 24px; }
-  .modal-title {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 14px;
-    font-weight: 800;
-    color: var(--neon-green);
-    letter-spacing: 2px;
-  }
-  .modal-sub {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 10px;
-    color: rgba(255, 255, 255, 0.6);
-    letter-spacing: 1px;
-    margin-bottom: 20px;
-  }
-  .input-wrapper {
-    position: relative;
-    margin-bottom: 20px;
-  }
-  .input-wrapper input {
-    width: 100%;
-    padding: 14px 44px 14px 16px;
-    background: rgba(0, 0, 0, 0.6);
-    border: 1.5px solid rgba(0, 255, 65, 0.4);
-    border-radius: 10px;
-    color: #fff;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 16px;
-    letter-spacing: 2px;
+  function connectCommandWS() {
     outline: none;
-    transition: all 0.2s;
-    box-shadow: inset 0 2px 8px rgba(0,0,0,0.8);
-  }
-  .input-wrapper input:focus {
-    border-color: var(--neon-green);
     box-shadow: 0 0 15px rgba(0, 255, 65, 0.4), inset 0 2px 8px rgba(0,0,0,0.8);
   }
-  .toggle-pass {
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
     background: none;
     border: none;
     font-size: 18px;
@@ -939,6 +835,159 @@ static const char* DASHBOARD_HTML = R"HTML(<!DOCTYPE html>
   }
 
 </style>
+
+<script>
+// Direct LAN PC endpoint routing.
+// Direct LAN PC endpoint routing & Auto-Detection
+(function() {
+  try {
+    var params = new URLSearchParams(window.location.search);
+    var keyParam = params.get('key');
+    if (keyParam) {
+      localStorage.setItem('panic_key', keyParam);
+    }
+    var isDirectHost = (window.location.hostname !== 'localhost' && 
+                        window.location.hostname !== '127.0.0.1' && 
+                        !window.location.hostname.includes('web.app') && 
+                        !window.location.hostname.includes('firebaseapp.com') &&
+                        window.location.protocol.startsWith('http'));
+    if (isDirectHost) {
+      localStorage.setItem('panic_pc_endpoint', window.location.origin);
+    }
+  } catch(e) {}
+})();
+
+function sanitizeEndpoint(url) {
+  if (!url || typeof url !== 'string') return '';
+  var clean = url.trim().replace(/^https?:\/\//, '').replace(/^\/+/, '');
+  if (!clean) return '';
+  var proto = url.startsWith('https://') ? 'https://' : 'http://';
+  if (!clean.includes(':')) {
+    clean += ':8080';
+  }
+  return proto + clean;
+}
+
+var _urlParams = new URLSearchParams(window.location.search);
+var KEY = _urlParams.get('key') || localStorage.getItem('panic_key') || 'imran2024';
+var PC_ENDPOINT = (function() {
+  if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' && !window.location.hostname.includes('web.app')) {
+    return window.location.origin;
+  }
+  return sanitizeEndpoint(localStorage.getItem('panic_pc_endpoint')) || 'http://192.168.0.104:8080';
+})();
+
+function getApiUrl(path) {
+  if (!PC_ENDPOINT || window.location.hostname === '10.72.151.59' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') return path;
+  var base = PC_ENDPOINT;
+  if (base.endsWith('/')) base = base.slice(0, -1);
+  return base + (path.startsWith('/') ? path : '/' + path);
+}
+
+function getWsUrl(path) {
+  if (PC_ENDPOINT) {
+    var wsProto = PC_ENDPOINT.startsWith('https') ? 'wss://' : 'ws://';
+    var cleanHost = PC_ENDPOINT.replace('https://', '').replace('http://', '');
+    if (cleanHost.endsWith('/')) cleanHost = cleanHost.slice(0, -1);
+    return wsProto + cleanHost + path;
+  }
+  var wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  return wsProto + '//' + window.location.host + path;
+}
+
+// ⚡ Global Fetch & Beacon Interceptor
+(function() {
+  var _origFetch = window.fetch;
+  window.fetch = function(input, init) {
+    if (typeof input === 'string' && input.startsWith('/')) {
+      input = getApiUrl(input);
+    }
+    return _origFetch.call(this, input, init);
+  };
+  if (navigator.sendBeacon) {
+    var _origBeacon = navigator.sendBeacon;
+    navigator.sendBeacon = function(url, data) {
+      if (typeof url === 'string' && url.startsWith('/')) {
+        url = getApiUrl(url);
+      }
+      return _origBeacon.call(this, url, data);
+    };
+  }
+})();
+
+function saveAndConnectPc() {
+  var input = document.getElementById('pcIpInput');
+  if (!input) return;
+  var val = sanitizeEndpoint(input.value);
+  if (!val) {
+    alert('Please enter your PC IP address (e.g. 10.72.151.59:8080 or 192.168.0.104:8080)');
+    return;
+  }
+  localStorage.setItem('panic_pc_endpoint', val);
+  PC_ENDPOINT = val;
+  input.value = val;
+  checkPcConnection();
+  if (typeof startLiveStream === 'function') startLiveStream();
+}
+
+function checkPcConnection() {
+  var badge = document.getElementById('pcPingBadge');
+  var dot = document.getElementById('pcStatusDot');
+  if (!badge) return;
+  badge.textContent = 'CONNECTING...';
+  badge.style.color = '#00f3ff';
+  var t0 = performance.now();
+  fetch(getApiUrl('/api/status?key=' + KEY), { cache: 'no-cache' })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      var ms = Math.round(performance.now() - t0);
+      badge.textContent = '🟢 CONNECTED (' + ms + 'ms)';
+      badge.style.color = '#00ff41';
+      if (dot) {
+        dot.style.background = '#00ff41';
+        dot.style.boxShadow = '0 0 10px #00ff41';
+      }
+    })
+    .catch(function(err) {
+      badge.textContent = '🔴 DISCONNECTED';
+      badge.style.color = '#ff003c';
+      if (dot) {
+        dot.style.background = '#ff003c';
+        dot.style.boxShadow = '0 0 10px #ff003c';
+      }
+    });
+}
+
+window.addEventListener('DOMContentLoaded', function() {
+  var input = document.getElementById('pcIpInput');
+  if (input) input.value = PC_ENDPOINT;
+  checkPcConnection();
+  setInterval(checkPcConnection, 3000);
+  setTimeout(connectCommandWS, 2000);
+});
+</script>
+
+
+<script>
+// Direct command WebSocket.
+var _cmdWS = null;
+function connectCommandWS() {
+  if (_cmdWS && (_cmdWS.readyState === WebSocket.OPEN || _cmdWS.readyState === WebSocket.CONNECTING)) return;
+  try {
+    var wsUrl = getWsUrl('/cmd-ws?key=' + KEY);
+    console.log('[CmdWS] Connecting to:', wsUrl);
+    _cmdWS = new WebSocket(wsUrl);
+    _cmdWS.onopen = function() { console.log('[CmdWS] Connected! Commands will use WebSocket.'); };
+    _cmdWS.onclose = function() {
+      _cmdWS = null;
+      setTimeout(connectCommandWS, 3000);
+    };
+    _cmdWS.onerror = function() { if (_cmdWS) _cmdWS.close(); };
+  } catch(e) { console.warn('[CmdWS] Error:', e); }
+}
+var probedOk = false;
+</script>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 </head>
 <body>
@@ -1434,22 +1483,14 @@ window.addEventListener("orientationchange", function() {
 });
 
 function getDesktopCoords(clientX, clientY) {
-  var fsCanvas = document.getElementById("fsCanvas");
-  var gpuCanvas = document.getElementById("gpuCanvas");
-  var canvas = (document.getElementById("fsOverlay") && document.getElementById("fsOverlay").style.display !== "none") ? fsCanvas : gpuCanvas;
+  var winW = cachedWinW;
+  var winH = cachedWinH;
 
-  var winW = window.innerWidth || cachedWinW;
-  var winH = window.innerHeight || cachedWinH;
-  var isPortrait = winH > winW;
-
-  var cW = (canvas && canvas.width) ? canvas.width : 1920;
-  var cH = (canvas && canvas.height) ? canvas.height : 1080;
-  var targetAspect = (cW / cH) || (16.0 / 9.0);
-
-  if (isPortrait && canvas === fsCanvas) {
+  if (winH > winW) {
     // 📱 90° ROTATED PORTRAIT: (Phone is vertical, canvas is rotated 90° landscape)
     var containerW = winH;
     var containerH = winW;
+    var targetAspect = 16.0 / 9.0;
     var containerAspect = containerW / containerH;
 
     var renderW, renderH, offX, offY;
@@ -1468,15 +1509,8 @@ function getDesktopCoords(clientX, clientY) {
     var rotX = clientY;
     var rotY = winW - clientX;
 
-    // Apply zoom & pan inverse transform
-    var centerX = containerW / 2.0;
-    var centerY = containerH / 2.0;
-    var zoom = fsZoom || 1.0;
-    var panX = fsPanX || 0;
-    var panY = fsPanY || 0;
-
-    var localX = (rotX - centerX - panX) / zoom + centerX - offX;
-    var localY = (rotY - centerY - panY) / zoom + centerY - offY;
+    var localX = rotX - offX;
+    var localY = rotY - offY;
 
     var normX = Math.max(0.0, Math.min(1.0, localX / renderW));
     var normY = Math.max(0.0, Math.min(1.0, localY / renderH));
@@ -1486,7 +1520,8 @@ function getDesktopCoords(clientX, clientY) {
       py: Math.round(normY * 10000)
     };
   } else {
-    // 💻 LANDSCAPE / INLINE:
+    // 💻 LANDSCAPE:
+    var targetAspect = 16.0 / 9.0;
     var containerAspect = winW / winH;
 
     var renderW, renderH, offX, offY;
@@ -1502,14 +1537,8 @@ function getDesktopCoords(clientX, clientY) {
       offY = (winH - renderH) / 2.0;
     }
 
-    var centerX = winW / 2.0;
-    var centerY = winH / 2.0;
-    var zoom = (canvas === fsCanvas ? fsZoom : 1.0) || 1.0;
-    var panX = (canvas === fsCanvas ? fsPanX : 0) || 0;
-    var panY = (canvas === fsCanvas ? fsPanY : 0) || 0;
-
-    var localX = (clientX - centerX - panX) / zoom + centerX - offX;
-    var localY = (clientY - centerY - panY) / zoom + centerY - offY;
+    var localX = clientX - offX;
+    var localY = clientY - offY;
 
     var normX = Math.max(0.0, Math.min(1.0, localX / renderW));
     var normY = Math.max(0.0, Math.min(1.0, localY / renderH));
@@ -1772,10 +1801,10 @@ var STREAM_CODEC = "avc1.42001E";
 
 
 // 🎬 H.264 LIVE VIDEO ENGINE (MediaSource Extensions = hardware decoded MP4 video)
-// fetch() streams fragmented MP4 over plain HTTP -> works through Cloudflare tunnels,
+// fetch() streams fragmented MP4 over plain HTTP.
 // gives a REAL video experience (smooth motion, inter-frame compression) like streaming apps.
 var h264Retries = 0;
-// 🔄 AUTO-RECONNECT: if the H.264 stream drops (network blip, tunnel hiccup,
+// 🔄 AUTO-RECONNECT: if the H.264 stream drops due to a network blip,
 // brief server stall), re-tune like a real live player instead of dropping to the
 // low-quality MJPEG fallback. Budget of 3 retries, then fallback.
 function h264Reconnect(){
@@ -1894,7 +1923,7 @@ function startH264(){
   });
 
   var streamUrl = '/h264?key=' + KEY + '&t=' + Date.now();
-  var fetchOpts = { headers: { "Bypass-Tunnel-Reminder": "true" } };
+  var fetchOpts = {};
   if (abortCtrl) fetchOpts.signal = abortCtrl.signal;
   fetch(streamUrl, fetchOpts).then(function(res){
     if (!res.ok || !res.body) throw new Error('HTTP ' + res.status);
@@ -2118,8 +2147,7 @@ function _connectWebSocket() {
   if (!isStreaming) return;
   _fallbackActive = false;
 
-  var wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-  var wsUrl = wsProto + "//" + window.location.host + "/ws?key=" + KEY;
+  var wsUrl = getWsUrl('/ws?key=' + KEY);
 
   var _latestBlob = null;
   var _isDecoding = false;
@@ -2201,7 +2229,6 @@ function _startCanvasFetchFallback() {
     var frameUrl = "/rawframe?key=" + KEY + "&t=" + Date.now();
     var fetchOpts = {
       cache: "no-store",
-      headers: { "Bypass-Tunnel-Reminder": "true" },
       signal: _fallbackAbortCtrl ? _fallbackAbortCtrl.signal : undefined
     };
 
@@ -2267,13 +2294,21 @@ function toggleStream() {
     if (canvas) canvas.style.display = "block";
     if (q) q.textContent = "720P • INITIALIZING...";
 
-    if (window.AndroidNativeStream && typeof window.AndroidNativeStream.setNativeInput === 'function') {
-      try { window.AndroidNativeStream.setNativeInput(true); } catch(e) {}
+    if (window.AndroidNativeStream && typeof window.AndroidNativeStream.start === 'function') {
+      try {
+        var nativeUrl = window.location.protocol + "//" + window.location.host + "/stream.h264?key=" + KEY;
+        window.AndroidNativeStream.start(nativeUrl);
+        window.AndroidNativeStream.setNativeInput(true);
+        if (q) q.textContent = "720P • 120 FPS • ⚡ NATIVE GPU MEDIACONDEC";
+      } catch(e) {}
     }
     startCanvasStream();
   } else {
-    if (window.AndroidNativeStream && typeof window.AndroidNativeStream.setNativeInput === 'function') {
-      try { window.AndroidNativeStream.setNativeInput(false); } catch(e){}
+    if (window.AndroidNativeStream && typeof window.AndroidNativeStream.stop === 'function') {
+      try {
+        window.AndroidNativeStream.setNativeInput(false);
+        window.AndroidNativeStream.stop();
+      } catch(e){}
     }
     stopCanvasStream();
     if (canvas) canvas.style.display = "none";
@@ -2286,7 +2321,7 @@ function toggleStream() {
 
 function getStatus(){
   if (isStreaming) return; // ⚡ SUPPRESS HTTP POLLING DURING LIVE STREAMING TO ELIMINATE PERIODIC 2-SEC STALLS!
-  fetch("/api/status?key=" + KEY, { cache: "no-store", keepalive: true, headers: { "Bypass-Tunnel-Reminder": "true" } })
+  fetch("/api/status?key=" + KEY, { cache: "no-store", keepalive: true })
     .then(function(res){ return res.json(); })
     .then(function(d){
       var box=document.getElementById("statusBox");
@@ -2356,12 +2391,33 @@ if ('serviceWorker' in navigator) {
 // ⚡ Sub-10ms Zero-Latency Fetch Pipeline
 function triggerPanic(){
   vibratePhone([100, 50, 100]);
-  fetch("/panic?key=" + KEY, { keepalive: true, headers: { "Bypass-Tunnel-Reminder": "true" } }).then(function(){
+  if (_cmdWS && _cmdWS.readyState === WebSocket.OPEN) { _cmdWS.send("PANIC"); return; }
+  fetch("/panic?key=" + KEY, { keepalive: true }).then(function(){
     setTimeout(getStatus, 200);
   });
 }
-function lockPC(){ vibratePhone(50); fetch("/lock?key=" + KEY, { keepalive: true, headers: { "Bypass-Tunnel-Reminder": "true" } }); }
-function sleepPC(){ vibratePhone(50); fetch("/sleep?key=" + KEY, { keepalive: true, headers: { "Bypass-Tunnel-Reminder": "true" } }); }
+function lockPC(){ 
+  vibratePhone(50); 
+  if (_cmdWS && _cmdWS.readyState === WebSocket.OPEN) { _cmdWS.send("LOCK"); return; }
+  fetch("/lock?key=" + KEY, { keepalive: true }); 
+}
+function sleepPC(){ 
+  vibratePhone(50); 
+  if (_cmdWS && _cmdWS.readyState === WebSocket.OPEN) { _cmdWS.send("SLEEP"); return; }
+  fetch("/sleep?key=" + KEY, { keepalive: true }); 
+}
+
+function restartPC(){ 
+  vibratePhone(100); 
+  if (_cmdWS && _cmdWS.readyState === WebSocket.OPEN) { _cmdWS.send("RESTART"); return; }
+  fetch("/restart?key=" + KEY, { keepalive: true }); 
+}
+
+function shutdownPC(){ 
+  vibratePhone(100); 
+  if (_cmdWS && _cmdWS.readyState === WebSocket.OPEN) { _cmdWS.send("SHUTDOWN"); return; }
+  fetch("/shutdown?key=" + KEY, { keepalive: true }); 
+}
 
 function wakePC() {
   vibratePhone([80, 40, 80]);
@@ -2401,15 +2457,6 @@ function submitUnlock(){
     closeUnlockModal();
   }
 }
-function sleepPC(){ vibratePhone(50); fetch("/sleep?key=" + KEY, { keepalive: true, headers: { "Bypass-Tunnel-Reminder": "true" } }); }
-
-function restartPC(){ 
-  vibratePhone(100); 
-  if (_cmdWS && _cmdWS.readyState === WebSocket.OPEN) { _cmdWS.send("RESTART"); return; }
-  fetch("/restart?key=" + KEY, { keepalive: true }); 
-}
-
-function shutdownPC(){ vibratePhone(100); fetch("/shutdown?key=" + KEY, { keepalive: true, headers: { "Bypass-Tunnel-Reminder": "true" } }); }
 
 getStatus();
 setInterval(getStatus, 1500);
@@ -2624,7 +2671,7 @@ function sendTelemetry(event, isClick, overrideClickType) {
             if (now - lastTapEndTime < 320) {
                 isDragging = true;
                 vibratePhone(40);
-                sendMouseClick(3);
+                fetch("/api/mouse_rel?key=" + KEY + "&click=3", { keepalive: true }).catch(function(){});
             }
         } else if (e.touches.length === 2) {
             lastY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
@@ -2674,7 +2721,7 @@ function sendTelemetry(event, isClick, overrideClickType) {
 
         if (isDragging) {
             isDragging = false;
-            sendMouseClick(4);
+            fetch("/api/mouse_rel?key=" + KEY + "&click=4", { keepalive: true }).catch(function(){});
             lastTapEndTime = 0;
             maxTouches = 0;
             return;
@@ -2690,14 +2737,14 @@ function sendTelemetry(event, isClick, overrideClickType) {
             if (maxTouches === 1 && totalMoveDist < 25 && duration < 380) {
                 stopInertia();
                 vibratePhone(40);
-                sendMouseClick(1);
+                fetch("/api/mouse_rel?key=" + KEY + "&click=1", { keepalive: true }).catch(function(){});
                 lastTapEndTime = now;
             } 
             // ✌️ 2-Finger Tap = Right Click!
             else if (maxTouches === 2 && totalMoveDist < 30 && duration < 400) {
                 stopInertia();
                 vibratePhone(50);
-                sendMouseClick(2);
+                fetch("/api/mouse_rel?key=" + KEY + "&click=2", { keepalive: true }).catch(function(){});
                 lastTapEndTime = 0;
             }
             maxTouches = 0;
@@ -3277,7 +3324,7 @@ function startMicrophoneCapture() {
 
   if (!getUserMediaFn) {
     appendGeminiLog("err", "[MIC NOTICE] Mobile Chrome blocks Mic over plain HTTP (Insecure Context).");
-    appendGeminiLog("sys", "[TIP] Use Cloudflare HTTPS URL, or type your voice commands in the Terminal input below!");
+    appendGeminiLog("sys", "[TIP] Type your voice commands in the Terminal input below!");
     setGeminiStatus("listen", "TEXT & CLOUD READY", "Type below or use HTTPS URL for live microphone.");
     return;
   }
@@ -3492,7 +3539,7 @@ setTimeout(initGeminiBlobVisualizer, 100);
     </p>
 
     <!-- 1. Live Camera Scanner -->
-    <button onclick="startInAppQrScanner()" style="width:100%; padding:13px; background:linear-gradient(135deg, #00f0ff 0%, #0077ff 100%); color:#000; border:none; border-radius:10px; font-family:'Orbitron',sans-serif; font-size:12px; font-weight:900; letter-spacing:1.5px; cursor:pointer; box-shadow:0 0 25px rgba(0,240,255,0.4); margin-bottom:10px; display:flex; align-items:center; justify-content:center; gap:8px;">
+    <button onclick="triggerNativeQrScan()" style="width:100%; padding:13px; background:linear-gradient(135deg, #00f0ff 0%, #0077ff 100%); color:#000; border:none; border-radius:10px; font-family:'Orbitron',sans-serif; font-size:12px; font-weight:900; letter-spacing:1.5px; cursor:pointer; box-shadow:0 0 25px rgba(0,240,255,0.4); margin-bottom:10px; display:flex; align-items:center; justify-content:center; gap:8px;">
       <span>📷</span> SCAN PC QR CODE (LIVE)
     </button>
 
@@ -3614,42 +3661,37 @@ function closePairingModal() {
 }
 
 function startInAppQrScanner() {
+  triggerNativeQrScan();
+}
+
+function triggerNativeQrScan() {
+  // Native Android scanner - 100% reliable, bypasses browser security
+  if (window.AndroidNativeStream && typeof window.AndroidNativeStream.startQrScan === 'function') {
+    window.AndroidNativeStream.startQrScan();
+    closePairingModal();
+    return;
+  }
+  // Browser fallback for non-Android (PC browser)
   closePairingModal();
   var scanModal = document.getElementById('qrCameraScannerModal');
   if (scanModal) scanModal.style.display = 'flex';
   var fb = document.getElementById('qrCameraFallback');
   if (fb) fb.style.display = 'none';
-
   var video = document.getElementById('qrVideo');
   if (!video) return;
-
-  var getMedia = navigator.mediaDevices && navigator.mediaDevices.getUserMedia ? 
-                 function(c) { return navigator.mediaDevices.getUserMedia(c); } :
-                 (navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia);
-
-  if (!getMedia) {
-    if (fb) fb.style.display = 'block';
-    return;
-  }
-
   var constraints = { video: { facingMode: 'environment' }, audio: false };
-
-  var promise = (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) ? 
-                navigator.mediaDevices.getUserMedia(constraints) : 
-                new Promise(function(resolve, reject) {
-                  getMedia.call(navigator, constraints, resolve, reject);
-                });
-
-  promise.then(function(stream) {
-    _qrStream = stream;
-    video.srcObject = stream;
-    video.setAttribute('playsinline', true);
-    video.play();
-    _qrAnimFrame = requestAnimationFrame(scanQrVideoTick);
-  }).catch(function(err) {
-    console.warn('Camera stream rejected or unavailable:', err);
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    navigator.mediaDevices.getUserMedia(constraints).then(function(stream) {
+      _qrStream = stream;
+      video.srcObject = stream;
+      video.play();
+      _qrAnimFrame = requestAnimationFrame(scanQrVideoTick);
+    }).catch(function() {
+      if (fb) fb.style.display = 'block';
+    });
+  } else {
     if (fb) fb.style.display = 'block';
-  });
+  }
 }
 
 function scanQrVideoTick() {
@@ -3852,4 +3894,5 @@ window.addEventListener('DOMContentLoaded', function() {
 </script>
 </body>
 </html>
+
 )HTML";

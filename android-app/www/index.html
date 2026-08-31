@@ -98,62 +98,73 @@
     letter-spacing: 1px;
   }
 
-  /* 🎬 FUTURISTIC VIDEO PLAYER MONITOR */
+  /* 🎬 LUXURY FROSTED GLASS VIDEO MONITOR HUD */
   .player-card {
-    background: #000;
-    border: 1px solid rgba(0, 255, 65, 0.4);
-    box-shadow: 0 0 25px rgba(0, 255, 65, 0.15), inset 0 0 15px rgba(0,0,0,0.9);
-    border-radius: 12px;
+    background: rgba(22, 18, 16, 0.65);
+    backdrop-filter: blur(28px) saturate(190%);
+    -webkit-backdrop-filter: blur(28px) saturate(190%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-top: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    border-radius: 22px;
     overflow: hidden;
     margin-bottom: 16px;
     position: relative;
   }
   
-  /* Video Player Top HUD - Non-overlapping header */
+  /* Video Player Top HUD - Sleek ambient glass bar */
   .player-hud-top {
     position: relative;
-    background: rgba(10, 14, 22, 0.95);
-    border-bottom: 1px solid rgba(255,255,255,0.08);
-    padding: 8px 12px;
+    background: rgba(14, 11, 9, 0.85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 10px 14px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 10px;
+    font-size: 11px;
+    font-weight: 600;
   }
   .rec-badge {
-    color: var(--neon-red);
+    color: #ff3366;
     display: flex;
     align-items: center;
-    gap: 6px;
-    font-weight: bold;
+    gap: 7px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
   }
   .rec-dot {
     width: 8px; height: 8px;
-    background: var(--neon-red);
+    background: #ff3366;
     border-radius: 50%;
-    box-shadow: 0 0 8px var(--neon-red);
-    animation: pulseRed 1s infinite;
+    box-shadow: 0 0 10px #ff3366;
+    animation: pulseRed 1.4s infinite;
   }
-  @keyframes pulseRed { 0%,100%{opacity:1;} 50%{opacity:0.2;} }
+  @keyframes pulseRed { 0%,100%{opacity:1; transform:scale(1);} 50%{opacity:0.35; transform:scale(0.85);} }
 
   .stream-quality {
-    color: var(--neon-cyan);
+    color: #ff9500;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10.5px;
     letter-spacing: 1px;
+    background: rgba(255, 149, 0, 0.12);
+    border: 1px solid rgba(255, 149, 0, 0.3);
+    padding: 3px 8px;
+    border-radius: 999px;
   }
 
   /* Screen Display Box */
   .screen-display {
     width: 100%;
     aspect-ratio: 16/9;
-    min-height: 200px;
-    background: #000;
+    min-height: 190px;
+    background: #000000;
     display: flex;
     align-items: center;
     justify-content: center;
     position: relative;
     overflow: hidden;
-    border-radius: 6px;
   }
   
   .screen-img {
@@ -163,73 +174,78 @@
     max-height: 100% !important;
     display: block;
     cursor: pointer;
-    border-radius: 4px;
     object-fit: contain !important;
     image-rendering: -webkit-optimize-contrast;
   }
 
   .offline-matrix {
-    padding: 35px 20px;
+    padding: 30px 20px;
     text-align: center;
-    font-family: 'Share Tech Mono', monospace;
   }
   .matrix-icon {
-    font-size: 32px;
-    margin-bottom: 10px;
-    text-shadow: 0 0 15px var(--neon-cyan);
+    font-size: 36px;
+    margin-bottom: 8px;
+    filter: drop-shadow(0 0 16px rgba(255, 149, 0, 0.6));
   }
   .matrix-title {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 13px;
+    font-size: 14px;
+    font-weight: 700;
     color: #fff;
-    letter-spacing: 2px;
-    margin-bottom: 6px;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
   }
   .matrix-sub {
-    font-size: 10px;
-    color: rgba(255,255,255,0.6);
-    margin-bottom: 16px;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.65);
+    margin-bottom: 14px;
+    max-width: 280px;
+    line-height: 1.4;
   }
 
   /* Player Bottom Controls Bar */
   .player-controls {
-    background: rgba(10, 14, 22, 0.95);
-    border-top: 1px solid rgba(255,255,255,0.08);
+    background: rgba(14, 11, 9, 0.85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
     padding: 10px 14px;
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 10px;
   }
   
   .play-btn {
-    background: var(--neon-green);
-    color: #000;
+    background: linear-gradient(135deg, #ff7722 0%, #ff9500 100%);
+    color: #ffffff;
     border: none;
-    padding: 8px 16px;
-    border-radius: 6px;
-    font-family: 'Orbitron', sans-serif;
-    font-size: 11px;
+    padding: 10px 18px;
+    border-radius: 999px;
+    font-size: 12px;
     font-weight: 800;
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
     cursor: pointer;
     display: flex;
     align-items: center;
     gap: 6px;
-    box-shadow: 0 0 12px rgba(0, 255, 65, 0.4);
-    transition: transform 0.1s;
+    box-shadow: 0 4px 18px rgba(255, 119, 34, 0.45);
+    transition: transform 0.15s, box-shadow 0.15s;
   }
-  .play-btn:active { transform: scale(0.96); }
+  .play-btn:active { transform: scale(0.96); box-shadow: 0 2px 8px rgba(255, 119, 34, 0.3); }
 
   .fs-btn {
-    background: rgba(255,255,255,0.05);
+    background: rgba(255, 255, 255, 0.08);
     color: #fff;
-    border: 1px solid rgba(255,255,255,0.2);
-    padding: 8px 12px;
-    border-radius: 6px;
-    font-family: 'Orbitron', sans-serif;
-    font-size: 11px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 10px 16px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 600;
     cursor: pointer;
+    backdrop-filter: blur(10px);
+    transition: all 0.15s;
   }
+  .fs-btn:active { transform: scale(0.96); background: rgba(255,255,255,0.15); }
 
   /* 🎮 PARSEC IMMERSIVE FULLSCREEN OVERLAY & FLOATING BUBBLE */
   .fullscreen-overlay {
