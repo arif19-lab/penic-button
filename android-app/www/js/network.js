@@ -218,24 +218,41 @@ function quickConnectIp(hostPort) {
   window.location.href = fullUrl;
 }
 
+var _isCurrentlyConnected = false;
+
 function checkPcConnection() {
   var t0 = performance.now();
   fetch(getApiUrl('/api/status?key=' + KEY), { cache: 'no-cache' })
-    .then(function(res) { return res.json(); })
+    .then(function(res) {
+      if (!res.ok) throw new Error('Status not ok');
+      return res.json();
+    })
     .then(function(data) {
       var ms = Math.round(performance.now() - t0);
+      _isCurrentlyConnected = true;
       updateNetworkUi(true, ms);
     })
     .catch(function(err) {
+      _isCurrentlyConnected = false;
       updateNetworkUi(false, 0);
     });
 }
 
-function probeBestEndpoint(callback) {
+function probeBestEndpoint(force, callback) {
+  if (typeof force === 'function') {
+    callback = force;
+    force = false;
+  }
+  // ⚡ If already connected to user's selected endpoint (Local or Tailscale), RESPECT IT!
+  if (!force && _isCurrentlyConnected) {
+    if (typeof callback === 'function') callback(true, PC_ENDPOINT);
+    return;
+  }
+
   var key = localStorage.getItem('panic_key') || KEY || 'imran2024';
   var candidates = [
-    'http://100.83.195.91:8085', // 1. Tailscale Worldwide (TOP PRIORITY)
-    'http://192.168.0.100:8085'  // 2. Local Wi-Fi (Secondary)
+    'http://100.83.195.91:8085', // 1. Tailscale Worldwide
+    'http://192.168.0.100:8085'  // 2. Local Wi-Fi
   ];
 
   var probeIndex = 0;
@@ -254,7 +271,7 @@ function probeBestEndpoint(callback) {
       .then(function(res) {
         clearTimeout(timer);
         if (res.ok) {
-          console.log('[Network] Probed endpoint active:', ep);
+          console.log('[Network] Connected to endpoint:', ep);
           localStorage.setItem('panic_pc_endpoint', ep);
           PC_ENDPOINT = ep;
           var input = document.getElementById('pcIpInput');
@@ -282,7 +299,12 @@ window.addEventListener('DOMContentLoaded', function() {
   checkPcConnection();
   setInterval(checkPcConnection, 3000);
   setTimeout(connectCommandWS, 2000);
-  setTimeout(probeBestEndpoint, 800);
+  // Only probe if initial connection is completely dead after 2 seconds
+  setTimeout(function() {
+    if (!_isCurrentlyConnected) {
+      probeBestEndpoint(false);
+    }
+  }, 2000);
 });
 
 

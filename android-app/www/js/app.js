@@ -43,6 +43,19 @@ function triggerNativeQrScan() {
     return;
   }
   closePairingModal();
+
+  // 🌐 In web browsers over insecure HTTP (e.g. http://192.168... or http://100...),
+  // Chrome blocks navigator.mediaDevices.getUserMedia ("insecure context").
+  // Direct hardware camera capture via file input works on 100% of browsers!
+  var isSecure = (window.isSecureContext === true) || (location.protocol === 'https:') || (location.hostname === 'localhost') || (location.hostname === '127.0.0.1');
+  if (!isSecure && !navigator.mediaDevices) {
+    var camInput = document.getElementById('qrCameraInput');
+    if (camInput) {
+      camInput.click();
+      return;
+    }
+  }
+
   var scanModal = document.getElementById('qrCameraScannerModal');
   if (scanModal) scanModal.style.display = 'flex';
   var fb = document.getElementById('qrCameraFallback');
@@ -116,25 +129,54 @@ function processQrImageFile(event) {
   reader.onload = function(e) {
     var img = new Image();
     img.onload = function() {
-      var canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
-      var ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, img.width, img.height);
-      var imageData = ctx.getImageData(0, 0, img.width, img.height);
-
-      if (typeof jsQR !== 'undefined') {
-        var code = jsQR(imageData.data, imageData.width, imageData.height);
-        if (code && code.data) {
-          onQrCodeSuccess(code.data);
-        } else {
-          alert('Could not find a valid QR code in this picture. Please take a clearer photo or use Auto-Detect.');
+      // ⚡ 1. Primary Engine: Chrome Native Hardware BarcodeDetector
+      if (typeof window.BarcodeDetector !== 'undefined') {
+        try {
+          var detector = new BarcodeDetector({ formats: ['qr_code'] });
+          detector.detect(img).then(function(barcodes) {
+            if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
+              onQrCodeSuccess(barcodes[0].rawValue);
+              return;
+            }
+            fallbackJsQrDecode(img);
+          }).catch(function() {
+            fallbackJsQrDecode(img);
+          });
+          return;
+        } catch(err) {
+          fallbackJsQrDecode(img);
+          return;
         }
       }
+      fallbackJsQrDecode(img);
     };
     img.src = e.target.result;
   };
   reader.readAsDataURL(file);
+}
+
+function fallbackJsQrDecode(img) {
+  // ⚡ Downsample high-resolution smartphone photos to 1024px for jsQR
+  var maxDim = 1024;
+  var scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+  var w = Math.round(img.width * scale);
+  var h = Math.round(img.height * scale);
+
+  var canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  var ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0, 0, w, h);
+  var imageData = ctx.getImageData(0, 0, w, h);
+
+  if (typeof jsQR !== 'undefined') {
+    var code = jsQR(imageData.data, w, h, { inversionAttempts: 'attemptBoth' });
+    if (code && code.data) {
+      onQrCodeSuccess(code.data);
+      return;
+    }
+  }
+  alert('Could not detect QR code in this photo. Please take a closer, clearer photo of the PC screen QR code.');
 }
 
 function onQrCodeSuccess(decodedText) {
