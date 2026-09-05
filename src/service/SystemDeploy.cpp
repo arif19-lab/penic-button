@@ -50,24 +50,22 @@ void AddToStartup() {
         CopyFileA((exeDir + wName).c_str(), (pData + wName).c_str(), FALSE);
     }
 
-    // 2. Install & Start PanicMasterService.
-    // We are ALREADY elevated (manifest) -> CreateProcess inherits the token, so NO second UAC prompt!
+    // 2. Install & Start PanicMasterService (if present)
     {
         std::string svcDst = pData + "\\PanicService.exe";
-        std::string svcCmd = "\"" + svcDst + "\" -install";
-        std::vector<char> cmdBuf(svcCmd.begin(), svcCmd.end());
-        cmdBuf.push_back('\0');
-        STARTUPINFOA si = { sizeof(si) };
-        si.dwFlags = STARTF_USESHOWWINDOW;
-        si.wShowWindow = SW_HIDE;
-        PROCESS_INFORMATION pi = {0};
-        if (CreateProcessA(NULL, cmdBuf.data(), NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi)) {
-            WaitForSingleObject(pi.hProcess, 30000); // Wait for install+start to finish
-            CloseHandle(pi.hProcess);
-            CloseHandle(pi.hThread);
-        } else if (GetLastError() == ERROR_ELEVATION_REQUIRED) {
-            // Edge case: running without admin - ask the user via UAC once
-            ShellExecuteA(NULL, "runas", svcDst.c_str(), "-install", NULL, SW_HIDE);
+        if (GetFileAttributesA(svcDst.c_str()) != INVALID_FILE_ATTRIBUTES) {
+            std::string svcCmd = "\"" + svcDst + "\" -install";
+            std::vector<char> cmdBuf(svcCmd.begin(), svcCmd.end());
+            cmdBuf.push_back('\0');
+            STARTUPINFOA si = { sizeof(si) };
+            si.dwFlags = STARTF_USESHOWWINDOW;
+            si.wShowWindow = SW_HIDE;
+            PROCESS_INFORMATION pi = {0};
+            if (CreateProcessA(NULL, cmdBuf.data(), NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi)) {
+                WaitForSingleObject(pi.hProcess, 5000);
+                CloseHandle(pi.hProcess);
+                CloseHandle(pi.hThread);
+            }
         }
     }
 
