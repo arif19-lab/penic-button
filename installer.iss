@@ -38,7 +38,7 @@ Name: "{autoprograms}\PANIC CTRL"; Filename: "{app}\PanicButton.exe"; WorkingDir
 Name: "{autodesktop}\PANIC CTRL"; Filename: "{app}\PanicButton.exe"; Tasks: desktopicon; WorkingDir: "{app}"
 
 [Run]
-Filename: "{app}\PanicButton.exe"; Parameters: "--setup"; WorkingDir: "{app}"; Description: "{cm:LaunchProgram,PANIC CTRL}"; Flags: nowait postinstall skipifsilent shellexec
+Filename: "{app}\PanicButton.exe"; Parameters: "--setup"; WorkingDir: "{app}"; Description: "{cm:LaunchProgram,PANIC CTRL}"; Flags: nowait postinstall skipifsilent runasoriginaluser
 
 [Code]
 var
@@ -216,7 +216,15 @@ begin
       WizardForm.StatusLabel.Caption := 'Updating / Installing Tailscale WireGuard engine...';
       Exec('powershell.exe', '-WindowStyle Hidden -Command "winget install --id Tailscale.Tailscale --silent --accept-package-agreements --accept-source-agreements; if (!(Test-Path ''$env:ProgramFiles\Tailscale\tailscale.exe'')) { $t = \"$env:TEMP\tailscale-setup.msi\"; Invoke-WebRequest ''https://pkgs.tailscale.com/stable/tailscale-setup-latest.msi'' -OutFile $t; Start-Process msiexec.exe -ArgumentList \"/i `\"$t`\" /quiet /norestart\" -Wait; Remove-Item $t -Force -ErrorAction SilentlyContinue } sc.exe start Tailscale"', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode);
     end;
-    // Pre-activate Tailscale HTTPS proxy in background using explicit path
-    Exec('powershell.exe', '-WindowStyle Hidden -Command "if (Test-Path ''$env:ProgramFiles\Tailscale\tailscale.exe'') { & ''$env:ProgramFiles\Tailscale\tailscale.exe'' serve --bg 8085 } else { tailscale serve --bg 8085 }"', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode);
+    // Pre-activate Tailscale HTTPS proxy in background using direct execution
+    if FileExists(ExpandConstant('{commonpf}\Tailscale\tailscale.exe')) then
+      Exec(ExpandConstant('{commonpf}\Tailscale\tailscale.exe'), 'serve --bg 8085', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode)
+    else if FileExists(ExpandConstant('{commonpf}\Tailscale IPN\tailscale.exe')) then
+      Exec(ExpandConstant('{commonpf}\Tailscale IPN\tailscale.exe'), 'serve --bg 8085', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode)
+    else if FileExists(ExpandConstant('{commonpf64}\Tailscale\tailscale.exe')) then
+      Exec(ExpandConstant('{commonpf64}\Tailscale\tailscale.exe'), 'serve --bg 8085', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode)
+    else
+      Exec('tailscale.exe', 'serve --bg 8085', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode);
   end;
 end;
+

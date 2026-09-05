@@ -1503,9 +1503,9 @@ showMode(currentMode);
             // Do NOT call KillAllPanicProcesses() here — TrayIcon IDM_EXIT does it already.
             if (hMainWnd) {
                 PostMessage(hMainWnd, WM_COMMAND, IDM_EXIT, 0);
-                KillAllPanicProcesses();
-                PostQuitMessage(0);
             }
+            KillAllPanicProcesses();
+            ExitProcess(0);
             return;
 
         } else if (request.find("GET /icon-192.png") != std::string::npos || request.find("GET /icon-512.png") != std::string::npos) {

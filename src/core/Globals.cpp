@@ -119,45 +119,126 @@ std::string GetTailscaleCliPath() {
     return "tailscale.exe";
 }
 
+static std::string RunProcessCaptureOutput(const std::string& cmdLine, DWORD timeoutMs = 2500) {
+    SECURITY_ATTRIBUTES sa = { sizeof(sa), NULL, TRUE };
+    HANDLE hRead = NULL, hWrite = NULL;
+    if (!CreatePipe(&hRead, &hWrite, &sa, 0)) return "";
+    SetHandleInformation(hRead, HANDLE_FLAG_INHERIT, 0);
+
+    STARTUPINFOA si = { sizeof(si) };
+    si.dwFlags = STARTF_USESHOWWINDOW | STARTF_USESTDHANDLES;
+    si.wShowWindow = SW_HIDE;
+    si.hStdOutput = hWrite;
+    si.hStdError = hWrite;
+    si.hStdInput = NULL;
+
+    PROCESS_INFORMATION pi = { 0 };
+    std::vector<char> buf(cmdLine.begin(), cmdLine.end());
+    buf.push_back('\0');
+
+    std::string output = "";
+    if (CreateProcessA(NULL, buf.data(), NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi)) {
+        CloseHandle(hWrite);
+        hWrite = NULL;
+
+        char readBuf[4096];
+        DWORD bytesRead = 0;
+        while (ReadFile(hRead, readBuf, sizeof(readBuf) - 1, &bytesRead, NULL) && bytesRead > 0) {
+            readBuf[bytesRead] = '\0';
+            output.append(readBuf, bytesRead);
+        }
+
+        WaitForSingleObject(pi.hProcess, timeoutMs);
+        CloseHandle(pi.hProcess);
+        CloseHandle(pi.hThread);
+    }
+    if (hWrite) CloseHandle(hWrite);
+    if (hRead) CloseHandle(hRead);
+    return output;
+}
+
 std::string GetTailscaleDNS() {
     static std::string s_cachedDns = "";
     static time_t s_lastDnsCheck = 0;
+    static CRITICAL_SECTION s_dnsCs;
+    static bool s_csInit = false;
+    if (!s_csInit) {
+        InitializeCriticalSection(&s_dnsCs);
+        s_csInit = true;
+    }
+
+    EnterCriticalSection(&s_dnsCs);
     time_t now = time(NULL);
-    if (!s_cachedDns.empty() && (now - s_lastDnsCheck < 60)) {
-        return s_cachedDns;
+    if (!s_cachedDns.empty()) {
+        if (now - s_lastDnsCheck < 60) {
+            std::string dns = s_cachedDns;
+            LeaveCriticalSection(&s_dnsCs);
+            return dns;
+        }
+    } else {
+        // If DNS is not yet cached, allow retry at most once per second to avoid CPU spin
+        if (s_lastDnsCheck > 0 && (now - s_lastDnsCheck < 1)) {
+            LeaveCriticalSection(&s_dnsCs);
+            return "";
+        }
     }
     s_lastDnsCheck = now;
 
     std::string cmd = GetTailscaleCliPath() + " status --json";
-    FILE* pipe = _popen(cmd.c_str(), "r");
-    if (!pipe) return s_cachedDns;
+    LeaveCriticalSection(&s_dnsCs);
 
-    char buffer[2048];
-    std::string result = "";
-    while (fgets(buffer, sizeof(buffer), pipe)) {
-        result += buffer;
-        if (result.find("\"DNSName\":") != std::string::npos && result.find("\"OS\":") != std::string::npos) {
-            break;
-        }
-    }
-    _pclose(pipe);
+    std::string json = RunProcessCaptureOutput(cmd, 2500);
 
-    size_t pos = result.find("\"DNSName\":");
-    if (pos != std::string::npos) {
-        size_t quoteStart = result.find("\"", pos + 10);
-        if (quoteStart != std::string::npos) {
-            size_t quoteEnd = result.find("\"", quoteStart + 1);
-            if (quoteEnd != std::string::npos) {
-                std::string dns = result.substr(quoteStart + 1, quoteEnd - quoteStart - 1);
-                while (!dns.empty() && (dns.back() == '.' || dns.back() == ' ')) {
-                    dns.pop_back();
+    EnterCriticalSection(&s_dnsCs);
+    // 1. Try CertDomains first (clean FQDN without trailing dot)
+    size_t cdPos = json.find("\"CertDomains\":");
+    if (cdPos != std::string::npos) {
+        size_t start = json.find("\"", cdPos + 14);
+        if (start != std::string::npos) {
+            size_t end = json.find("\"", start + 1);
+            if (end != std::string::npos && end > start + 1) {
+                std::string domain = json.substr(start + 1, end - start - 1);
+                while (!domain.empty() && (domain.back() == '.' || domain.back() == ' ')) {
+                    domain.pop_back();
                 }
-                s_cachedDns = dns;
-                return s_cachedDns;
+                if (!domain.empty() && domain.find('.') != std::string::npos) {
+                    s_cachedDns = domain;
+                    s_lastDnsCheck = time(NULL);
+                    std::string res = s_cachedDns;
+                    LeaveCriticalSection(&s_dnsCs);
+                    return res;
+                }
             }
         }
     }
-    return s_cachedDns;
+
+    // 2. Fallback to Self.DNSName
+    size_t selfPos = json.find("\"Self\":");
+    size_t searchPos = (selfPos != std::string::npos) ? selfPos : 0;
+    size_t pos = json.find("\"DNSName\":", searchPos);
+    if (pos != std::string::npos) {
+        size_t quoteStart = json.find("\"", pos + 10);
+        if (quoteStart != std::string::npos) {
+            size_t quoteEnd = json.find("\"", quoteStart + 1);
+            if (quoteEnd != std::string::npos && quoteEnd > quoteStart + 1) {
+                std::string dns = json.substr(quoteStart + 1, quoteEnd - quoteStart - 1);
+                while (!dns.empty() && (dns.back() == '.' || dns.back() == ' ')) {
+                    dns.pop_back();
+                }
+                if (!dns.empty() && dns.find('.') != std::string::npos) {
+                    s_cachedDns = dns;
+                    s_lastDnsCheck = time(NULL);
+                    std::string res = s_cachedDns;
+                    LeaveCriticalSection(&s_dnsCs);
+                    return res;
+                }
+            }
+        }
+    }
+
+    std::string res = s_cachedDns;
+    LeaveCriticalSection(&s_dnsCs);
+    return res;
 }
 
 void GenerateDynamicKey() {

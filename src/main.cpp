@@ -66,11 +66,24 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     bool forceSetup = (lpCmdLine && strstr(lpCmdLine, "--setup") != NULL);
     CreateThread(NULL, 0, [](LPVOID param) -> DWORD {
         bool force = (param != NULL);
-        Sleep(1500);
         std::string flagPath = GetProgramDataFolder() + "\\setup_shown.txt";
         if (force || GetFileAttributesA(flagPath.c_str()) == INVALID_FILE_ATTRIBUTES) {
             FILE* f = fopen(flagPath.c_str(), "w");
             if (f) { fprintf(f, "1\n"); fclose(f); }
+
+            // Warm Tailscale DNS before popping browser so HTTPS is immediately ready
+            for (int i = 0; i < 20; ++i) {
+                std::string dns = GetTailscaleDNS();
+                if (!dns.empty()) {
+                    AppLog(("[setup] Pre-warmed Tailscale DNS: " + dns).c_str());
+                    break;
+                }
+                Sleep(150);
+            }
+
+            // Small grace period for HTTP server socket to bind
+            Sleep(300);
+
             std::string qrUrl = "http://127.0.0.1:8085/qr?v=" + std::to_string((unsigned int)time(NULL));
             AppLog(("Triggering auto-open for pairing HUD: " + qrUrl).c_str());
             HINSTANCE hRes = ShellExecuteA(NULL, "open", qrUrl.c_str(), NULL, NULL, SW_SHOWNORMAL);
