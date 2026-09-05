@@ -43,12 +43,11 @@ Filename: "{app}\PanicButton.exe"; Parameters: "--setup"; Description: "{cm:Laun
 var
   TailscalePage: TWizardPage;
   CardPanel: TPanel;
-  StatusBadge: TLabel;
-  CardDivider: TPanel;
-  FeatureLabel1, FeatureLabel2, FeatureLabel3: TLabel;
-  MobileStepLabel: TLabel;
-  ScanHeaderLabel: TLabel;
-  ScanProgressBar: TNewProgressBar;
+  CardStripe: TPanel;
+  StatusTitleLabel: TLabel;
+  StatusSubLabel: TLabel;
+  SectionTitleLabel: TLabel;
+  StepLabel1, StepLabel2, StepLabel3: TLabel;
   TailscaleInstallCheck: TNewCheckBox;
   IsTailscaleInstalled: Boolean;
 
@@ -77,113 +76,108 @@ procedure InitializeWizard();
 begin
   IsTailscaleInstalled := CheckIfTailscaleInstalled();
 
-  TailscalePage := CreateCustomPage(wpWelcome, 'Remote Access & Tailscale Mesh Configuration', 'Configure secure worldwide remote control from your mobile phone');
+  TailscalePage := CreateCustomPage(wpWelcome, 'Remote Access Configuration', 'Configure encrypted remote emergency control for your mobile device');
 
-  // 1. Dark Sleek Cyber Card Panel
+  // 1. Clean Modern Hero Status Card (Windows 11 Card Style)
   CardPanel := TPanel.Create(TailscalePage);
   CardPanel.Parent := TailscalePage.Surface;
   CardPanel.Left := 0;
-  CardPanel.Top := 0;
+  CardPanel.Top := 6;
   CardPanel.Width := TailscalePage.SurfaceWidth;
-  CardPanel.Height := 145;
-  CardPanel.Color := $001A100A; // Dark sleek navy-black
+  CardPanel.Height := 62;
   CardPanel.BevelKind := bkFlat;
   CardPanel.BevelOuter := bvNone;
   CardPanel.ParentBackground := False;
 
-  // Status Badge at top of Card
-  StatusBadge := TLabel.Create(TailscalePage);
-  StatusBadge.Parent := CardPanel;
-  StatusBadge.Left := 14;
-  StatusBadge.Top := 10;
-  StatusBadge.Font.Name := 'Segoe UI';
-  StatusBadge.Font.Style := [fsBold];
-  StatusBadge.Font.Size := 9;
+  // Left Accent Stripe
+  CardStripe := TPanel.Create(TailscalePage);
+  CardStripe.Parent := CardPanel;
+  CardStripe.Left := 0;
+  CardStripe.Top := 0;
+  CardStripe.Width := 4;
+  CardStripe.Height := CardPanel.Height;
+  CardStripe.BevelOuter := bvNone;
+  CardStripe.ParentBackground := False;
+
+  // Status Title
+  StatusTitleLabel := TLabel.Create(TailscalePage);
+  StatusTitleLabel.Parent := CardPanel;
+  StatusTitleLabel.Left := 16;
+  StatusTitleLabel.Top := 11;
+  StatusTitleLabel.Font.Name := 'Segoe UI';
+  StatusTitleLabel.Font.Style := [fsBold];
+  StatusTitleLabel.Font.Size := 10;
+
+  // Status Subtitle
+  StatusSubLabel := TLabel.Create(TailscalePage);
+  StatusSubLabel.Parent := CardPanel;
+  StatusSubLabel.Left := 16;
+  StatusSubLabel.Top := 33;
+  StatusSubLabel.Font.Name := 'Segoe UI';
+  StatusSubLabel.Font.Size := 9;
 
   if IsTailscaleInstalled then
   begin
-    StatusBadge.Caption := '● SYSTEM STATUS: TAILSCALE WIREGUARD DETECTED [ACTIVE / READY]';
-    StatusBadge.Font.Color := $0041FF00; // Matrix Neon Green
+    CardPanel.Color := $00F4FAF5; // Soft subtle green
+    CardStripe.Color := $0022C55E; // Emerald Green stripe
+    StatusTitleLabel.Caption := 'Tailscale WireGuard Mesh Detected [Ready]';
+    StatusTitleLabel.Font.Color := $0015803D; // Forest green
+    StatusSubLabel.Caption := 'Status: Node is ready for worldwide encrypted mobile pairing.';
+    StatusSubLabel.Font.Color := $00374151;
   end
   else
   begin
-    StatusBadge.Caption := '▲ SYSTEM STATUS: TAILSCALE NOT DETECTED [AUTO-INSTALL READY]';
-    StatusBadge.Font.Color := $001B75D0; // Warning Orange
+    CardPanel.Color := $00FEF9EC; // Soft subtle amber
+    CardStripe.Color := $00D97706; // Amber stripe
+    StatusTitleLabel.Caption := 'Tailscale Engine Not Detected [Auto-Install Ready]';
+    StatusTitleLabel.Font.Color := $00B45309; // Deep amber
+    StatusSubLabel.Caption := 'Status: Setup can automatically download and configure Tailscale for you.';
+    StatusSubLabel.Font.Color := $004B5563;
   end;
 
-  // Divider Line inside Card
-  CardDivider := TPanel.Create(TailscalePage);
-  CardDivider.Parent := CardPanel;
-  CardDivider.Left := 14;
-  CardDivider.Top := 30;
-  CardDivider.Width := CardPanel.Width - 28;
-  CardDivider.Height := 1;
-  CardDivider.Color := $00403020;
-  CardDivider.BevelOuter := bvNone;
-  CardDivider.ParentBackground := False;
+  // 2. Clean Feature / Step Section
+  SectionTitleLabel := TLabel.Create(TailscalePage);
+  SectionTitleLabel.Parent := TailscalePage.Surface;
+  SectionTitleLabel.Left := 0;
+  SectionTitleLabel.Top := 84;
+  SectionTitleLabel.Font.Name := 'Segoe UI';
+  SectionTitleLabel.Font.Style := [fsBold];
+  SectionTitleLabel.Font.Size := 9;
+  SectionTitleLabel.Font.Color := $00111827;
+  SectionTitleLabel.Caption := 'How Worldwide Mobile Security Works:';
 
-  // Feature Highlights
-  FeatureLabel1 := TLabel.Create(TailscalePage);
-  FeatureLabel1.Parent := CardPanel;
-  FeatureLabel1.Left := 14;
-  FeatureLabel1.Top := 38;
-  FeatureLabel1.Font.Name := 'Segoe UI';
-  FeatureLabel1.Font.Size := 9;
-  FeatureLabel1.Font.Color := $00FFF000; // Cyan
-  FeatureLabel1.Caption := '🔒 PROTOCOL: Encrypted WireGuard P2P Tunnel (256-bit Security)';
+  StepLabel1 := TLabel.Create(TailscalePage);
+  StepLabel1.Parent := TailscalePage.Surface;
+  StepLabel1.Left := 8;
+  StepLabel1.Top := 108;
+  StepLabel1.Font.Name := 'Segoe UI';
+  StepLabel1.Font.Size := 9;
+  StepLabel1.Font.Color := $00374151;
+  StepLabel1.Caption := '1.  Encrypted Tunnel: Establishes a direct peer-to-peer WireGuard mesh.';
 
-  FeatureLabel2 := TLabel.Create(TailscalePage);
-  FeatureLabel2.Parent := CardPanel;
-  FeatureLabel2.Left := 14;
-  FeatureLabel2.Top := 58;
-  FeatureLabel2.Font.Name := 'Segoe UI';
-  FeatureLabel2.Font.Size := 9;
-  FeatureLabel2.Font.Color := $00DFE2E5; // Soft silver
-  FeatureLabel2.Caption := '🌐 RANGE: Worldwide Remote Access (Cellular 4G/5G, Starlink, Wi-Fi)';
+  StepLabel2 := TLabel.Create(TailscalePage);
+  StepLabel2.Parent := TailscalePage.Surface;
+  StepLabel2.Left := 8;
+  StepLabel2.Top := 132;
+  StepLabel2.Font.Name := 'Segoe UI';
+  StepLabel2.Font.Size := 9;
+  StepLabel2.Font.Color := $00374151;
+  StepLabel2.Caption := '2.  Worldwide Access: Trigger emergency lock over cellular 4G/5G from anywhere.';
 
-  FeatureLabel3 := TLabel.Create(TailscalePage);
-  FeatureLabel3.Parent := CardPanel;
-  FeatureLabel3.Left := 14;
-  FeatureLabel3.Top := 78;
-  FeatureLabel3.Font.Name := 'Segoe UI';
-  FeatureLabel3.Font.Size := 9;
-  FeatureLabel3.Font.Color := $00DFE2E5;
-  FeatureLabel3.Caption := '⚡ RESPONSE: Kernel-level 0ms Zero-Latency Emergency Blackout';
+  StepLabel3 := TLabel.Create(TailscalePage);
+  StepLabel3.Parent := TailscalePage.Surface;
+  StepLabel3.Left := 8;
+  StepLabel3.Top := 156;
+  StepLabel3.Font.Name := 'Segoe UI';
+  StepLabel3.Font.Size := 9;
+  StepLabel3.Font.Color := $00374151;
+  StepLabel3.Caption := '3.  Instant Pairing: A QR code pairing dashboard will open upon finish.';
 
-  // Mobile setup tip inside card
-  MobileStepLabel := TLabel.Create(TailscalePage);
-  MobileStepLabel.Parent := CardPanel;
-  MobileStepLabel.Left := 14;
-  MobileStepLabel.Top := 105;
-  MobileStepLabel.Font.Name := 'Segoe UI';
-  MobileStepLabel.Font.Style := [fsBold];
-  MobileStepLabel.Font.Size := 9;
-  MobileStepLabel.Font.Color := $0080D0FF; // Soft Neon Gold
-  MobileStepLabel.Caption := '📱 MOBILE: Install Tailscale on phone, log in, then scan QR on next screen.';
-
-  // 2. Animated Scanner Label & Marquee Progress Bar
-  ScanHeaderLabel := TLabel.Create(TailscalePage);
-  ScanHeaderLabel.Parent := TailscalePage.Surface;
-  ScanHeaderLabel.Left := 0;
-  ScanHeaderLabel.Top := 155;
-  ScanHeaderLabel.Font.Name := 'Segoe UI';
-  ScanHeaderLabel.Font.Style := [fsBold];
-  ScanHeaderLabel.Font.Size := 8;
-  ScanHeaderLabel.Caption := 'LIVE MESH ADAPTER SCANNER:';
-
-  ScanProgressBar := TNewProgressBar.Create(TailscalePage);
-  ScanProgressBar.Parent := TailscalePage.Surface;
-  ScanProgressBar.Left := 0;
-  ScanProgressBar.Top := 172;
-  ScanProgressBar.Width := TailscalePage.SurfaceWidth;
-  ScanProgressBar.Height := 8;
-  ScanProgressBar.Style := npbstMarquee;
-
-  // 3. Action Checkbox
+  // 3. Action Checkbox (Clean & Spaced)
   TailscaleInstallCheck := TNewCheckBox.Create(TailscalePage);
   TailscaleInstallCheck.Parent := TailscalePage.Surface;
   TailscaleInstallCheck.Left := 0;
-  TailscaleInstallCheck.Top := 190;
+  TailscaleInstallCheck.Top := 194;
   TailscaleInstallCheck.Width := TailscalePage.SurfaceWidth;
   TailscaleInstallCheck.Font.Name := 'Segoe UI';
   TailscaleInstallCheck.Font.Size := 9;
@@ -191,12 +185,12 @@ begin
 
   if IsTailscaleInstalled then
   begin
-    TailscaleInstallCheck.Caption := 'Update / repair Tailscale WireGuard engine on this PC during setup';
+    TailscaleInstallCheck.Caption := 'Update or reinstall Tailscale engine on this PC during setup';
     TailscaleInstallCheck.Checked := False;
   end
   else
   begin
-    TailscaleInstallCheck.Caption := 'Automatically download and install Tailscale on this PC during setup';
+    TailscaleInstallCheck.Caption := 'Automatically download and install Tailscale on this PC';
     TailscaleInstallCheck.Checked := True;
   end;
 end;
