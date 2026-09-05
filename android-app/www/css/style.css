@@ -3097,3 +3097,8 @@
   /* Off-canvas Drawer icons bigger only on mobile */
 }
 
+/* Hide APK download buttons when running inside native Android application */
+body.native-app #pwaInstallBtn,
+body.native-app #sidebarApkBtn {
+  display: none !important;
+}

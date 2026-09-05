@@ -3117,6 +3117,11 @@ static const char* DASHBOARD_HTML = R"HTML(
   /* Off-canvas Drawer icons bigger only on mobile */
 }
 
+/* Hide APK download buttons when running inside native Android application */
+body.native-app #pwaInstallBtn,
+body.native-app #sidebarApkBtn {
+  display: none !important;
+}
 
 </style>
 
@@ -3315,7 +3320,7 @@ static const char* DASHBOARD_HTML = R"HTML(
               <span class="cg-menu-row-text">Gemini API Key</span>
             </button>
 
-            <button type="button" class="cg-menu-card-row" onclick="window.open('/download/app.apk', '_blank'); if(window.innerWidth < 860) closeCgSidebar();">
+            <button type="button" id="sidebarApkBtn" class="cg-menu-card-row" onclick="window.open('/download/app.apk', '_blank'); if(window.innerWidth < 860) closeCgSidebar();">
               <span class="cg-menu-row-icon">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0f172a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -7773,17 +7778,36 @@ function triggerAutoDetectPc() {
   }, 2500);
 }
 
-// Ensure install/download button works smoothly
+// Ensure install/download button is hidden inside native Android app
 (function() {
   function setupApkBtn() {
+    var isNativeApp = (typeof window.AndroidNativeStream !== 'undefined') ||
+                      (typeof window.Capacitor !== 'undefined' && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) ||
+                      (window.location.protocol === 'capacitor:') ||
+                      (window.location.hostname === 'localhost' && window.location.protocol !== 'http:');
+
+    if (isNativeApp && document.body) {
+      document.body.classList.add('native-app');
+    }
+
     var btn = document.getElementById('pwaInstallBtn');
     if (btn) {
-      btn.style.display = 'inline-flex';
-      btn.style.alignItems = 'center';
-      btn.style.gap = '4px';
+      if (isNativeApp) {
+        btn.style.display = 'none';
+      } else {
+        btn.style.display = 'inline-flex';
+        btn.style.alignItems = 'center';
+        btn.style.gap = '4px';
+      }
+    }
+
+    var sideBtn = document.getElementById('sidebarApkBtn');
+    if (sideBtn && isNativeApp) {
+      sideBtn.style.display = 'none';
     }
   }
   window.addEventListener('DOMContentLoaded', setupApkBtn);
+  setTimeout(setupApkBtn, 50);
   setTimeout(setupApkBtn, 500);
 })();
 

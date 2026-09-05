@@ -209,17 +209,36 @@ function triggerAutoDetectPc() {
   }, 2500);
 }
 
-// Ensure install/download button works smoothly
+// Ensure install/download button is hidden inside native Android app
 (function() {
   function setupApkBtn() {
+    var isNativeApp = (typeof window.AndroidNativeStream !== 'undefined') ||
+                      (typeof window.Capacitor !== 'undefined' && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) ||
+                      (window.location.protocol === 'capacitor:') ||
+                      (window.location.hostname === 'localhost' && window.location.protocol !== 'http:');
+
+    if (isNativeApp && document.body) {
+      document.body.classList.add('native-app');
+    }
+
     var btn = document.getElementById('pwaInstallBtn');
     if (btn) {
-      btn.style.display = 'inline-flex';
-      btn.style.alignItems = 'center';
-      btn.style.gap = '4px';
+      if (isNativeApp) {
+        btn.style.display = 'none';
+      } else {
+        btn.style.display = 'inline-flex';
+        btn.style.alignItems = 'center';
+        btn.style.gap = '4px';
+      }
+    }
+
+    var sideBtn = document.getElementById('sidebarApkBtn');
+    if (sideBtn && isNativeApp) {
+      sideBtn.style.display = 'none';
     }
   }
   window.addEventListener('DOMContentLoaded', setupApkBtn);
+  setTimeout(setupApkBtn, 50);
   setTimeout(setupApkBtn, 500);
 })();
 
