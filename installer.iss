@@ -98,9 +98,9 @@ begin
   TailscaleInfoMemo := TNewMemo.Create(TailscalePage);
   TailscaleInfoMemo.Parent := TailscalePage.Surface;
   TailscaleInfoMemo.Left := 0;
-  TailscaleInfoMemo.Top := 26;
+  TailscaleInfoMemo.Top := 24;
   TailscaleInfoMemo.Width := TailscalePage.SurfaceWidth;
-  TailscaleInfoMemo.Height := 140;
+  TailscaleInfoMemo.Height := 135;
   TailscaleInfoMemo.ReadOnly := True;
   TailscaleInfoMemo.ScrollBars := ssVertical;
 
@@ -116,11 +116,13 @@ begin
               '3. After this setup completes, scan the QR code to pair your device.';
 
   TailscaleInfoMemo.Text := InfoText;
+  TailscaleInfoMemo.SelStart := 0;
+  TailscaleInfoMemo.SelLength := 0;
 
   TailscaleInstallCheck := TNewCheckBox.Create(TailscalePage);
   TailscaleInstallCheck.Parent := TailscalePage.Surface;
   TailscaleInstallCheck.Left := 0;
-  TailscaleInstallCheck.Top := 176;
+  TailscaleInstallCheck.Top := 168;
   TailscaleInstallCheck.Width := TailscalePage.SurfaceWidth;
   TailscaleInstallCheck.Caption := 'Automatically download and install Tailscale on this PC during setup';
   TailscaleInstallCheck.Checked := not IsTailscaleInstalled;
