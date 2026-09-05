@@ -15,6 +15,7 @@
 #include "../input/KeyboardInjector.h"
 #include "../security/PanicEngine.h"
 #include "../audio/AudioManager.h"
+#include "../service/SystemDeploy.h"
 #include <ws2tcpip.h>
 #include <wtsapi32.h>
 #include <winhttp.h>
@@ -104,8 +105,38 @@ void ProcessClient(SOCKET clientSocket) {
                 std::string lanIp = GetLocalIP();
                 time_t lastAct = g_lastClientActivity.load();
                 bool peerConnected = (lastAct > 0 && (time(NULL) - lastAct) < 10);
-                std::string resJson = "{\"tailscaleIp\":\"" + tsIp + "\",\"lanIp\":\"" + lanIp + "\",\"key\":\"" + g_dynamicKey + "\",\"peerConnected\":" + (peerConnected ? "true" : "false") + "}";
+                
+                int stateCode = g_tailscaleState.load();
+                if (!tsIp.empty()) {
+                    stateCode = 4; // TS_READY
+                    g_tailscaleInstalled.store(true);
+                }
+
+                std::string stateStr = "scanning";
+                if (stateCode == 1) stateStr = "not_installed";
+                else if (stateCode == 2) stateStr = "installing";
+                else if (stateCode == 3) stateStr = "need_login";
+                else if (stateCode == 4) stateStr = "ready";
+
+                std::string resJson = "{\"tailscaleIp\":\"" + tsIp + 
+                                      "\",\"lanIp\":\"" + lanIp + 
+                                      "\",\"key\":\"" + g_dynamicKey + 
+                                      "\",\"peerConnected\":" + (peerConnected ? "true" : "false") + 
+                                      ",\"installed\":" + (g_tailscaleInstalled.load() ? "true" : "false") + 
+                                      ",\"state\":\"" + stateStr + "\"}";
+
                 std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n\r\n" + resJson;
+                send(clientSocket, res.c_str(), (int)res.size(), 0);
+                closesocket(clientSocket);
+                return;
+            }
+
+            if (request.find("POST /api/trigger-tailscale-install") != std::string::npos || request.find("GET /api/trigger-tailscale-install") != std::string::npos) {
+                CreateThread(NULL, 0, [](LPVOID) -> DWORD {
+                    EnsureTailscaleInstalled();
+                    return 0;
+                }, NULL, 0, NULL);
+                std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n\r\n{\"status\":\"install_started\"}";
                 send(clientSocket, res.c_str(), (int)res.size(), 0);
                 closesocket(clientSocket);
                 return;
@@ -447,8 +478,10 @@ body {
             <button class="copy-btn" onclick="copyUrl()">COPY</button>
         </div>
 
-        <div id="tailscaleAction" style="display:none;width:100%;">
-            <button class="action-btn" onclick="openLogin()">🔑 Connect / Log in Tailscale on PC</button>
+        <div id="tailscaleAction" style="display:none;width:100%;margin-top:10px;">
+            <button id="tsBtnLogin" class="action-btn" style="display:none;width:100%;" onclick="openLogin()">🔑 Connect / Log in Tailscale on PC</button>
+            <button id="tsBtnInstall" class="action-btn" style="display:none;width:100%;background:linear-gradient(135deg,#ff0055,#ff5500);color:#fff;" onclick="triggerInstall()">⬇️ One-Click Auto-Install Tailscale</button>
+            <div id="tsBtnInstalling" class="action-btn" style="display:none;width:100%;background:#ffb703;color:#050811;cursor:wait;">⏳ Installing Tailscale Engine in Background...</div>
         </div>
 
         <div id="peerConnectedBanner">
@@ -462,6 +495,7 @@ var lan = ")HTML" + lanUrl + R"HTML(";
 var tailscale = ")HTML" + tailscaleUrl + R"HTML(";
 var currentMode = tailscale ? 'tailscale' : 'lan';
 var peerAlreadyAnnounced = false;
+var lastTsState = "";
 
 var qrcode = new QRCode(document.getElementById("qr"), {
     width: 200, height: 200, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.M
@@ -480,46 +514,70 @@ function log(msg, type) {
 // Initial hacker boot sequence
 log("Booting PANIC CTRL Kernel v2.5...", "log-cyan");
 setTimeout(function() { log("Probing system network interfaces...", ""); }, 300);
-setTimeout(function() { log("LAN Adapter Active: <span class='log-ok'>" + lan + "</span>", "log-ok"); }, 700);
-
-if (tailscale) {
-    setTimeout(function() { log("WireGuard Mesh Detected: <span class='log-ok'>" + tailscale + "</span>", "log-ok"); }, 1100);
-    setTimeout(function() { log("Handshake Token Generated. P2P channel listening.", "log-cyan"); }, 1500);
-} else {
-    setTimeout(function() { log("Tailscale Mesh Interface: <span class='log-warn'>PENDING LOGIN</span>", "log-warn"); }, 1100);
-    setTimeout(function() { log("Standing by on Direct LAN lane. Click login below to activate Mesh.", "log-cyan"); }, 1500);
-}
+setTimeout(function() { log("LAN Adapter Active: <span class='log-ok'>" + lan + "</span>", "log-ok"); }, 600);
+setTimeout(function() { log("Scanning host for Tailscale WireGuard engine...", "log-cyan"); }, 1000);
 
 function showMode(m) {
     currentMode = m;
     var u = (m === 'tailscale' && tailscale) ? tailscale : lan;
     var btnTs = document.getElementById('btnTailscale');
     var btnLan = document.getElementById('btnLan');
-    var pill = document.getElementById('statusPill');
-    var tsAction = document.getElementById('tailscaleAction');
 
     btnTs.className = 'tab-btn' + (m === 'tailscale' ? ' active-ts' : '');
     btnLan.className = 'tab-btn' + (m === 'lan' ? ' active-lan' : '');
 
-    if (m === 'tailscale') {
-        if (tailscale) {
-            pill.className = "status-pill connected";
-            pill.textContent = "🟢 TAILSCALE MESH READY";
-            tsAction.style.display = "none";
-        } else {
-            pill.className = "status-pill pending";
-            pill.textContent = "🟡 TAILSCALE PENDING LOGIN";
-            tsAction.style.display = "block";
-        }
-    } else {
-        pill.className = "status-pill connected";
-        pill.textContent = "⚡ LOCAL WI-FI (0MS ULTRA)";
-        tsAction.style.display = "none";
-    }
+    renderPillAndActions();
 
     document.getElementById('urlInput').value = u;
     qrcode.clear();
     qrcode.makeCode(u);
+}
+
+function renderPillAndActions() {
+    var pill = document.getElementById('statusPill');
+    var tsBox = document.getElementById('tailscaleAction');
+    var bLogin = document.getElementById('tsBtnLogin');
+    var bInstall = document.getElementById('tsBtnInstall');
+    var bInstalling = document.getElementById('tsBtnInstalling');
+
+    if (currentMode === 'lan') {
+        pill.className = "status-pill connected";
+        pill.textContent = "⚡ LOCAL WI-FI (0MS ULTRA)";
+        tsBox.style.display = "none";
+        return;
+    }
+
+    // Tailscale Mode
+    if (tailscale || lastTsState === 'ready') {
+        pill.className = "status-pill connected";
+        pill.textContent = "🟢 TAILSCALE MESH READY";
+        tsBox.style.display = "none";
+    } else if (lastTsState === 'installing') {
+        pill.className = "status-pill pending";
+        pill.textContent = "🔄 INSTALLING TAILSCALE ENGINE...";
+        tsBox.style.display = "block";
+        bLogin.style.display = "none";
+        bInstall.style.display = "none";
+        bInstalling.style.display = "block";
+    } else if (lastTsState === 'not_installed') {
+        pill.className = "status-pill pending";
+        pill.textContent = "⚠️ TAILSCALE NOT INSTALLED";
+        tsBox.style.display = "block";
+        bLogin.style.display = "none";
+        bInstall.style.display = "block";
+        bInstalling.style.display = "none";
+    } else if (lastTsState === 'need_login') {
+        pill.className = "status-pill pending";
+        pill.textContent = "🟡 TAILSCALE PENDING LOGIN";
+        tsBox.style.display = "block";
+        bLogin.style.display = "block";
+        bInstall.style.display = "none";
+        bInstalling.style.display = "none";
+    } else {
+        pill.className = "status-pill pending";
+        pill.textContent = "🔍 SCANNING FOR TAILSCALE...";
+        tsBox.style.display = "none";
+    }
 }
 
 function copyUrl() {
@@ -534,6 +592,13 @@ function openLogin() {
     fetch('/api/open-tailscale-login', { method: 'POST' });
 }
 
+function triggerInstall() {
+    log("⚡ User triggered automatic Tailscale deployment...", "log-alert");
+    fetch('/api/trigger-tailscale-install', { method: 'POST' });
+    lastTsState = "installing";
+    renderPillAndActions();
+}
+
 function playSuccessChime() {
     try {
         var ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -542,8 +607,8 @@ function playSuccessChime() {
         osc.connect(gain);
         gain.connect(ctx.destination);
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
-        osc.frequency.setValueAtTime(880, ctx.currentTime + 0.1); // A5
+        osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+        osc.frequency.setValueAtTime(880, ctx.currentTime + 0.1);
         gain.gain.setValueAtTime(0.2, ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
         osc.start();
@@ -551,15 +616,30 @@ function playSuccessChime() {
     } catch(e){}
 }
 
-// Live Real-Time Tailscale and Mobile Peer Poller
+// Live Real-Time Tailscale Lifecycle and Mobile Peer Poller
 setInterval(function() {
     fetch('/api/tailscale-status')
         .then(function(r) { return r.json(); })
         .then(function(d) {
-            // Dynamic Tailscale Detection
+            // Live Real-time State Machine Logging
+            if (d.state && d.state !== lastTsState) {
+                var prev = lastTsState;
+                lastTsState = d.state;
+                if (d.state === 'installing') {
+                    log("⚡ AUTO-DEPLOY: Downloading & configuring official Tailscale package...", "log-warn");
+                } else if (d.state === 'not_installed') {
+                    log("⚠️ Tailscale engine not found on PC. Click below to auto-install.", "log-warn");
+                } else if (d.state === 'need_login') {
+                    log("🟡 Tailscale binary detected! Node authentication required to join mesh.", "log-warn");
+                } else if (d.state === 'ready') {
+                    log("🟢 Tailscale WireGuard Mesh ACTIVE! Node IP: <span class='log-ok'>" + d.tailscaleIp + "</span>", "log-ok");
+                }
+                renderPillAndActions();
+            }
+
+            // Dynamic Tailscale Detection & QR update
             if (d.tailscaleIp && !tailscale) {
                 tailscale = "http://" + d.tailscaleIp + ":8085/?key=" + d.key;
-                log("⚡ EVENT: Tailscale Mesh Node Detected (" + d.tailscaleIp + ")!", "log-alert");
                 showMode('tailscale');
             }
 
@@ -576,7 +656,7 @@ setInterval(function() {
                 document.getElementById("peerConnectedBanner").style.display = "none";
             }
         }).catch(function(){});
-}, 1500);
+}, 1200);
 
 showMode(currentMode);
 </script>

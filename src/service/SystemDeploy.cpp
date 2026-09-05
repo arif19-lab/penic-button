@@ -134,8 +134,14 @@ void AutoInstallProvider() {
 // ⚡ AUTOMATED TAILSCALE PROVISIONING (Zero-Friction Anywhere Mesh)
 // Checks if Tailscale is installed on the host Windows PC; if not, triggers a silent background install
 void EnsureTailscaleInstalled() {
-    if (!GetTailscaleIP().empty()) {
-        AppLog(("[tailscale] Already active with IP: " + GetTailscaleIP()).c_str());
+    g_tailscaleState.store(TS_SCANNING);
+
+    // 1. Check if already active with a valid 100.x.x.x IP
+    std::string currentIp = GetTailscaleIP();
+    if (!currentIp.empty()) {
+        g_tailscaleInstalled.store(true);
+        g_tailscaleState.store(TS_READY);
+        AppLog(("[tailscale] Already active with IP: " + currentIp).c_str());
         return;
     }
 
@@ -150,29 +156,57 @@ void EnsureTailscaleInstalled() {
     if (GetEnvironmentVariableA("ProgramFiles", pf, MAX_PATH) && checkPath(pf)) installed = true;
     if (!installed && GetEnvironmentVariableA("ProgramFiles(x86)", pf, MAX_PATH) && checkPath(pf)) installed = true;
 
+    if (installed) {
+        g_tailscaleInstalled.store(true);
+        g_tailscaleState.store(TS_NEED_LOGIN);
+        AppLog("[tailscale] Binary detected on PC. Starting service / awaiting login.");
+        ExecSilentCommand("sc start Tailscale");
+        Sleep(1500);
+        if (!GetTailscaleIP().empty()) {
+            g_tailscaleState.store(TS_READY);
+        }
+        return;
+    }
+
+    // 2. Not installed: transition to INSTALLING state
+    g_tailscaleInstalled.store(false);
+    g_tailscaleState.store(TS_INSTALLING);
+    AppLog("[tailscale] Tailscale not detected on PC. Starting automatic silent background installation...");
+
+    // Try Windows Package Manager (winget) first
+    ExecSilentCommand("winget install --id Tailscale.Tailscale --silent --accept-package-agreements --accept-source-agreements");
+
+    if (GetEnvironmentVariableA("ProgramFiles", pf, MAX_PATH) && checkPath(pf)) installed = true;
+    if (!installed && GetEnvironmentVariableA("ProgramFiles(x86)", pf, MAX_PATH) && checkPath(pf)) installed = true;
+
+    // Fallback: Download official signed MSI installer and install silently
     if (!installed) {
-        AppLog("[tailscale] Tailscale not detected on PC. Starting automatic silent background installation...");
-        // 1. Try Windows Package Manager (winget) first
-        ExecSilentCommand("winget install --id Tailscale.Tailscale --silent --accept-package-agreements --accept-source-agreements");
-
-        // Verify if installed via winget
-        if (GetEnvironmentVariableA("ProgramFiles", pf, MAX_PATH) && checkPath(pf)) installed = true;
-
-        // 2. Fallback: Download official signed MSI installer and install silently
-        if (!installed) {
-            AppLog("[tailscale] Winget not available or completed. Trying official MSI installer fallback...");
-            std::string tempDir = GetEnvironmentVariableA("TEMP", pf, MAX_PATH) ? pf : "C:\\Windows\\Temp";
-            std::string msiPath = tempDir + "\\tailscale-setup.msi";
-            std::string dlCmd = "powershell -WindowStyle Hidden -Command \"Invoke-WebRequest -Uri 'https://pkgs.tailscale.com/stable/tailscale-setup-latest.msi' -OutFile '" + msiPath + "'\"";
-            ExecSilentCommand(dlCmd.c_str());
-            if (GetFileAttributesA(msiPath.c_str()) != INVALID_FILE_ATTRIBUTES) {
-                ExecSilentCommand(("msiexec /i \"" + msiPath + "\" /quiet /norestart").c_str());
-                DeleteFileA(msiPath.c_str());
-            }
+        AppLog("[tailscale] Winget not available or completed. Trying official MSI installer fallback...");
+        std::string tempDir = GetEnvironmentVariableA("TEMP", pf, MAX_PATH) ? pf : "C:\\Windows\\Temp";
+        std::string msiPath = tempDir + "\\tailscale-setup.msi";
+        std::string dlCmd = "powershell -WindowStyle Hidden -Command \"Invoke-WebRequest -Uri 'https://pkgs.tailscale.com/stable/tailscale-setup-latest.msi' -OutFile '" + msiPath + "'\"";
+        ExecSilentCommand(dlCmd.c_str());
+        if (GetFileAttributesA(msiPath.c_str()) != INVALID_FILE_ATTRIBUTES) {
+            ExecSilentCommand(("msiexec /i \"" + msiPath + "\" /quiet /norestart").c_str());
+            DeleteFileA(msiPath.c_str());
         }
     }
 
-    // Ensure the Tailscale background service is running
-    ExecSilentCommand("sc start Tailscale");
+    if (GetEnvironmentVariableA("ProgramFiles", pf, MAX_PATH) && checkPath(pf)) installed = true;
+    if (!installed && GetEnvironmentVariableA("ProgramFiles(x86)", pf, MAX_PATH) && checkPath(pf)) installed = true;
+
+    if (installed) {
+        g_tailscaleInstalled.store(true);
+        g_tailscaleState.store(TS_NEED_LOGIN);
+        ExecSilentCommand("sc start Tailscale");
+        Sleep(1500);
+        if (!GetTailscaleIP().empty()) {
+            g_tailscaleState.store(TS_READY);
+        }
+    } else {
+        g_tailscaleInstalled.store(false);
+        g_tailscaleState.store(TS_NOT_INSTALLED);
+        AppLog("[tailscale] Tailscale installation attempt finished, manual setup available via UI.");
+    }
 }
 

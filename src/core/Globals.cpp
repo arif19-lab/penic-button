@@ -5,6 +5,8 @@
 
 std::string g_dynamicKey = "imran2024";
 std::atomic<time_t> g_lastClientActivity{0};
+std::atomic<int> g_tailscaleState{0}; // TS_SCANNING
+std::atomic<bool> g_tailscaleInstalled{false};
 
 #include <winsock2.h>
 #include <ws2tcpip.h>
