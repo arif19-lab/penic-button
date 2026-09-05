@@ -884,8 +884,16 @@ showMode(currentMode);
             return;
 
         } else if (request.find("GET /api/status") != std::string::npos || request.find("GET /status") != std::string::npos) {
-            // 🛡️ System Defense Status Endpoint (Returns Panic State 0/1/2 + LAN IP)
-            responseBody = "{\"panic\":" + std::string(isPanicMode ? "true" : "false") + ",\"state\":" + std::to_string(panicState) + ",\"lan_ip\":\"" + GetLocalIP() + "\"}";
+            // 🛡️ System Defense Status Endpoint (Returns Panic State 0/1/2 + LAN IP + Tailscale IP)
+            bool isLocked = IsWorkstationLocked();
+            std::string tsIp = GetTailscaleIP();
+            std::string lanIp = GetLocalIP();
+            responseBody = "{\"panic\":" + std::string(isPanicMode ? "true" : "false") + 
+                           ",\"locked\":" + std::string(isLocked ? "true" : "false") + 
+                           ",\"state\":" + std::to_string(panicState) + 
+                           ",\"lan_ip\":\"" + lanIp + "\"" + 
+                           ",\"tailscale_ip\":\"" + tsIp + "\"" + 
+                           ",\"key\":\"" + g_dynamicKey + "\"}";
             std::string res = 
                 "HTTP/1.1 200 OK\r\n"
                 "Content-Type: application/json\r\n"

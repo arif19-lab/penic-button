@@ -3691,13 +3691,13 @@ body.native-app #sidebarApkBtn {
 
     <!-- 4. 1-Tap Direct Quick Connect (Tailscale Worldwide + Local LAN) -->
     <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:14px;">
-      <button onclick="quickConnectIp('100.83.195.91:8085')" style="width:100%; padding:10px 12px; background:rgba(0,240,255,0.12); color:#00f0ff; border:1px solid rgba(0,240,255,0.4); border-radius:8px; font-family:'Orbitron',sans-serif; font-size:11px; font-weight:800; letter-spacing:1px; cursor:pointer; display:flex; align-items:center; justify-content:space-between;">
+      <button id="btnQuickTailscale" onclick="quickConnectTailscale()" style="width:100%; padding:10px 12px; background:rgba(0,240,255,0.12); color:#00f0ff; border:1px solid rgba(0,240,255,0.4); border-radius:8px; font-family:'Orbitron',sans-serif; font-size:11px; font-weight:800; letter-spacing:1px; cursor:pointer; display:flex; align-items:center; justify-content:space-between;">
         <span>🌐 1-TAP TAILSCALE</span>
-        <span style="font-family:'Share Tech Mono',monospace; font-size:10px; color:#fff;">100.83.195.91</span>
+        <span id="quickTailscaleHost" style="font-family:'Share Tech Mono',monospace; font-size:10px; color:#fff;">CONNECT</span>
       </button>
-      <button onclick="quickConnectIp('192.168.0.100:8085')" style="width:100%; padding:10px 12px; background:rgba(0,255,65,0.12); color:#00ff41; border:1px solid rgba(0,255,65,0.4); border-radius:8px; font-family:'Orbitron',sans-serif; font-size:11px; font-weight:800; letter-spacing:1px; cursor:pointer; display:flex; align-items:center; justify-content:space-between;">
+      <button id="btnQuickLan" onclick="quickConnectLan()" style="width:100%; padding:10px 12px; background:rgba(0,255,65,0.12); color:#00ff41; border:1px solid rgba(0,255,65,0.4); border-radius:8px; font-family:'Orbitron',sans-serif; font-size:11px; font-weight:800; letter-spacing:1px; cursor:pointer; display:flex; align-items:center; justify-content:space-between;">
         <span>📡 1-TAP LOCAL WI-FI</span>
-        <span style="font-family:'Share Tech Mono',monospace; font-size:10px; color:#fff;">192.168.0.100</span>
+        <span id="quickLanHost" style="font-family:'Share Tech Mono',monospace; font-size:10px; color:#fff;">CONNECT</span>
       </button>
     </div>
 
@@ -4004,6 +4004,27 @@ function quickConnectIp(hostPort) {
   window.location.href = fullUrl;
 }
 
+function updateQuickConnectButtons(lanIp, tailscaleIp) {
+  var lanSpan = document.getElementById('quickLanHost');
+  var tsSpan = document.getElementById('quickTailscaleHost');
+  if (lanSpan && lanIp) {
+    lanSpan.textContent = lanIp;
+  }
+  if (tsSpan && tailscaleIp) {
+    tsSpan.textContent = tailscaleIp;
+  }
+}
+
+function quickConnectTailscale() {
+  var ip = localStorage.getItem('panic_tailscale_ip') || '100.83.195.91';
+  quickConnectIp(ip + ':8085');
+}
+
+function quickConnectLan() {
+  var ip = localStorage.getItem('panic_lan_ip') || '192.168.0.100';
+  quickConnectIp(ip + ':8085');
+}
+
 var _isCurrentlyConnected = false;
 
 function checkPcConnection() {
@@ -4017,6 +4038,12 @@ function checkPcConnection() {
       var ms = Math.round(performance.now() - t0);
       _isCurrentlyConnected = true;
       updateNetworkUi(true, ms);
+      if (data) {
+        if (data.lan_ip) localStorage.setItem('panic_lan_ip', data.lan_ip);
+        if (data.tailscale_ip) localStorage.setItem('panic_tailscale_ip', data.tailscale_ip);
+        if (data.key) localStorage.setItem('panic_key', data.key);
+        updateQuickConnectButtons(data.lan_ip, data.tailscale_ip);
+      }
     })
     .catch(function(err) {
       _isCurrentlyConnected = false;
@@ -4036,10 +4063,13 @@ function probeBestEndpoint(force, callback) {
   }
 
   var key = localStorage.getItem('panic_key') || KEY || 'imran2024';
-  var candidates = [
-    'http://100.83.195.91:8085', // 1. Tailscale Worldwide
-    'http://192.168.0.100:8085'  // 2. Local Wi-Fi
-  ];
+  var candidates = [];
+  var dynLan = localStorage.getItem('panic_lan_ip');
+  var dynTs = localStorage.getItem('panic_tailscale_ip');
+  if (dynLan) candidates.push('http://' + dynLan + ':8085');
+  if (dynTs) candidates.push('http://' + dynTs + ':8085');
+  if (!candidates.includes('http://192.168.0.100:8085')) candidates.push('http://192.168.0.100:8085');
+  if (!candidates.includes('http://100.83.195.91:8085')) candidates.push('http://100.83.195.91:8085');
 
   var probeIndex = 0;
   function tryNext() {
@@ -4082,6 +4112,7 @@ function probeBestEndpoint(force, callback) {
 window.addEventListener('DOMContentLoaded', function() {
   var input = document.getElementById('pcIpInput');
   if (input) input.value = PC_ENDPOINT;
+  updateQuickConnectButtons(localStorage.getItem('panic_lan_ip'), localStorage.getItem('panic_tailscale_ip'));
   checkPcConnection();
   setInterval(checkPcConnection, 3000);
   setTimeout(connectCommandWS, 2000);

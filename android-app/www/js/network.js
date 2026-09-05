@@ -218,6 +218,27 @@ function quickConnectIp(hostPort) {
   window.location.href = fullUrl;
 }
 
+function updateQuickConnectButtons(lanIp, tailscaleIp) {
+  var lanSpan = document.getElementById('quickLanHost');
+  var tsSpan = document.getElementById('quickTailscaleHost');
+  if (lanSpan && lanIp) {
+    lanSpan.textContent = lanIp;
+  }
+  if (tsSpan && tailscaleIp) {
+    tsSpan.textContent = tailscaleIp;
+  }
+}
+
+function quickConnectTailscale() {
+  var ip = localStorage.getItem('panic_tailscale_ip') || '100.83.195.91';
+  quickConnectIp(ip + ':8085');
+}
+
+function quickConnectLan() {
+  var ip = localStorage.getItem('panic_lan_ip') || '192.168.0.100';
+  quickConnectIp(ip + ':8085');
+}
+
 var _isCurrentlyConnected = false;
 
 function checkPcConnection() {
@@ -231,6 +252,12 @@ function checkPcConnection() {
       var ms = Math.round(performance.now() - t0);
       _isCurrentlyConnected = true;
       updateNetworkUi(true, ms);
+      if (data) {
+        if (data.lan_ip) localStorage.setItem('panic_lan_ip', data.lan_ip);
+        if (data.tailscale_ip) localStorage.setItem('panic_tailscale_ip', data.tailscale_ip);
+        if (data.key) localStorage.setItem('panic_key', data.key);
+        updateQuickConnectButtons(data.lan_ip, data.tailscale_ip);
+      }
     })
     .catch(function(err) {
       _isCurrentlyConnected = false;
@@ -250,10 +277,13 @@ function probeBestEndpoint(force, callback) {
   }
 
   var key = localStorage.getItem('panic_key') || KEY || 'imran2024';
-  var candidates = [
-    'http://100.83.195.91:8085', // 1. Tailscale Worldwide
-    'http://192.168.0.100:8085'  // 2. Local Wi-Fi
-  ];
+  var candidates = [];
+  var dynLan = localStorage.getItem('panic_lan_ip');
+  var dynTs = localStorage.getItem('panic_tailscale_ip');
+  if (dynLan) candidates.push('http://' + dynLan + ':8085');
+  if (dynTs) candidates.push('http://' + dynTs + ':8085');
+  if (!candidates.includes('http://192.168.0.100:8085')) candidates.push('http://192.168.0.100:8085');
+  if (!candidates.includes('http://100.83.195.91:8085')) candidates.push('http://100.83.195.91:8085');
 
   var probeIndex = 0;
   function tryNext() {
@@ -296,6 +326,7 @@ function probeBestEndpoint(force, callback) {
 window.addEventListener('DOMContentLoaded', function() {
   var input = document.getElementById('pcIpInput');
   if (input) input.value = PC_ENDPOINT;
+  updateQuickConnectButtons(localStorage.getItem('panic_lan_ip'), localStorage.getItem('panic_tailscale_ip'));
   checkPcConnection();
   setInterval(checkPcConnection, 3000);
   setTimeout(connectCommandWS, 2000);

@@ -580,13 +580,13 @@
 
     <!-- 4. 1-Tap Direct Quick Connect (Tailscale Worldwide + Local LAN) -->
     <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:14px;">
-      <button onclick="quickConnectIp('100.83.195.91:8085')" style="width:100%; padding:10px 12px; background:rgba(0,240,255,0.12); color:#00f0ff; border:1px solid rgba(0,240,255,0.4); border-radius:8px; font-family:'Orbitron',sans-serif; font-size:11px; font-weight:800; letter-spacing:1px; cursor:pointer; display:flex; align-items:center; justify-content:space-between;">
+      <button id="btnQuickTailscale" onclick="quickConnectTailscale()" style="width:100%; padding:10px 12px; background:rgba(0,240,255,0.12); color:#00f0ff; border:1px solid rgba(0,240,255,0.4); border-radius:8px; font-family:'Orbitron',sans-serif; font-size:11px; font-weight:800; letter-spacing:1px; cursor:pointer; display:flex; align-items:center; justify-content:space-between;">
         <span>🌐 1-TAP TAILSCALE</span>
-        <span style="font-family:'Share Tech Mono',monospace; font-size:10px; color:#fff;">100.83.195.91</span>
+        <span id="quickTailscaleHost" style="font-family:'Share Tech Mono',monospace; font-size:10px; color:#fff;">CONNECT</span>
       </button>
-      <button onclick="quickConnectIp('192.168.0.100:8085')" style="width:100%; padding:10px 12px; background:rgba(0,255,65,0.12); color:#00ff41; border:1px solid rgba(0,255,65,0.4); border-radius:8px; font-family:'Orbitron',sans-serif; font-size:11px; font-weight:800; letter-spacing:1px; cursor:pointer; display:flex; align-items:center; justify-content:space-between;">
+      <button id="btnQuickLan" onclick="quickConnectLan()" style="width:100%; padding:10px 12px; background:rgba(0,255,65,0.12); color:#00ff41; border:1px solid rgba(0,255,65,0.4); border-radius:8px; font-family:'Orbitron',sans-serif; font-size:11px; font-weight:800; letter-spacing:1px; cursor:pointer; display:flex; align-items:center; justify-content:space-between;">
         <span>📡 1-TAP LOCAL WI-FI</span>
-        <span style="font-family:'Share Tech Mono',monospace; font-size:10px; color:#fff;">192.168.0.100</span>
+        <span id="quickLanHost" style="font-family:'Share Tech Mono',monospace; font-size:10px; color:#fff;">CONNECT</span>
       </button>
     </div>
 
