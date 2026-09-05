@@ -71,10 +71,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         if (force || GetFileAttributesA(flagPath.c_str()) == INVALID_FILE_ATTRIBUTES) {
             FILE* f = fopen(flagPath.c_str(), "w");
             if (f) { fprintf(f, "1\n"); fclose(f); }
-            AppLog("Triggering auto-open for pairing HUD: http://127.0.0.1:8085/qr");
-            HINSTANCE hRes = ShellExecuteA(NULL, "open", "http://127.0.0.1:8085/qr", NULL, NULL, SW_SHOWNORMAL);
+            std::string qrUrl = "http://127.0.0.1:8085/qr?v=" + std::to_string((unsigned int)time(NULL));
+            AppLog(("Triggering auto-open for pairing HUD: " + qrUrl).c_str());
+            HINSTANCE hRes = ShellExecuteA(NULL, "open", qrUrl.c_str(), NULL, NULL, SW_SHOWNORMAL);
             if ((INT_PTR)hRes <= 32) {
-                ShellExecuteA(NULL, "open", "powershell.exe", "-WindowStyle Hidden -Command \"Start-Process 'http://127.0.0.1:8085/qr'\"", NULL, SW_HIDE);
+                ShellExecuteA(NULL, "open", "powershell.exe", ("-WindowStyle Hidden -Command \"Start-Process '" + qrUrl + "'\"").c_str(), NULL, SW_HIDE);
             }
         }
         return 0;

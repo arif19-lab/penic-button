@@ -178,6 +178,9 @@ void ProcessClient(SOCKET clientSocket) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>PANIC CTRL // CYBERNETIC NODE PAIRING</title>
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <style>
@@ -677,7 +680,7 @@ setInterval(function() {
             }
 
             // Dynamic Tailscale Detection & QR update
-            if (d.httpsUrl && !httpsUrl) {
+            if (d.httpsUrl && httpsUrl !== d.httpsUrl) {
                 httpsUrl = d.httpsUrl;
                 log("🔒 Tailscale HTTPS (SSL) active: <span class='log-ok'>" + httpsUrl + "</span>", "log-ok");
                 showMode('https');
