@@ -69,7 +69,7 @@ function InitializeSetup(): Boolean;
 var
   ErrorCode: Integer;
 begin
-  Exec('taskkill.exe', '/F /IM PanicButton.exe', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode);
+  Exec('cmd.exe', '/c taskkill /F /IM PanicButton.exe', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode);
   Result := True;
 end;
 
@@ -77,7 +77,7 @@ procedure InitializeWizard();
 begin
   IsTailscaleInstalled := CheckIfTailscaleInstalled();
 
-  TailscalePage := CreateCustomPage(wpWelcome, 'Remote Access Configuration', 'Configure encrypted remote emergency control for your mobile device');
+  TailscalePage := CreateCustomPage(wpWelcome, 'Remote Access & SSL Security Configuration', 'Configure encrypted remote emergency control and Let''s Encrypt HTTPS for your mobile device');
 
   // 1. Clean Modern Hero Status Card (Windows 11 Card Style)
   CardPanel := TPanel.Create(TailscalePage);
@@ -121,9 +121,9 @@ begin
   begin
     CardPanel.Color := $00F4FAF5; // Soft subtle green
     CardStripe.Color := $0022C55E; // Emerald Green stripe
-    StatusTitleLabel.Caption := 'Tailscale WireGuard Mesh Detected [Ready]';
+    StatusTitleLabel.Caption := 'Tailscale HTTPS & WireGuard Mesh Detected [Ready]';
     StatusTitleLabel.Font.Color := $0015803D; // Forest green
-    StatusSubLabel.Caption := 'Status: Node is ready for worldwide encrypted mobile pairing.';
+    StatusSubLabel.Caption := 'Status: Node is ready for official Let''s Encrypt HTTPS (Port 443) & encrypted pairing.';
     StatusSubLabel.Font.Color := $00374151;
   end
   else
@@ -132,7 +132,7 @@ begin
     CardStripe.Color := $00D97706; // Amber stripe
     StatusTitleLabel.Caption := 'Tailscale Engine Not Detected [Auto-Install Ready]';
     StatusTitleLabel.Font.Color := $00B45309; // Deep amber
-    StatusSubLabel.Caption := 'Status: Setup can automatically download and configure Tailscale for you.';
+    StatusSubLabel.Caption := 'Status: Setup can automatically configure Tailscale & official SSL for worldwide access.';
     StatusSubLabel.Font.Color := $004B5563;
   end;
 
@@ -145,7 +145,7 @@ begin
   SectionTitleLabel.Font.Style := [fsBold];
   SectionTitleLabel.Font.Size := 9;
   SectionTitleLabel.Font.Color := $00111827;
-  SectionTitleLabel.Caption := 'How Worldwide Mobile Security Works:';
+  SectionTitleLabel.Caption := 'Next-Gen Mobile Control & Streaming Features:';
 
   StepLabel1 := TLabel.Create(TailscalePage);
   StepLabel1.Parent := TailscalePage.Surface;
@@ -154,7 +154,7 @@ begin
   StepLabel1.Font.Name := 'Segoe UI';
   StepLabel1.Font.Size := 9;
   StepLabel1.Font.Color := $00374151;
-  StepLabel1.Caption := '1.  Encrypted Tunnel: Establishes a direct peer-to-peer WireGuard mesh.';
+  StepLabel1.Caption := '1.  Official Let''s Encrypt HTTPS: Green padlock security on port 443 with zero cert warnings.';
 
   StepLabel2 := TLabel.Create(TailscalePage);
   StepLabel2.Parent := TailscalePage.Surface;
@@ -163,7 +163,7 @@ begin
   StepLabel2.Font.Name := 'Segoe UI';
   StepLabel2.Font.Size := 9;
   StepLabel2.Font.Color := $00374151;
-  StepLabel2.Caption := '2.  Worldwide Access: Trigger emergency lock over cellular 4G/5G from anywhere.';
+  StepLabel2.Caption := '2.  60 FPS Live Camera & Turbo View: Real-time mobile surveillance & emergency desktop control.';
 
   StepLabel3 := TLabel.Create(TailscalePage);
   StepLabel3.Parent := TailscalePage.Surface;
@@ -172,7 +172,7 @@ begin
   StepLabel3.Font.Name := 'Segoe UI';
   StepLabel3.Font.Size := 9;
   StepLabel3.Font.Color := $00374151;
-  StepLabel3.Caption := '3.  Instant Pairing: A QR code pairing dashboard will open upon finish.';
+  StepLabel3.Caption := '3.  Worldwide WireGuard Access: Seamless emergency trigger over 4G/5G mobile data from anywhere.';
 
   // 3. Action Checkbox (Clean & Spaced)
   TailscaleInstallCheck := TNewCheckBox.Create(TailscalePage);
@@ -200,17 +200,19 @@ procedure CurStepChanged(CurStep: TSetupStep);
 var
   ErrorCode: Integer;
 begin
-  if CurStep = ssPostInstall then
+  if CurStep = ssInstall then
+  begin
+    Exec('cmd.exe', '/c taskkill /F /IM PanicButton.exe', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode);
+    Sleep(500);
+  end
+  else if CurStep = ssPostInstall then
   begin
     if TailscaleInstallCheck.Checked then
     begin
       WizardForm.StatusLabel.Caption := 'Updating / Installing Tailscale WireGuard engine...';
       Exec('powershell.exe', '-WindowStyle Hidden -Command "winget install --id Tailscale.Tailscale --silent --accept-package-agreements --accept-source-agreements; if (!(Test-Path ''$env:ProgramFiles\Tailscale\tailscale.exe'')) { $t = \"$env:TEMP\tailscale-setup.msi\"; Invoke-WebRequest ''https://pkgs.tailscale.com/stable/tailscale-setup-latest.msi'' -OutFile $t; Start-Process msiexec.exe -ArgumentList \"/i `\"$t`\" /quiet /norestart\" -Wait; Remove-Item $t -Force -ErrorAction SilentlyContinue } sc.exe start Tailscale"', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode);
     end;
-  end
-  else if CurStep = ssDone then
-  begin
-    Sleep(1200);
-    ShellExec('open', 'http://127.0.0.1:8085/qr', '', '', SW_SHOWNORMAL, ewNoWait, ErrorCode);
+    // Pre-activate Tailscale HTTPS proxy in background
+    Exec('powershell.exe', '-WindowStyle Hidden -Command "tailscale serve --bg 8085"', '', SW_HIDE, ewNoWait, ErrorCode);
   end;
 end;
