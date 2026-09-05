@@ -125,6 +125,7 @@ public class MainActivity extends BridgeActivity {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                     settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
                 }
+                settings.setUserAgentString(settings.getUserAgentString() + " PanicCTRLNativeApp");
 
                 // ⚡ Grant camera, microphone and media permissions to WebView automatically
                 this.bridge.getWebView().setWebChromeClient(new android.webkit.WebChromeClient() {

@@ -209,37 +209,45 @@ function triggerAutoDetectPc() {
   }, 2500);
 }
 
-// Ensure install/download button is hidden inside native Android app
+// Ensure install/download button is hidden/removed inside native Android app
+function checkIsNativeApp() {
+  return (typeof window.AndroidNativeStream !== 'undefined') ||
+         (typeof window.Capacitor !== 'undefined' && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) ||
+         (window.location.protocol === 'capacitor:') ||
+         (navigator.userAgent.indexOf('PanicCTRLNativeApp') > -1) ||
+         (navigator.userAgent.indexOf('wv') > -1) ||
+         (window.location.hostname === 'localhost' && window.location.protocol !== 'http:');
+}
+
 (function() {
   function setupApkBtn() {
-    var isNativeApp = (typeof window.AndroidNativeStream !== 'undefined') ||
-                      (typeof window.Capacitor !== 'undefined' && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) ||
-                      (window.location.protocol === 'capacitor:') ||
-                      (window.location.hostname === 'localhost' && window.location.protocol !== 'http:');
+    var isNative = checkIsNativeApp();
 
-    if (isNativeApp && document.body) {
-      document.body.classList.add('native-app');
+    if (isNative) {
+      if (document.body) document.body.classList.add('native-app');
+      var btn = document.getElementById('pwaInstallBtn');
+      if (btn) btn.remove();
+      var sideBtn = document.getElementById('sidebarApkBtn');
+      if (sideBtn) sideBtn.remove();
+      return;
     }
 
+    // Web browser mode: make visible
     var btn = document.getElementById('pwaInstallBtn');
     if (btn) {
-      if (isNativeApp) {
-        btn.style.display = 'none';
-      } else {
-        btn.style.display = 'inline-flex';
-        btn.style.alignItems = 'center';
-        btn.style.gap = '4px';
-      }
+      btn.style.display = 'inline-flex';
+      btn.style.alignItems = 'center';
+      btn.style.gap = '4px';
     }
-
     var sideBtn = document.getElementById('sidebarApkBtn');
-    if (sideBtn && isNativeApp) {
-      sideBtn.style.display = 'none';
+    if (sideBtn) {
+      sideBtn.style.display = 'flex';
     }
   }
   window.addEventListener('DOMContentLoaded', setupApkBtn);
   setTimeout(setupApkBtn, 50);
-  setTimeout(setupApkBtn, 500);
+  setTimeout(setupApkBtn, 300);
+  setTimeout(setupApkBtn, 1000);
 })();
 
 // ⚡ TAB CONTROLLER ENGINE

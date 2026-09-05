@@ -3182,7 +3182,7 @@ body.native-app #sidebarApkBtn {
   <!-- Top Header Branding: Left PANIC Title + Right GET APK Button -->
   <div id="mainTopHeader" style="display:flex; align-items:center; justify-content:space-between; margin: 4px 0 14px 0;">
     <div style="font-family:'Orbitron',sans-serif; font-size:20px; font-weight:900; color:var(--neon-cyan); letter-spacing:2.5px; text-shadow:0 0 15px rgba(0,240,255,0.4);">PANIC</div>
-    <a id="pwaInstallBtn" href="/download/app.apk" style="display:inline-block; text-decoration:none; background:linear-gradient(135deg, #00ff41, #00f0ff); color:#000; border:none; border-radius:6px; font-family:'Orbitron',sans-serif; font-size:10px; font-weight:800; padding:6px 12px; cursor:pointer; box-shadow:0 0 15px rgba(0,255,65,0.4); letter-spacing:0.5px;">📥 GET APK</a>
+    <a id="pwaInstallBtn" href="/download/app.apk" style="display:none; text-decoration:none; background:linear-gradient(135deg, #00ff41, #00f0ff); color:#000; border:none; border-radius:6px; font-family:'Orbitron',sans-serif; font-size:10px; font-weight:800; padding:6px 12px; cursor:pointer; box-shadow:0 0 15px rgba(0,255,65,0.4); letter-spacing:0.5px;">📥 GET APK</a>
   </div>
 
   <!-- ==================== TAB 1: 🖥️ MONITOR (1st: Monitor, 2nd: Trackpad, 3rd: Keyboard) ==================== -->
@@ -3320,7 +3320,7 @@ body.native-app #sidebarApkBtn {
               <span class="cg-menu-row-text">Gemini API Key</span>
             </button>
 
-            <button type="button" id="sidebarApkBtn" class="cg-menu-card-row" onclick="window.open('/download/app.apk', '_blank'); if(window.innerWidth < 860) closeCgSidebar();">
+            <button type="button" id="sidebarApkBtn" class="cg-menu-card-row" style="display:none;" onclick="window.open('/download/app.apk', '_blank'); if(window.innerWidth < 860) closeCgSidebar();">
               <span class="cg-menu-row-icon">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0f172a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -5844,8 +5844,9 @@ var deferredPwaPrompt = null;
 window.addEventListener('beforeinstallprompt', function(e) {
   e.preventDefault();
   deferredPwaPrompt = e;
+  if (typeof checkIsNativeApp === 'function' && checkIsNativeApp()) return;
   var btn = document.getElementById('pwaInstallBtn');
-  if (btn) btn.style.display = 'inline-block';
+  if (btn) btn.style.display = 'inline-flex';
 });
 
 function installPWA() {
@@ -7778,37 +7779,45 @@ function triggerAutoDetectPc() {
   }, 2500);
 }
 
-// Ensure install/download button is hidden inside native Android app
+// Ensure install/download button is hidden/removed inside native Android app
+function checkIsNativeApp() {
+  return (typeof window.AndroidNativeStream !== 'undefined') ||
+         (typeof window.Capacitor !== 'undefined' && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) ||
+         (window.location.protocol === 'capacitor:') ||
+         (navigator.userAgent.indexOf('PanicCTRLNativeApp') > -1) ||
+         (navigator.userAgent.indexOf('wv') > -1) ||
+         (window.location.hostname === 'localhost' && window.location.protocol !== 'http:');
+}
+
 (function() {
   function setupApkBtn() {
-    var isNativeApp = (typeof window.AndroidNativeStream !== 'undefined') ||
-                      (typeof window.Capacitor !== 'undefined' && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) ||
-                      (window.location.protocol === 'capacitor:') ||
-                      (window.location.hostname === 'localhost' && window.location.protocol !== 'http:');
+    var isNative = checkIsNativeApp();
 
-    if (isNativeApp && document.body) {
-      document.body.classList.add('native-app');
+    if (isNative) {
+      if (document.body) document.body.classList.add('native-app');
+      var btn = document.getElementById('pwaInstallBtn');
+      if (btn) btn.remove();
+      var sideBtn = document.getElementById('sidebarApkBtn');
+      if (sideBtn) sideBtn.remove();
+      return;
     }
 
+    // Web browser mode: make visible
     var btn = document.getElementById('pwaInstallBtn');
     if (btn) {
-      if (isNativeApp) {
-        btn.style.display = 'none';
-      } else {
-        btn.style.display = 'inline-flex';
-        btn.style.alignItems = 'center';
-        btn.style.gap = '4px';
-      }
+      btn.style.display = 'inline-flex';
+      btn.style.alignItems = 'center';
+      btn.style.gap = '4px';
     }
-
     var sideBtn = document.getElementById('sidebarApkBtn');
-    if (sideBtn && isNativeApp) {
-      sideBtn.style.display = 'none';
+    if (sideBtn) {
+      sideBtn.style.display = 'flex';
     }
   }
   window.addEventListener('DOMContentLoaded', setupApkBtn);
   setTimeout(setupApkBtn, 50);
-  setTimeout(setupApkBtn, 500);
+  setTimeout(setupApkBtn, 300);
+  setTimeout(setupApkBtn, 1000);
 })();
 
 // ⚡ TAB CONTROLLER ENGINE

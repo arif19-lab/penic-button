@@ -210,8 +210,9 @@ var deferredPwaPrompt = null;
 window.addEventListener('beforeinstallprompt', function(e) {
   e.preventDefault();
   deferredPwaPrompt = e;
+  if (typeof checkIsNativeApp === 'function' && checkIsNativeApp()) return;
   var btn = document.getElementById('pwaInstallBtn');
-  if (btn) btn.style.display = 'inline-block';
+  if (btn) btn.style.display = 'inline-flex';
 });
 
 function installPWA() {
