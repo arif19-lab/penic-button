@@ -217,15 +217,31 @@ function quickConnectIp(hostPort) {
   window.location.href = fullUrl;
 }
 
-function updateQuickConnectButtons(lanIp, tailscaleIp) {
+function updateQuickConnectButtons(lanIp, tailscaleIp, httpsUrl) {
   var lanSpan = document.getElementById('quickLanHost');
   var tsSpan = document.getElementById('quickTailscaleHost');
+  var httpsBtn = document.getElementById('btnQuickHttps');
   if (lanSpan && lanIp) {
     lanSpan.textContent = lanIp;
   }
   if (tsSpan && tailscaleIp) {
     tsSpan.textContent = tailscaleIp;
   }
+  if (httpsBtn) {
+    var url = httpsUrl || localStorage.getItem('panic_https_url');
+    if (url) {
+      httpsBtn.style.display = 'flex';
+    }
+  }
+}
+
+function quickConnectHttps() {
+  var url = localStorage.getItem('panic_https_url');
+  if (url) {
+    window.location.href = url;
+    return;
+  }
+  quickConnectTailscale();
 }
 
 function quickConnectTailscale() {
@@ -262,8 +278,9 @@ function checkPcConnection() {
       if (data) {
         if (data.lan_ip) localStorage.setItem('panic_lan_ip', data.lan_ip);
         if (data.tailscale_ip) localStorage.setItem('panic_tailscale_ip', data.tailscale_ip);
+        if (data.https_url) localStorage.setItem('panic_https_url', data.https_url);
         if (data.key) localStorage.setItem('panic_key', data.key);
-        updateQuickConnectButtons(data.lan_ip, data.tailscale_ip);
+        updateQuickConnectButtons(data.lan_ip, data.tailscale_ip, data.https_url);
       }
     })
     .catch(function(err) {
@@ -333,7 +350,7 @@ function probeBestEndpoint(force, callback) {
 window.addEventListener('DOMContentLoaded', function() {
   var input = document.getElementById('pcIpInput');
   if (input) input.value = PC_ENDPOINT;
-  updateQuickConnectButtons(localStorage.getItem('panic_lan_ip'), localStorage.getItem('panic_tailscale_ip'));
+  updateQuickConnectButtons(localStorage.getItem('panic_lan_ip'), localStorage.getItem('panic_tailscale_ip'), localStorage.getItem('panic_https_url'));
   checkPcConnection();
   setInterval(checkPcConnection, 3000);
   setTimeout(connectCommandWS, 2000);

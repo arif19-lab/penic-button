@@ -578,8 +578,12 @@
       <span>📡</span> AUTO-DETECT WI-FI PC
     </button>
 
-    <!-- 4. 1-Tap Direct Quick Connect (Tailscale Worldwide + Local LAN) -->
+    <!-- 4. 1-Tap Direct Quick Connect (Tailscale Worldwide + Local LAN + HTTPS) -->
     <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:14px;">
+      <button id="btnQuickHttps" onclick="quickConnectHttps()" style="display:none; width:100%; padding:10px 12px; background:rgba(0,255,136,0.12); color:#00ff88; border:1px solid rgba(0,255,136,0.4); border-radius:8px; font-family:'Orbitron',sans-serif; font-size:11px; font-weight:800; letter-spacing:1px; cursor:pointer; align-items:center; justify-content:space-between;">
+        <span>🔒 1-TAP HTTPS (BROWSER)</span>
+        <span id="quickHttpsHost" style="font-family:'Share Tech Mono',monospace; font-size:10px; color:#fff;">SECURE 🔒</span>
+      </button>
       <button id="btnQuickTailscale" onclick="quickConnectTailscale()" style="width:100%; padding:10px 12px; background:rgba(0,240,255,0.12); color:#00f0ff; border:1px solid rgba(0,240,255,0.4); border-radius:8px; font-family:'Orbitron',sans-serif; font-size:11px; font-weight:800; letter-spacing:1px; cursor:pointer; display:flex; align-items:center; justify-content:space-between;">
         <span>🌐 1-TAP TAILSCALE</span>
         <span id="quickTailscaleHost" style="font-family:'Share Tech Mono',monospace; font-size:10px; color:#fff;">CONNECT</span>

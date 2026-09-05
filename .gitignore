@@ -8,6 +8,9 @@ dist/
 *key*.txt
 gemini_key.txt
 resource.res
+*.crt
+*.key
+*.pem
 android-app/www/download/
 android-app/www/index.html.bak
 

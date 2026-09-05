@@ -884,15 +884,19 @@ showMode(currentMode);
             return;
 
         } else if (request.find("GET /api/status") != std::string::npos || request.find("GET /status") != std::string::npos) {
-            // 🛡️ System Defense Status Endpoint (Returns Panic State 0/1/2 + LAN IP + Tailscale IP)
+            // 🛡️ System Defense Status Endpoint (Returns Panic State 0/1/2 + LAN IP + Tailscale IP + HTTPS)
             bool isLocked = IsWorkstationLocked();
             std::string tsIp = GetTailscaleIP();
+            std::string tsDns = GetTailscaleDNS();
             std::string lanIp = GetLocalIP();
+            std::string httpsUrl = tsDns.empty() ? "" : ("https://" + tsDns + "/?key=" + g_dynamicKey);
             responseBody = "{\"panic\":" + std::string(isPanicMode ? "true" : "false") + 
                            ",\"locked\":" + std::string(isLocked ? "true" : "false") + 
                            ",\"state\":" + std::to_string(panicState) + 
                            ",\"lan_ip\":\"" + lanIp + "\"" + 
                            ",\"tailscale_ip\":\"" + tsIp + "\"" + 
+                           ",\"tailscale_dns\":\"" + tsDns + "\"" + 
+                           ",\"https_url\":\"" + httpsUrl + "\"" + 
                            ",\"key\":\"" + g_dynamicKey + "\"}";
             std::string res = 
                 "HTTP/1.1 200 OK\r\n"

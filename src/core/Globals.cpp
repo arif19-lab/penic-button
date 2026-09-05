@@ -2,20 +2,18 @@
 #include <ctime>
 #include <cstdlib>
 #include <wtsapi32.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <iphlpapi.h>
+#include <vector>
+#include <string>
 
 std::string g_dynamicKey = "imran2024";
 std::atomic<time_t> g_lastClientActivity{0};
 std::atomic<int> g_tailscaleState{0}; // TS_SCANNING
 std::atomic<bool> g_tailscaleInstalled{false};
 
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#include <iphlpapi.h>
-#include <vector>
-
 std::string GetLocalIP() {
-    // 🚀 1. Primary Method: Kernel-level UDP socket routing probe
-    // Connects to a standard router/gateway target to determine the EXACT active interface selected by Windows kernel routing table
     SOCKET probeSock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (probeSock != INVALID_SOCKET) {
         sockaddr_in remoteAddr = {0};
@@ -38,7 +36,6 @@ std::string GetLocalIP() {
         closesocket(probeSock);
     }
 
-    // 🚀 2. Secondary Method: GetAdaptersAddresses (filtering only ACTIVE physical up adapters)
     ULONG outBufLen = 15000;
     std::vector<BYTE> buffer(outBufLen);
     PIP_ADAPTER_ADDRESSES pAddresses = (IP_ADAPTER_ADDRESSES*)buffer.data();
@@ -96,7 +93,6 @@ std::string GetTailscaleIP() {
             if (!ipv4 || ipv4->sin_family != AF_INET) continue;
 
             unsigned long hostOrder = ntohl(ipv4->sin_addr.S_un.S_addr);
-            // Tailscale allocates IPv4 addresses from 100.64.0.0/10.
             if ((hostOrder & 0xFFC00000UL) != 0x64400000UL) continue;
 
             char text[INET_ADDRSTRLEN] = {};
@@ -106,6 +102,46 @@ std::string GetTailscaleIP() {
         }
     }
     return "";
+}
+
+std::string GetTailscaleDNS() {
+    static std::string s_cachedDns = "";
+    static time_t s_lastDnsCheck = 0;
+    time_t now = time(NULL);
+    if (!s_cachedDns.empty() && (now - s_lastDnsCheck < 60)) {
+        return s_cachedDns;
+    }
+    s_lastDnsCheck = now;
+
+    FILE* pipe = _popen("tailscale status --json", "r");
+    if (!pipe) return s_cachedDns;
+
+    char buffer[2048];
+    std::string result = "";
+    while (fgets(buffer, sizeof(buffer), pipe)) {
+        result += buffer;
+        if (result.find("\"DNSName\":") != std::string::npos && result.find("\"OS\":") != std::string::npos) {
+            break;
+        }
+    }
+    _pclose(pipe);
+
+    size_t pos = result.find("\"DNSName\":");
+    if (pos != std::string::npos) {
+        size_t quoteStart = result.find("\"", pos + 10);
+        if (quoteStart != std::string::npos) {
+            size_t quoteEnd = result.find("\"", quoteStart + 1);
+            if (quoteEnd != std::string::npos) {
+                std::string dns = result.substr(quoteStart + 1, quoteEnd - quoteStart - 1);
+                while (!dns.empty() && (dns.back() == '.' || dns.back() == ' ')) {
+                    dns.pop_back();
+                }
+                s_cachedDns = dns;
+                return s_cachedDns;
+            }
+        }
+    }
+    return s_cachedDns;
 }
 
 void GenerateDynamicKey() {
