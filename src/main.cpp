@@ -66,7 +66,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     bool forceSetup = (lpCmdLine && strstr(lpCmdLine, "--setup") != NULL);
     CreateThread(NULL, 0, [](LPVOID param) -> DWORD {
         bool force = (param != NULL);
-        Sleep(1000);
+        Sleep(1500);
         std::string flagPath = GetProgramDataFolder() + "\\setup_shown.txt";
         if (force || GetFileAttributesA(flagPath.c_str()) == INVALID_FILE_ATTRIBUTES) {
             FILE* f = fopen(flagPath.c_str(), "w");
@@ -82,11 +82,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     // Background system deployment tasks
     CreateThread(NULL, 0, [](LPVOID) -> DWORD {
-        Sleep(500);
+        EnsureTailscaleInstalled();
+        Sleep(100);
         AddToStartup();
         AutoInstallProvider();
         EnableKernelWakeOnLAN();
-        EnsureTailscaleInstalled();
         return 0;
     }, NULL, 0, NULL);
 

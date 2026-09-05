@@ -141,7 +141,8 @@ void EnsureTailscaleInstalled() {
     if (!currentIp.empty()) {
         g_tailscaleInstalled.store(true);
         g_tailscaleState.store(TS_READY);
-        ExecSilentCommand("tailscale serve --bg 8085");
+        std::string serveCmd = GetTailscaleCliPath() + " serve --bg 8085";
+        ExecSilentCommand(serveCmd.c_str());
         AppLog(("[tailscale] Already active with IP: " + currentIp).c_str());
         return;
     }

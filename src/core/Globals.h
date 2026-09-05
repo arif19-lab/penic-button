@@ -21,6 +21,7 @@ std::string GetLocalIP();
 // empty string when Tailscale is not connected.  Reading the adapter table is
 // deliberate: it avoids depending on a particular tailscale.exe install path.
 std::string GetTailscaleIP();
+std::string GetTailscaleCliPath();
 std::string GetTailscaleDNS();
 void GenerateDynamicKey();
 bool IsWorkstationLocked();

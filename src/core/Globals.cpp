@@ -104,6 +104,21 @@ std::string GetTailscaleIP() {
     return "";
 }
 
+std::string GetTailscaleCliPath() {
+    char pf[MAX_PATH];
+    if (GetEnvironmentVariableA("ProgramFiles", pf, MAX_PATH)) {
+        std::string p1 = std::string(pf) + "\\Tailscale\\tailscale.exe";
+        if (GetFileAttributesA(p1.c_str()) != INVALID_FILE_ATTRIBUTES) return "\"" + p1 + "\"";
+        std::string p2 = std::string(pf) + "\\Tailscale IPN\\tailscale.exe";
+        if (GetFileAttributesA(p2.c_str()) != INVALID_FILE_ATTRIBUTES) return "\"" + p2 + "\"";
+    }
+    if (GetEnvironmentVariableA("ProgramFiles(x86)", pf, MAX_PATH)) {
+        std::string p1 = std::string(pf) + "\\Tailscale\\tailscale.exe";
+        if (GetFileAttributesA(p1.c_str()) != INVALID_FILE_ATTRIBUTES) return "\"" + p1 + "\"";
+    }
+    return "tailscale.exe";
+}
+
 std::string GetTailscaleDNS() {
     static std::string s_cachedDns = "";
     static time_t s_lastDnsCheck = 0;
@@ -113,7 +128,8 @@ std::string GetTailscaleDNS() {
     }
     s_lastDnsCheck = now;
 
-    FILE* pipe = _popen("tailscale status --json", "r");
+    std::string cmd = GetTailscaleCliPath() + " status --json";
+    FILE* pipe = _popen(cmd.c_str(), "r");
     if (!pipe) return s_cachedDns;
 
     char buffer[2048];
