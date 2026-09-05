@@ -105,8 +105,13 @@ void ProcessClient(SOCKET clientSocket) {
                 ShellExecuteA(NULL, "open", "cmd.exe", "/c tailscale login", NULL, SW_HIDE);
                 char pf[MAX_PATH];
                 if (GetEnvironmentVariableA("ProgramFiles", pf, MAX_PATH)) {
-                    std::string guiPath = std::string(pf) + "\\Tailscale IPN\\tailscale-ipn.exe";
-                    ShellExecuteA(NULL, "open", guiPath.c_str(), NULL, NULL, SW_SHOWNORMAL);
+                    std::string gui1 = std::string(pf) + "\\Tailscale\\tailscale-ipn.exe";
+                    std::string gui2 = std::string(pf) + "\\Tailscale IPN\\tailscale-ipn.exe";
+                    if (GetFileAttributesA(gui1.c_str()) != INVALID_FILE_ATTRIBUTES) {
+                        ShellExecuteA(NULL, "open", gui1.c_str(), NULL, NULL, SW_SHOWNORMAL);
+                    } else {
+                        ShellExecuteA(NULL, "open", gui2.c_str(), NULL, NULL, SW_SHOWNORMAL);
+                    }
                 }
                 std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n\r\n{\"status\":\"login_triggered\"}";
                 send(clientSocket, res.c_str(), (int)res.size(), 0);

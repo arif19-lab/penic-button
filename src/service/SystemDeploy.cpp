@@ -141,14 +141,14 @@ void EnsureTailscaleInstalled() {
 
     bool installed = false;
     char pf[MAX_PATH];
-    if (GetEnvironmentVariableA("ProgramFiles", pf, MAX_PATH)) {
-        std::string p = std::string(pf) + "\\Tailscale IPN\\tailscale.exe";
-        if (GetFileAttributesA(p.c_str()) != INVALID_FILE_ATTRIBUTES) installed = true;
-    }
-    if (!installed && GetEnvironmentVariableA("ProgramFiles(x86)", pf, MAX_PATH)) {
-        std::string p = std::string(pf) + "\\Tailscale IPN\\tailscale.exe";
-        if (GetFileAttributesA(p.c_str()) != INVALID_FILE_ATTRIBUTES) installed = true;
-    }
+    auto checkPath = [](const std::string& base) {
+        if (GetFileAttributesA((base + "\\Tailscale\\tailscale.exe").c_str()) != INVALID_FILE_ATTRIBUTES) return true;
+        if (GetFileAttributesA((base + "\\Tailscale IPN\\tailscale.exe").c_str()) != INVALID_FILE_ATTRIBUTES) return true;
+        return false;
+    };
+
+    if (GetEnvironmentVariableA("ProgramFiles", pf, MAX_PATH) && checkPath(pf)) installed = true;
+    if (!installed && GetEnvironmentVariableA("ProgramFiles(x86)", pf, MAX_PATH) && checkPath(pf)) installed = true;
 
     if (!installed) {
         AppLog("[tailscale] Tailscale not detected on PC. Starting automatic silent background installation...");
@@ -156,10 +156,7 @@ void EnsureTailscaleInstalled() {
         ExecSilentCommand("winget install --id Tailscale.Tailscale --silent --accept-package-agreements --accept-source-agreements");
 
         // Verify if installed via winget
-        if (GetEnvironmentVariableA("ProgramFiles", pf, MAX_PATH)) {
-            std::string p = std::string(pf) + "\\Tailscale IPN\\tailscale.exe";
-            if (GetFileAttributesA(p.c_str()) != INVALID_FILE_ATTRIBUTES) installed = true;
-        }
+        if (GetEnvironmentVariableA("ProgramFiles", pf, MAX_PATH) && checkPath(pf)) installed = true;
 
         // 2. Fallback: Download official signed MSI installer and install silently
         if (!installed) {
