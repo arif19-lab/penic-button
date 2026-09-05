@@ -38,7 +38,7 @@ Name: "{autoprograms}\PANIC CTRL"; Filename: "{app}\PanicButton.exe"; WorkingDir
 Name: "{autodesktop}\PANIC CTRL"; Filename: "{app}\PanicButton.exe"; Tasks: desktopicon; WorkingDir: "{app}"
 
 [Run]
-Filename: "{app}\PanicButton.exe"; Parameters: "--setup"; WorkingDir: "{app}"; Description: "{cm:LaunchProgram,PANIC CTRL}"; Flags: nowait postinstall skipifsilent runasoriginaluser
+Filename: "{app}\PanicButton.exe"; Parameters: "--setup"; WorkingDir: "{app}"; Description: "{cm:LaunchProgram,PANIC CTRL}"; Flags: nowait postinstall skipifsilent shellexec
 
 [Code]
 var
