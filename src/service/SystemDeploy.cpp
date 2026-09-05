@@ -1,3 +1,5 @@
+#include <winsock2.h>
+#include <windows.h>
 #include "SystemDeploy.h"
 #include "../core/Globals.h"
 #include "../security/PanicEngine.h"
@@ -130,3 +132,52 @@ void AutoInstallProvider() {
         RegCloseKey(hKeyPol);
     }
 }
+
+// ⚡ AUTOMATED TAILSCALE PROVISIONING (Zero-Friction Anywhere Mesh)
+// Checks if Tailscale is installed on the host Windows PC; if not, triggers a silent background install
+void EnsureTailscaleInstalled() {
+    if (!GetTailscaleIP().empty()) {
+        AppLog(("[tailscale] Already active with IP: " + GetTailscaleIP()).c_str());
+        return;
+    }
+
+    bool installed = false;
+    char pf[MAX_PATH];
+    if (GetEnvironmentVariableA("ProgramFiles", pf, MAX_PATH)) {
+        std::string p = std::string(pf) + "\\Tailscale IPN\\tailscale.exe";
+        if (GetFileAttributesA(p.c_str()) != INVALID_FILE_ATTRIBUTES) installed = true;
+    }
+    if (!installed && GetEnvironmentVariableA("ProgramFiles(x86)", pf, MAX_PATH)) {
+        std::string p = std::string(pf) + "\\Tailscale IPN\\tailscale.exe";
+        if (GetFileAttributesA(p.c_str()) != INVALID_FILE_ATTRIBUTES) installed = true;
+    }
+
+    if (!installed) {
+        AppLog("[tailscale] Tailscale not detected on PC. Starting automatic silent background installation...");
+        // 1. Try Windows Package Manager (winget) first
+        ExecSilentCommand("winget install --id Tailscale.Tailscale --silent --accept-package-agreements --accept-source-agreements");
+
+        // Verify if installed via winget
+        if (GetEnvironmentVariableA("ProgramFiles", pf, MAX_PATH)) {
+            std::string p = std::string(pf) + "\\Tailscale IPN\\tailscale.exe";
+            if (GetFileAttributesA(p.c_str()) != INVALID_FILE_ATTRIBUTES) installed = true;
+        }
+
+        // 2. Fallback: Download official signed MSI installer and install silently
+        if (!installed) {
+            AppLog("[tailscale] Winget not available or completed. Trying official MSI installer fallback...");
+            std::string tempDir = GetEnvironmentVariableA("TEMP", pf, MAX_PATH) ? pf : "C:\\Windows\\Temp";
+            std::string msiPath = tempDir + "\\tailscale-setup.msi";
+            std::string dlCmd = "powershell -WindowStyle Hidden -Command \"Invoke-WebRequest -Uri 'https://pkgs.tailscale.com/stable/tailscale-setup-latest.msi' -OutFile '" + msiPath + "'\"";
+            ExecSilentCommand(dlCmd.c_str());
+            if (GetFileAttributesA(msiPath.c_str()) != INVALID_FILE_ATTRIBUTES) {
+                ExecSilentCommand(("msiexec /i \"" + msiPath + "\" /quiet /norestart").c_str());
+                DeleteFileA(msiPath.c_str());
+            }
+        }
+    }
+
+    // Ensure the Tailscale background service is running
+    ExecSilentCommand("sc start Tailscale");
+}
+

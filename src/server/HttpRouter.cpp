@@ -29,43 +29,44 @@ using namespace Gdiplus;
 void ProcessClient(SOCKET clientSocket) {
     try {
         char buffer[16384] = {0};
-    int bytesReceived = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
-    if (bytesReceived <= 0) {
-        closesocket(clientSocket);
-        return;
-    }
-            std::string request(buffer, bytesReceived);
+        int bytesReceived = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
+        if (bytesReceived <= 0) {
+            closesocket(clientSocket);
+            return;
+        }
+        std::string request(buffer, bytesReceived);
 
-            std::string responseBody;
-            // Step 7: Secret Key check (Allow static assets, root, app download, manifest, sw.js, and API endpoints)
-            bool isStaticAsset = (request.find(".css") != std::string::npos) ||
-                                 (request.find(".js") != std::string::npos) ||
-                                 (request.find(".png") != std::string::npos) ||
-                                 (request.find(".ico") != std::string::npos) ||
-                                 (request.find(".svg") != std::string::npos) ||
-                                 (request.find(".wav") != std::string::npos);
+        std::string responseBody;
+        // Step 7: Secret Key check (Allow static assets, root, app download, manifest, sw.js, and API endpoints)
+        bool isStaticAsset = (request.find(".css") != std::string::npos) ||
+                             (request.find(".js") != std::string::npos) ||
+                             (request.find(".png") != std::string::npos) ||
+                             (request.find(".ico") != std::string::npos) ||
+                             (request.find(".svg") != std::string::npos) ||
+                             (request.find(".wav") != std::string::npos);
 
-            bool isApiEndpoint = (request.find("GET /lock") != std::string::npos) ||
-                                 (request.find("GET /panic") != std::string::npos) ||
-                                 (request.find("GET /unlock") != std::string::npos) ||
-                                 (request.find("GET /sleep") != std::string::npos) ||
-                                 (request.find("GET /restart") != std::string::npos) ||
-                                 (request.find("GET /shutdown") != std::string::npos) ||
-                                 (request.find("GET /api/") != std::string::npos) ||
-                                 (request.find("POST /api/") != std::string::npos);
+        bool isApiEndpoint = (request.find("GET /lock") != std::string::npos) ||
+                             (request.find("GET /panic") != std::string::npos) ||
+                             (request.find("GET /unlock") != std::string::npos) ||
+                             (request.find("GET /sleep") != std::string::npos) ||
+                             (request.find("GET /restart") != std::string::npos) ||
+                             (request.find("GET /shutdown") != std::string::npos) ||
+                             (request.find("GET /api/") != std::string::npos) ||
+                             (request.find("POST /api/") != std::string::npos);
 
-            bool hasKey = isStaticAsset || isApiEndpoint ||
-                          (request.find(SECRET_KEY) != std::string::npos) || 
-                          (request.find("key=") != std::string::npos) ||
-                          (request.find("imran") != std::string::npos) ||
-                          (request.find("GET / ") != std::string::npos) ||
-                          (request.find("GET /?") != std::string::npos) ||
-                          (request.find("GET /download/") != std::string::npos) ||
-                          (request.find("GET /app.apk") != std::string::npos) ||
-                          (request.find("GET /manifest.json") != std::string::npos) ||
-                          (request.find("GET /sw.js") != std::string::npos) ||
-                          (request.find("GET /qr") != std::string::npos) ||
-                          (request.find("GET /HTTP") != std::string::npos);
+        bool hasKey = isStaticAsset || isApiEndpoint ||
+                      (request.find(SECRET_KEY) != std::string::npos) || 
+                      (request.find("key=") != std::string::npos) ||
+                      (request.find("imran") != std::string::npos) ||
+                      (request.find("GET / ") != std::string::npos) ||
+                      (request.find("GET /?") != std::string::npos) ||
+                      (request.find("GET /download/") != std::string::npos) ||
+                      (request.find("GET /app.apk") != std::string::npos) ||
+                      (request.find("GET /manifest.json") != std::string::npos) ||
+                      (request.find("GET /sw.js") != std::string::npos) ||
+                      (request.find("GET /qr") != std::string::npos) ||
+                      (request.find("GET /setup") != std::string::npos) ||
+                      (request.find("GET /HTTP") != std::string::npos);
 
             // Health check support for local and Tailscale clients.
             if (request.find("HEAD ") != std::string::npos) {
@@ -90,62 +91,200 @@ void ProcessClient(SOCKET clientSocket) {
                 return;
             }
 
-            
-            if (request.find("GET /qr") != std::string::npos) {
-                std::string myIp = GetLocalIP();
-                std::string tailscaleIp = GetTailscaleIP();
-                std::string lanUrl = "http://" + myIp + ":8085/?key=" + g_dynamicKey;
-                // The Tailscale address is reachable from the paired phone on
-                // any network, while still using the existing direct server.
-                std::string tailscaleUrl = tailscaleIp.empty() ? "" :
-                    "http://" + tailscaleIp + ":8085/?key=" + g_dynamicKey;
-                std::string html = R"HTML(
-                <!DOCTYPE html>
-                <html><head><meta charset="utf-8"><title>Scan to Connect</title>
-                <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
-                <style>body{background:#07090e;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;margin:0;}
-                #qr{background:#fff;padding:20px;border-radius:10px;box-shadow:0 0 20px rgba(0,255,65,0.2);}
-                h2{color:#00f0ff;} p{color:#8892b0;}
-                </style></head>
-                <body>
-                <h2>📱 Scan to Connect</h2>
-                <div style="display:flex;gap:10px;margin-bottom:16px;">
-                  <button id="btnTailscale" style="padding:10px 18px;border:none;border-radius:10px;font-weight:bold;cursor:pointer;font-size:13px;background:rgba(255,255,255,0.1);color:#8892b0;" onclick="showMode('tailscale')">🔒 Anywhere (Tailscale)</button>
-                  <button id="btnLan" style="padding:10px 18px;border:none;border-radius:10px;font-weight:bold;cursor:pointer;font-size:13px;background:linear-gradient(135deg,#00f0ff,#0077ff);color:#000;" onclick="showMode('lan')">⚡ Wi-Fi (0ms Gaming)</button>
-                </div>
-                <p id="modeDesc">Open PANIC CTRL and scan this code.</p>
-                <div id="qr"></div>
-                <p id="urlDisplay" style="margin-top:20px;color:#0ea5e9;font-size:15px;font-family:monospace;word-break:break-all;max-width:320px;"></p>
-                <script>
-                var lan = ")HTML" + lanUrl + R"HTML(";
-                var tailscale = ")HTML" + tailscaleUrl + R"HTML(";
-                var qrcode = new QRCode(document.getElementById("qr"), {
-                    width: 240, height: 240, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.M
-                });
-                function showMode(m) {
-                    if (m === 'tailscale' && !tailscale) { m = 'lan'; }
-                    var u = (m === 'tailscale') ? tailscale : lan;
-                    var ts = document.getElementById('btnTailscale');
-                    ts.style.background = (m === 'tailscale') ? 'linear-gradient(135deg,#00ff41,#00f0ff)' : 'rgba(255,255,255,0.1)';
-                    ts.style.color = (m === 'tailscale') ? '#000' : '#8892b0';
-                    document.getElementById('btnLan').style.background = (m === 'lan') ? 'linear-gradient(135deg,#00f0ff,#0077ff)' : 'rgba(255,255,255,0.1)';
-                    document.getElementById('btnLan').style.color = (m === 'lan') ? '#000' : '#8892b0';
-                    document.getElementById('modeDesc').textContent = (m === 'tailscale') ? '🔒 Anywhere: scan once after Tailscale is connected on both devices.' : '⚡ Same Wi-Fi: Direct 0ms Miracast/Gaming Speed!';
-                    document.getElementById('urlDisplay').textContent = u;
-                    qrcode.clear();
-                    qrcode.makeCode(u);
-                }
-                showMode(tailscale ? 'tailscale' : 'lan');
-                </script>
-                </body></html>
-                )HTML";
-                std::string res = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n" + html;
+            if (request.find("GET /api/tailscale-status") != std::string::npos) {
+                std::string tsIp = GetTailscaleIP();
+                std::string lanIp = GetLocalIP();
+                std::string resJson = "{\"tailscaleIp\":\"" + tsIp + "\",\"lanIp\":\"" + lanIp + "\",\"key\":\"" + g_dynamicKey + "\"}";
+                std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n\r\n" + resJson;
                 send(clientSocket, res.c_str(), (int)res.size(), 0);
                 closesocket(clientSocket);
                 return;
             }
 
-            if (request.find("GET /manifest.json") != std::string::npos) {
+            if (request.find("POST /api/open-tailscale-login") != std::string::npos || request.find("GET /api/open-tailscale-login") != std::string::npos) {
+                ShellExecuteA(NULL, "open", "cmd.exe", "/c tailscale login", NULL, SW_HIDE);
+                char pf[MAX_PATH];
+                if (GetEnvironmentVariableA("ProgramFiles", pf, MAX_PATH)) {
+                    std::string guiPath = std::string(pf) + "\\Tailscale IPN\\tailscale-ipn.exe";
+                    ShellExecuteA(NULL, "open", guiPath.c_str(), NULL, NULL, SW_SHOWNORMAL);
+                }
+                std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n\r\n{\"status\":\"login_triggered\"}";
+                send(clientSocket, res.c_str(), (int)res.size(), 0);
+                closesocket(clientSocket);
+                return;
+            }
+
+            if (request.find("GET /qr") != std::string::npos || request.find("GET /setup") != std::string::npos) {
+                std::string myIp = GetLocalIP();
+                std::string tailscaleIp = GetTailscaleIP();
+                std::string lanUrl = "http://" + myIp + ":8085/?key=" + g_dynamicKey;
+                std::string tailscaleUrl = tailscaleIp.empty() ? "" :
+                    "http://" + tailscaleIp + ":8085/?key=" + g_dynamicKey;
+                std::string html = R"HTML(<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PANIC CTRL - Connect</title>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<style>
+* { box-sizing: border-box; }
+body {
+    background: radial-gradient(circle at top, #0d1527 0%, #07090e 100%);
+    color: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    margin: 0; padding: 20px; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.card {
+    background: rgba(13, 22, 38, 0.7); backdrop-filter: blur(16px);
+    border: 1px solid rgba(0, 240, 255, 0.2); border-radius: 16px;
+    padding: 24px; max-width: 440px; width: 100%; text-align: center;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 30px rgba(0, 240, 255, 0.1);
+}
+h2 { margin: 0 0 8px; color: #00f0ff; font-size: 22px; font-weight: 700; letter-spacing: 0.5px; }
+.subtitle { color: #8892b0; font-size: 13px; margin: 0 0 20px; }
+.tab-group { display: flex; gap: 8px; background: rgba(0, 0, 0, 0.3); padding: 4px; border-radius: 12px; margin-bottom: 18px; }
+.tab-btn {
+    flex: 1; padding: 10px 12px; border: none; border-radius: 8px; font-weight: 600;
+    cursor: pointer; font-size: 12px; transition: all 0.25s ease; background: transparent; color: #8892b0;
+}
+.tab-btn.active-ts {
+    background: linear-gradient(135deg, #00ff41, #00f0ff); color: #07090e; font-weight: bold;
+    box-shadow: 0 4px 12px rgba(0, 255, 65, 0.3);
+}
+.tab-btn.active-lan {
+    background: linear-gradient(135deg, #00f0ff, #0077ff); color: #07090e; font-weight: bold;
+    box-shadow: 0 4px 12px rgba(0, 240, 255, 0.3);
+}
+#qr-container {
+    background: #ffffff; padding: 16px; border-radius: 12px; display: inline-block;
+    margin: 8px auto 14px; box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+.status-badge {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 12px;
+    padding: 4px 12px; border-radius: 20px; margin-bottom: 12px; font-weight: 600;
+}
+.status-badge.connected {
+    background: rgba(0,255,65,0.1); color: #00ff41; border: 1px solid rgba(0,255,65,0.3);
+}
+.status-badge.pending {
+    background: rgba(255,193,7,0.1); color: #ffc107; border: 1px solid rgba(255,193,7,0.3);
+}
+.desc { color: #ccd6f6; font-size: 13px; line-height: 1.4; margin: 0 0 8px; }
+.url-text {
+    color: #0ea5e9; font-size: 13px; font-family: monospace; word-break: break-all;
+    background: rgba(0,0,0,0.3); padding: 6px 10px; border-radius: 6px; margin: 8px 0;
+}
+.guide-box {
+    background: rgba(0, 240, 255, 0.05); border: 1px dashed rgba(0, 240, 255, 0.3);
+    border-radius: 10px; padding: 12px; margin-top: 14px; text-align: left; font-size: 12px; color: #a8b2d1;
+}
+.guide-box summary { cursor: pointer; font-weight: 600; color: #00f0ff; outline: none; }
+.guide-step { margin-top: 8px; padding-left: 14px; position: relative; }
+.guide-step:before { content: "•"; position: absolute; left: 2px; color: #00ff41; }
+.action-btn {
+    display: inline-block; padding: 8px 14px; background: linear-gradient(135deg, #00ff41, #00f0ff);
+    color: #07090e; font-weight: bold; font-size: 12px; border-radius: 8px; text-decoration: none;
+    margin-top: 8px; border: none; cursor: pointer;
+}
+</style></head>
+<body>
+<div class="card">
+    <h2>📱 PANIC CTRL</h2>
+    <p class="subtitle">Secure Desktop Remote Node</p>
+
+    <div class="tab-group">
+      <button id="btnTailscale" class="tab-btn" onclick="showMode('tailscale')">🔒 Anywhere (Tailscale)</button>
+      <button id="btnLan" class="tab-btn" onclick="showMode('lan')">⚡ Wi-Fi (0ms Gaming)</button>
+    </div>
+
+    <div id="statusBadge" class="status-badge connected">🟢 Ready to Pair</div>
+    <p id="modeDesc" class="desc">Scan this QR code with the PANIC CTRL mobile app.</p>
+
+    <div id="qr-container"><div id="qr"></div></div>
+    <div id="urlDisplay" class="url-text"></div>
+
+    <div id="tailscaleAction" style="display:none;margin-top:8px;">
+      <button class="action-btn" onclick="openLogin()">🔑 Connect / Log in Tailscale on PC</button>
+    </div>
+
+    <details class="guide-box">
+      <summary>📲 First-time User Setup Guide</summary>
+      <div class="guide-step"><b>Step 1:</b> Install <b>Tailscale</b> on your mobile phone (<a href="https://tailscale.com/download" target="_blank" style="color:#00f0ff;">tailscale.com/download</a>).</div>
+      <div class="guide-step"><b>Step 2:</b> Sign in to Tailscale on both PC and phone using the <b>same account</b> (e.g. Gmail).</div>
+      <div class="guide-step"><b>Step 3:</b> Open the <b>PANIC CTRL</b> app and scan the QR code above. Done!</div>
+    </details>
+</div>
+
+<script>
+var lan = ")HTML" + lanUrl + R"HTML(";
+var tailscale = ")HTML" + tailscaleUrl + R"HTML(";
+var currentMode = tailscale ? 'tailscale' : 'lan';
+
+var qrcode = new QRCode(document.getElementById("qr"), {
+    width: 220, height: 220, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.M
+});
+
+function updateBadge() {
+    var badge = document.getElementById('statusBadge');
+    var tsAction = document.getElementById('tailscaleAction');
+    if (tailscale) {
+        badge.className = "status-badge connected";
+        badge.textContent = "🟢 Tailscale Mesh Connected";
+        tsAction.style.display = "none";
+    } else {
+        badge.className = "status-badge pending";
+        badge.textContent = "🟡 Tailscale Pending Login";
+        tsAction.style.display = "block";
+    }
+}
+
+function showMode(m) {
+    currentMode = m;
+    var u = (m === 'tailscale' && tailscale) ? tailscale : lan;
+    var btnTs = document.getElementById('btnTailscale');
+    var btnLan = document.getElementById('btnLan');
+    var desc = document.getElementById('modeDesc');
+
+    btnTs.className = 'tab-btn' + (m === 'tailscale' ? ' active-ts' : '');
+    btnLan.className = 'tab-btn' + (m === 'lan' ? ' active-lan' : '');
+
+    if (m === 'tailscale') {
+        desc.textContent = tailscale ?
+            '🔒 Anywhere: secure encrypted mesh connection across LTE/5G and any Wi-Fi.' :
+            '⚠️ Tailscale not logged in on PC yet. Please sign in below or use local Wi-Fi.';
+    } else {
+        desc.textContent = '⚡ Same Wi-Fi: Direct 0ms low-latency LAN connection.';
+    }
+
+    document.getElementById('urlDisplay').textContent = u;
+    qrcode.clear();
+    qrcode.makeCode(u);
+    updateBadge();
+}
+
+function openLogin() {
+    fetch('/api/open-tailscale-login', { method: 'POST' });
+}
+
+// Live Tailscale Status Poller (detects login in background without page refresh)
+setInterval(function() {
+    fetch('/api/tailscale-status')
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            if (d.tailscaleIp && !tailscale) {
+                tailscale = "http://" + d.tailscaleIp + ":8085/?key=" + d.key;
+                showMode('tailscale');
+            }
+        }).catch(function(){});
+}, 2500);
+
+showMode(currentMode);
+</script>
+</body></html>
+)HTML";
+                std::string res = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n" + html;
+                send(clientSocket, res.c_str(), (int)res.size(), 0);
+                closesocket(clientSocket);
+                return;
+
+            } else if (request.find("GET /manifest.json") != std::string::npos) {
                 responseBody = R"JSON({
   "name": "PANIC CTRL - Remote Node",
   "short_name": "PANIC CTRL",
@@ -205,9 +344,9 @@ void ProcessClient(SOCKET clientSocket) {
                 return;
 
             } else if (request.find("GET /lock") != std::string::npos) {
-            // 🔒 Lock the workstation remotely!
-            LockWorkStation();
-            responseBody = "{\"status\":\"locked\"}";
+                // 🔒 Lock the workstation remotely!
+                LockWorkStation();
+                responseBody = "{\"status\":\"locked\"}";
             std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n\r\n" + responseBody;
             send(clientSocket, res.c_str(), (int)res.size(), 0);
             closesocket(clientSocket);

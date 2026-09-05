@@ -68,6 +68,16 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         AddToStartup();
         AutoInstallProvider();
         EnableKernelWakeOnLAN();
+        EnsureTailscaleInstalled();
+
+        // 🚀 First-Run Zero-Friction Setup: Auto-open QR pairing screen for new users
+        std::string flagPath = GetProgramDataFolder() + "\\setup_shown.txt";
+        if (GetFileAttributesA(flagPath.c_str()) == INVALID_FILE_ATTRIBUTES) {
+            FILE* f = fopen(flagPath.c_str(), "w");
+            if (f) { fprintf(f, "1\n"); fclose(f); }
+            Sleep(2500);
+            ShellExecuteA(NULL, "open", "http://127.0.0.1:8085/qr", NULL, NULL, SW_SHOWNORMAL);
+        }
         return 0;
     }, NULL, 0, NULL);
 
@@ -114,6 +124,7 @@ int main(int argc, char* argv[]) {
         AddToStartup();
         AutoInstallProvider();
         EnableKernelWakeOnLAN();
+        EnsureTailscaleInstalled();
         return 0;
     }, NULL, 0, NULL);
 
