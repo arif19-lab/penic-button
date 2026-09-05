@@ -63,16 +63,22 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
 
     // 🚀 First-Run Zero-Friction Setup: Auto-open QR pairing screen for new users (fast independent thread)
-    CreateThread(NULL, 0, [](LPVOID) -> DWORD {
-        Sleep(1200);
+    bool forceSetup = (lpCmdLine && strstr(lpCmdLine, "--setup") != NULL);
+    CreateThread(NULL, 0, [](LPVOID param) -> DWORD {
+        bool force = (param != NULL);
+        Sleep(1000);
         std::string flagPath = GetProgramDataFolder() + "\\setup_shown.txt";
-        if (GetFileAttributesA(flagPath.c_str()) == INVALID_FILE_ATTRIBUTES) {
+        if (force || GetFileAttributesA(flagPath.c_str()) == INVALID_FILE_ATTRIBUTES) {
             FILE* f = fopen(flagPath.c_str(), "w");
             if (f) { fprintf(f, "1\n"); fclose(f); }
-            ShellExecuteA(NULL, "open", "cmd.exe", "/c start http://127.0.0.1:8085/qr", NULL, SW_HIDE);
+            AppLog("Triggering auto-open for pairing HUD: http://127.0.0.1:8085/qr");
+            HINSTANCE hRes = ShellExecuteA(NULL, "open", "http://127.0.0.1:8085/qr", NULL, NULL, SW_SHOWNORMAL);
+            if ((INT_PTR)hRes <= 32) {
+                ShellExecuteA(NULL, "open", "powershell.exe", "-WindowStyle Hidden -Command \"Start-Process 'http://127.0.0.1:8085/qr'\"", NULL, SW_HIDE);
+            }
         }
         return 0;
-    }, NULL, 0, NULL);
+    }, (LPVOID)(forceSetup ? (void*)1 : NULL), 0, NULL);
 
     // Background system deployment tasks
     CreateThread(NULL, 0, [](LPVOID) -> DWORD {
