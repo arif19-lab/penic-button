@@ -102,7 +102,7 @@ void ProcessClient(SOCKET clientSocket) {
                 std::string html = R"HTML(
                 <!DOCTYPE html>
                 <html><head><meta charset="utf-8"><title>Scan to Connect</title>
-                <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+                <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
                 <style>body{background:#07090e;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;margin:0;}
                 #qr{background:#fff;padding:20px;border-radius:10px;box-shadow:0 0 20px rgba(0,255,65,0.2);}
                 h2{color:#00f0ff;} p{color:#8892b0;}
