@@ -3,6 +3,7 @@
 *.log
 *.tmp
 build_*.txt
+dist/
 *.mp4
 *key*.txt
 gemini_key.txt

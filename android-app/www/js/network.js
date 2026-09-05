@@ -90,31 +90,139 @@ function saveAndConnectPc() {
   if (typeof startLiveStream === 'function') startLiveStream();
 }
 
+function getNetworkInfo() {
+  var ep = PC_ENDPOINT || window.location.origin || '';
+  var host = '';
+  try {
+    var u = new URL(ep.startsWith('http') ? ep : ('http://' + ep));
+    host = u.hostname.toLowerCase();
+  } catch(e) {
+    host = ep.split(':')[0].toLowerCase();
+  }
+
+  // Tailscale: MagicDNS (.ts.net) or CGNAT 100.64.0.0/10 range (100.64.0.0 - 100.127.255.255)
+  var isTailscale = false;
+  if (host.includes('.ts.net')) {
+    isTailscale = true;
+  } else if (host.startsWith('100.')) {
+    var parts = host.split('.');
+    if (parts.length >= 2) {
+      var secondOctet = parseInt(parts[1], 10);
+      if (secondOctet >= 64 && secondOctet <= 127) {
+        isTailscale = true;
+      } else {
+        isTailscale = true; // In our context, any 100.x node is Tailscale
+      }
+    }
+  }
+
+  var isLocal = false;
+  if (!isTailscale) {
+    if (host.startsWith('192.168.') || host.startsWith('10.') || host.startsWith('172.') || host === 'localhost' || host === '127.0.0.1') {
+      isLocal = true;
+    }
+  }
+
+  var type = isTailscale ? 'TAILSCALE' : (isLocal ? 'LOCAL WI-FI' : 'REMOTE');
+  return {
+    type: type,
+    isTailscale: isTailscale,
+    isLocal: isLocal,
+    host: host,
+    endpoint: ep
+  };
+}
+
+function updateNetworkUi(isConnected, ms) {
+  var net = getNetworkInfo();
+  var badge = document.getElementById('activeNetworkBadge');
+  var dot = document.getElementById('networkStatusDot');
+  var txt = document.getElementById('networkStatusText');
+
+  var detailType = document.getElementById('detailLinkType');
+  var detailHost = document.getElementById('detailHostIp');
+  var detailPing = document.getElementById('detailPingMs');
+
+  if (isConnected) {
+    var color = net.isTailscale ? '#00f0ff' : '#00ff41';
+    var label = net.isTailscale ? '🌐 TAILSCALE' : '📡 LOCAL WI-FI';
+
+    if (dot) {
+      dot.style.background = color;
+      dot.style.boxShadow = '0 0 8px ' + color;
+    }
+    if (txt) {
+      txt.textContent = label + ' (' + ms + 'ms)';
+      txt.style.color = color;
+    }
+    if (badge) {
+      badge.style.borderColor = net.isTailscale ? 'rgba(0,240,255,0.6)' : 'rgba(0,255,65,0.6)';
+      badge.style.background = net.isTailscale ? 'rgba(0,240,255,0.12)' : 'rgba(0,255,65,0.12)';
+    }
+    if (detailType) {
+      detailType.textContent = net.isTailscale ? '🌐 TAILSCALE (Worldwide WireGuard)' : '📡 LOCAL WI-FI (High-Speed LAN)';
+      detailType.style.color = color;
+    }
+    if (detailHost) {
+      detailHost.textContent = PC_ENDPOINT || window.location.origin;
+    }
+    if (detailPing) {
+      detailPing.textContent = ms + ' ms (Direct)';
+      detailPing.style.color = color;
+    }
+  } else {
+    if (dot) {
+      dot.style.background = '#ff003c';
+      dot.style.boxShadow = '0 0 8px #ff003c';
+    }
+    if (txt) {
+      txt.textContent = '🔴 DISCONNECTED';
+      txt.style.color = '#ff003c';
+    }
+    if (badge) {
+      badge.style.borderColor = 'rgba(255,0,60,0.5)';
+      badge.style.background = 'rgba(255,0,60,0.12)';
+    }
+    if (detailType) {
+      detailType.textContent = 'OFFLINE (UNREACHABLE)';
+      detailType.style.color = '#ff003c';
+    }
+    if (detailHost) {
+      detailHost.textContent = PC_ENDPOINT || window.location.origin;
+    }
+    if (detailPing) {
+      detailPing.textContent = 'Unreachable';
+      detailPing.style.color = '#ff003c';
+    }
+  }
+}
+
+function quickConnectIp(hostPort) {
+  var url = (hostPort.startsWith('http') ? hostPort : ('http://' + hostPort));
+  var key = localStorage.getItem('panic_key') || KEY || 'imran2024';
+  var fullUrl = url + (url.includes('?') ? '&' : '/?') + 'key=' + key;
+
+  localStorage.setItem('panic_pc_endpoint', url);
+  localStorage.setItem('panic_key', key);
+
+  if (window.AndroidNativeStream && typeof window.AndroidNativeStream.savePcUrl === 'function') {
+    window.AndroidNativeStream.savePcUrl(fullUrl);
+  }
+
+  if (typeof closePairingModal === 'function') closePairingModal();
+  window.location.href = fullUrl;
+}
+
 function checkPcConnection() {
-  var badge = document.getElementById('pcPingBadge');
-  var dot = document.getElementById('pcStatusDot');
-  if (!badge) return;
-  badge.textContent = 'CONNECTING...';
-  badge.style.color = '#00f3ff';
   var t0 = performance.now();
   fetch(getApiUrl('/api/status?key=' + KEY), { cache: 'no-cache' })
     .then(function(res) { return res.json(); })
     .then(function(data) {
       var ms = Math.round(performance.now() - t0);
-      badge.textContent = '🟢 CONNECTED (' + ms + 'ms)';
-      badge.style.color = '#00ff41';
-      if (dot) {
-        dot.style.background = '#00ff41';
-        dot.style.boxShadow = '0 0 10px #00ff41';
-      }
+      updateNetworkUi(true, ms);
     })
     .catch(function(err) {
-      badge.textContent = '🔴 DISCONNECTED';
-      badge.style.color = '#ff003c';
-      if (dot) {
-        dot.style.background = '#ff003c';
-        dot.style.boxShadow = '0 0 10px #ff003c';
-      }
+      updateNetworkUi(false, 0);
     });
 }
 

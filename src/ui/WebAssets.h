@@ -3179,9 +3179,16 @@ body.native-app #sidebarApkBtn {
 </div>
 
 <div class="container">
-  <!-- Top Header Branding: Left PANIC Title + Right GET APK Button -->
+  <!-- Top Header Branding: Left PANIC Title & Network Badge + Right GET APK Button -->
   <div id="mainTopHeader" style="display:flex; align-items:center; justify-content:space-between; margin: 4px 0 14px 0;">
-    <div style="font-family:'Orbitron',sans-serif; font-size:20px; font-weight:900; color:var(--neon-cyan); letter-spacing:2.5px; text-shadow:0 0 15px rgba(0,240,255,0.4);">PANIC</div>
+    <div style="display:flex; align-items:center; gap:8px;">
+      <div style="font-family:'Orbitron',sans-serif; font-size:20px; font-weight:900; color:var(--neon-cyan); letter-spacing:2.5px; text-shadow:0 0 15px rgba(0,240,255,0.4);">PANIC</div>
+      <!-- 🌐 Active Network Indicator Badge (Tailscale vs Local Wi-Fi) -->
+      <div id="activeNetworkBadge" onclick="openPairingModal()" title="Click to view network & pairing options" style="display:inline-flex; align-items:center; gap:6px; background:rgba(0,0,0,0.65); border:1px solid rgba(0,240,255,0.35); border-radius:14px; padding:3px 8px; cursor:pointer; font-family:'Share Tech Mono',monospace; font-size:10px; letter-spacing:0.3px; transition:all 0.2s;">
+        <span id="networkStatusDot" style="display:inline-block; width:6px; height:6px; border-radius:50%; background:#ff003c; box-shadow:0 0 8px #ff003c;"></span>
+        <span id="networkStatusText" style="color:#00f0ff; font-weight:bold;">INITIALIZING...</span>
+      </div>
+    </div>
     <a id="pwaInstallBtn" href="/download/app.apk" style="display:none; text-decoration:none; background:linear-gradient(135deg, #00ff41, #00f0ff); color:#000; border:none; border-radius:6px; font-family:'Orbitron',sans-serif; font-size:10px; font-weight:800; padding:6px 12px; cursor:pointer; box-shadow:0 0 15px rgba(0,255,65,0.4); letter-spacing:0.5px;">📥 GET APK</a>
   </div>
 
@@ -3553,12 +3560,28 @@ body.native-app #sidebarApkBtn {
   <!-- ==================== TAB 3: ⚡ CONTROLS (2-COLUMN GRID, NO ICONS) ==================== -->
   <div id="tab-controls" class="tab-content">
     <!-- SYSTEM STATUS CARD -->
-    <div class="status-card" id="statusBox" style="margin-bottom:16px;">
+    <div class="status-card" id="statusBox" style="margin-bottom:12px;">
       <div>
         <div class="status-title">SYSTEM DEFENSE STATUS</div>
         <div class="status-text" id="statusText">SYSTEM SECURE</div>
       </div>
       <div style="font-size: 22px;" id="statusIcon">●</div>
+    </div>
+
+    <!-- 🌐 LIVE NETWORK ROUTING CARD -->
+    <div id="networkDetailCard" style="background:rgba(18,22,30,0.7); border:1px solid rgba(0,240,255,0.25); border-radius:14px; padding:12px 14px; margin-bottom:16px; font-family:'Share Tech Mono',monospace; font-size:11px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <span style="color:#8892b0;">ACTIVE CONNECTION</span>
+        <span id="detailLinkType" style="color:#00f0ff; font-weight:bold; font-family:'Orbitron',sans-serif;">DETECTING...</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <span style="color:#8892b0;">HOST PC ENDPOINT</span>
+        <span id="detailHostIp" style="color:#fff;">--</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <span style="color:#8892b0;">LINK LATENCY</span>
+        <span id="detailPingMs" style="color:#00ff41;">--</span>
+      </div>
     </div>
 
     <!-- ⚡ 2-COLUMN ACTION BUTTONS GRID (1. PANIC, 2. LOCK, 3. UNLOCK, 4. SLEEP, 5. WAKE UP, 6. SHUTDOWN, 7. RESTART) -->
@@ -3662,9 +3685,21 @@ body.native-app #sidebarApkBtn {
     </div>
 
     <!-- 3. Auto Detect Button -->
-    <button onclick="triggerAutoDetectPc()" id="autoDetectBtn" style="width:100%; padding:11px; background:rgba(0,255,65,0.1); color:#00ff41; border:1px solid rgba(0,255,65,0.4); border-radius:10px; font-family:'Share Tech Mono',monospace; font-size:12px; font-weight:bold; letter-spacing:1px; cursor:pointer; margin-bottom:14px; display:flex; align-items:center; justify-content:center; gap:8px;">
+    <button onclick="triggerAutoDetectPc()" id="autoDetectBtn" style="width:100%; padding:11px; background:rgba(0,255,65,0.1); color:#00ff41; border:1px solid rgba(0,255,65,0.4); border-radius:10px; font-family:'Share Tech Mono',monospace; font-size:12px; font-weight:bold; letter-spacing:1px; cursor:pointer; margin-bottom:10px; display:flex; align-items:center; justify-content:center; gap:8px;">
       <span>📡</span> AUTO-DETECT WI-FI PC
     </button>
+
+    <!-- 4. 1-Tap Direct Quick Connect (Tailscale Worldwide + Local LAN) -->
+    <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:14px;">
+      <button onclick="quickConnectIp('100.83.195.91:8085')" style="width:100%; padding:10px 12px; background:rgba(0,240,255,0.12); color:#00f0ff; border:1px solid rgba(0,240,255,0.4); border-radius:8px; font-family:'Orbitron',sans-serif; font-size:11px; font-weight:800; letter-spacing:1px; cursor:pointer; display:flex; align-items:center; justify-content:space-between;">
+        <span>🌐 1-TAP TAILSCALE</span>
+        <span style="font-family:'Share Tech Mono',monospace; font-size:10px; color:#fff;">100.83.195.91</span>
+      </button>
+      <button onclick="quickConnectIp('192.168.0.100:8085')" style="width:100%; padding:10px 12px; background:rgba(0,255,65,0.12); color:#00ff41; border:1px solid rgba(0,255,65,0.4); border-radius:8px; font-family:'Orbitron',sans-serif; font-size:11px; font-weight:800; letter-spacing:1px; cursor:pointer; display:flex; align-items:center; justify-content:space-between;">
+        <span>📡 1-TAP LOCAL WI-FI</span>
+        <span style="font-family:'Share Tech Mono',monospace; font-size:10px; color:#fff;">192.168.0.100</span>
+      </button>
+    </div>
 
     <!-- Manual IP Collapsible -->
     <div style="border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
@@ -3838,31 +3873,139 @@ function saveAndConnectPc() {
   if (typeof startLiveStream === 'function') startLiveStream();
 }
 
+function getNetworkInfo() {
+  var ep = PC_ENDPOINT || window.location.origin || '';
+  var host = '';
+  try {
+    var u = new URL(ep.startsWith('http') ? ep : ('http://' + ep));
+    host = u.hostname.toLowerCase();
+  } catch(e) {
+    host = ep.split(':')[0].toLowerCase();
+  }
+
+  // Tailscale: MagicDNS (.ts.net) or CGNAT 100.64.0.0/10 range (100.64.0.0 - 100.127.255.255)
+  var isTailscale = false;
+  if (host.includes('.ts.net')) {
+    isTailscale = true;
+  } else if (host.startsWith('100.')) {
+    var parts = host.split('.');
+    if (parts.length >= 2) {
+      var secondOctet = parseInt(parts[1], 10);
+      if (secondOctet >= 64 && secondOctet <= 127) {
+        isTailscale = true;
+      } else {
+        isTailscale = true; // In our context, any 100.x node is Tailscale
+      }
+    }
+  }
+
+  var isLocal = false;
+  if (!isTailscale) {
+    if (host.startsWith('192.168.') || host.startsWith('10.') || host.startsWith('172.') || host === 'localhost' || host === '127.0.0.1') {
+      isLocal = true;
+    }
+  }
+
+  var type = isTailscale ? 'TAILSCALE' : (isLocal ? 'LOCAL WI-FI' : 'REMOTE');
+  return {
+    type: type,
+    isTailscale: isTailscale,
+    isLocal: isLocal,
+    host: host,
+    endpoint: ep
+  };
+}
+
+function updateNetworkUi(isConnected, ms) {
+  var net = getNetworkInfo();
+  var badge = document.getElementById('activeNetworkBadge');
+  var dot = document.getElementById('networkStatusDot');
+  var txt = document.getElementById('networkStatusText');
+
+  var detailType = document.getElementById('detailLinkType');
+  var detailHost = document.getElementById('detailHostIp');
+  var detailPing = document.getElementById('detailPingMs');
+
+  if (isConnected) {
+    var color = net.isTailscale ? '#00f0ff' : '#00ff41';
+    var label = net.isTailscale ? '🌐 TAILSCALE' : '📡 LOCAL WI-FI';
+
+    if (dot) {
+      dot.style.background = color;
+      dot.style.boxShadow = '0 0 8px ' + color;
+    }
+    if (txt) {
+      txt.textContent = label + ' (' + ms + 'ms)';
+      txt.style.color = color;
+    }
+    if (badge) {
+      badge.style.borderColor = net.isTailscale ? 'rgba(0,240,255,0.6)' : 'rgba(0,255,65,0.6)';
+      badge.style.background = net.isTailscale ? 'rgba(0,240,255,0.12)' : 'rgba(0,255,65,0.12)';
+    }
+    if (detailType) {
+      detailType.textContent = net.isTailscale ? '🌐 TAILSCALE (Worldwide WireGuard)' : '📡 LOCAL WI-FI (High-Speed LAN)';
+      detailType.style.color = color;
+    }
+    if (detailHost) {
+      detailHost.textContent = PC_ENDPOINT || window.location.origin;
+    }
+    if (detailPing) {
+      detailPing.textContent = ms + ' ms (Direct)';
+      detailPing.style.color = color;
+    }
+  } else {
+    if (dot) {
+      dot.style.background = '#ff003c';
+      dot.style.boxShadow = '0 0 8px #ff003c';
+    }
+    if (txt) {
+      txt.textContent = '🔴 DISCONNECTED';
+      txt.style.color = '#ff003c';
+    }
+    if (badge) {
+      badge.style.borderColor = 'rgba(255,0,60,0.5)';
+      badge.style.background = 'rgba(255,0,60,0.12)';
+    }
+    if (detailType) {
+      detailType.textContent = 'OFFLINE (UNREACHABLE)';
+      detailType.style.color = '#ff003c';
+    }
+    if (detailHost) {
+      detailHost.textContent = PC_ENDPOINT || window.location.origin;
+    }
+    if (detailPing) {
+      detailPing.textContent = 'Unreachable';
+      detailPing.style.color = '#ff003c';
+    }
+  }
+}
+
+function quickConnectIp(hostPort) {
+  var url = (hostPort.startsWith('http') ? hostPort : ('http://' + hostPort));
+  var key = localStorage.getItem('panic_key') || KEY || 'imran2024';
+  var fullUrl = url + (url.includes('?') ? '&' : '/?') + 'key=' + key;
+
+  localStorage.setItem('panic_pc_endpoint', url);
+  localStorage.setItem('panic_key', key);
+
+  if (window.AndroidNativeStream && typeof window.AndroidNativeStream.savePcUrl === 'function') {
+    window.AndroidNativeStream.savePcUrl(fullUrl);
+  }
+
+  if (typeof closePairingModal === 'function') closePairingModal();
+  window.location.href = fullUrl;
+}
+
 function checkPcConnection() {
-  var badge = document.getElementById('pcPingBadge');
-  var dot = document.getElementById('pcStatusDot');
-  if (!badge) return;
-  badge.textContent = 'CONNECTING...';
-  badge.style.color = '#00f3ff';
   var t0 = performance.now();
   fetch(getApiUrl('/api/status?key=' + KEY), { cache: 'no-cache' })
     .then(function(res) { return res.json(); })
     .then(function(data) {
       var ms = Math.round(performance.now() - t0);
-      badge.textContent = '🟢 CONNECTED (' + ms + 'ms)';
-      badge.style.color = '#00ff41';
-      if (dot) {
-        dot.style.background = '#00ff41';
-        dot.style.boxShadow = '0 0 10px #00ff41';
-      }
+      updateNetworkUi(true, ms);
     })
     .catch(function(err) {
-      badge.textContent = '🔴 DISCONNECTED';
-      badge.style.color = '#ff003c';
-      if (dot) {
-        dot.style.background = '#ff003c';
-        dot.style.boxShadow = '0 0 10px #ff003c';
-      }
+      updateNetworkUi(false, 0);
     });
 }
 
