@@ -3777,7 +3777,10 @@ body.native-app #sidebarApkBtn {
   <!-- 🎙️ 7. GEMINI MULTIMODAL LIVE AI ENGINE -->
   
 
-  <!-- 📱 8. ONBOARDING, QR SCANNER, PWA & NAVIGATION -->
+  <!-- 📱 8. QR SCANNER DECODER ENGINE -->
+  <script src="js/jsqr.min.js"></script>
+
+  <!-- 📱 9. ONBOARDING, QR SCANNER, PWA & NAVIGATION -->
   <script>
 
 // --- network.js ---
@@ -3814,10 +3817,15 @@ function sanitizeEndpoint(url) {
 var _urlParams = new URLSearchParams(window.location.search);
 var KEY = _urlParams.get('key') || localStorage.getItem('panic_key') || 'imran2024';
 var PC_ENDPOINT = (function() {
-  if (window.location.protocol.startsWith('http')) {
+  if (window.location.protocol.startsWith('http') && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
     return window.location.origin;
   }
-  return sanitizeEndpoint(localStorage.getItem('panic_pc_endpoint')) || window.location.origin;
+  var saved = sanitizeEndpoint(localStorage.getItem('panic_pc_endpoint'));
+  if (saved && !saved.includes('127.0.0.1') && !saved.includes('localhost')) {
+    return saved;
+  }
+  // ⚡ Default to Tailscale Worldwide IP (Works Everywhere)
+  return 'http://100.83.195.91:8085';
 })();
 
 function getApiUrl(path) {
@@ -4009,12 +4017,58 @@ function checkPcConnection() {
     });
 }
 
+function probeBestEndpoint(callback) {
+  var key = localStorage.getItem('panic_key') || KEY || 'imran2024';
+  var candidates = [
+    'http://100.83.195.91:8085', // 1. Tailscale Worldwide (TOP PRIORITY)
+    'http://192.168.0.100:8085'  // 2. Local Wi-Fi (Secondary)
+  ];
+
+  var probeIndex = 0;
+  function tryNext() {
+    if (probeIndex >= candidates.length) {
+      if (typeof callback === 'function') callback(false);
+      return;
+    }
+    var ep = candidates[probeIndex++];
+    var testUrl = ep + '/api/status?key=' + key;
+
+    var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    var timer = setTimeout(function() { if (controller) controller.abort(); }, 1800);
+
+    fetch(testUrl, { signal: controller ? controller.signal : undefined, cache: 'no-cache' })
+      .then(function(res) {
+        clearTimeout(timer);
+        if (res.ok) {
+          console.log('[Network] Probed endpoint active:', ep);
+          localStorage.setItem('panic_pc_endpoint', ep);
+          PC_ENDPOINT = ep;
+          var input = document.getElementById('pcIpInput');
+          if (input) input.value = ep;
+          if (window.AndroidNativeStream && typeof window.AndroidNativeStream.savePcUrl === 'function') {
+            window.AndroidNativeStream.savePcUrl(ep + '/?key=' + key);
+          }
+          checkPcConnection();
+          if (typeof callback === 'function') callback(true, ep);
+        } else {
+          tryNext();
+        }
+      })
+      .catch(function() {
+        clearTimeout(timer);
+        tryNext();
+      });
+  }
+  tryNext();
+}
+
 window.addEventListener('DOMContentLoaded', function() {
   var input = document.getElementById('pcIpInput');
   if (input) input.value = PC_ENDPOINT;
   checkPcConnection();
   setInterval(checkPcConnection, 3000);
   setTimeout(connectCommandWS, 2000);
+  setTimeout(probeBestEndpoint, 800);
 });
 
 

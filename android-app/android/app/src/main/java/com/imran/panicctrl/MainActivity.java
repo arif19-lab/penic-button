@@ -198,10 +198,20 @@ public class MainActivity extends BridgeActivity {
                 String resp = new String(recvPacket.getData(), 0, recvPacket.getLength());
                 if (resp.startsWith("PANIC_DISCOVER_RESP:")) {
                     String cleanUrl = resp.substring("PANIC_DISCOVER_RESP:".length()).split(";")[0].trim();
+                    // ⚡ Prioritize Tailscale if available in UDP response!
+                    if (resp.contains("TAILSCALE=")) {
+                        for (String part : resp.split(";")) {
+                            if (part.startsWith("TAILSCALE=")) {
+                                cleanUrl = part.substring("TAILSCALE=".length()).trim();
+                                break;
+                            }
+                        }
+                    }
+                    final String targetUrl = cleanUrl;
                     runOnUiThread(() -> {
                         if (bridge != null && bridge.getWebView() != null) {
-                            getSharedPreferences("panic_prefs", MODE_PRIVATE).edit().putString("saved_pc_url", cleanUrl).apply();
-                            bridge.getWebView().loadUrl(cleanUrl);
+                            getSharedPreferences("panic_prefs", MODE_PRIVATE).edit().putString("saved_pc_url", targetUrl).apply();
+                            bridge.getWebView().loadUrl(targetUrl);
                         }
                     });
                 }
@@ -528,11 +538,13 @@ public class MainActivity extends BridgeActivity {
             String qrValue = data.getStringExtra(QrScannerActivity.RESULT_KEY);
             if (qrValue != null && !qrValue.isEmpty()) {
                 final String escapedValue = qrValue.replace("'", "\\'");
+                // ⚡ Save scanned URL permanently to SharedPreferences
+                getSharedPreferences("panic_prefs", MODE_PRIVATE).edit().putString("saved_pc_url", qrValue).apply();
                 // ⚡ Pass result back to JavaScript
                 if (bridge != null && bridge.getWebView() != null) {
                     bridge.getWebView().post(() ->
                         bridge.getWebView().evaluateJavascript(
-                            "if(typeof onQrCodeSuccess==='function') onQrCodeSuccess('" + escapedValue + "');",
+                            "if(typeof onQrCodeSuccess==='function') onQrCodeSuccess('" + escapedValue + "'); else window.location.href='" + escapedValue + "';",
                             null
                         )
                     );
@@ -545,6 +557,9 @@ public class MainActivity extends BridgeActivity {
     public void onResume() {
         super.onResume();
         applySystemTheme(mCurrentThemeColor, mCurrentIsLightIcons);
+        if (this.bridge != null && this.bridge.getWebView() != null) {
+            this.bridge.getWebView().addJavascriptInterface(new NativeStreamBridge(), "AndroidNativeStream");
+        }
     }
 
     @Override

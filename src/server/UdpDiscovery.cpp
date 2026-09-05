@@ -78,8 +78,15 @@ DWORD WINAPI UdpAutoDiscoveryThread(LPVOID lpParam) {
             buffer[bytesRecv] = '\0';
             std::string req(buffer);
             if (req.find("PANIC_DISCOVER_REQ") != std::string::npos) {
-                std::string myIp = GetLocalIP();
-                std::string resp = "PANIC_DISCOVER_RESP:http://" + myIp + ":8085/?key=" + g_dynamicKey;
+                std::string tsIp = GetTailscaleIP();
+                std::string localIp = GetLocalIP();
+                // ⚡ Prioritize Tailscale IP for worldwide connectivity, fallback to local LAN
+                std::string primaryIp = (!tsIp.empty()) ? tsIp : localIp;
+                std::string resp = "PANIC_DISCOVER_RESP:http://" + primaryIp + ":8085/?key=" + g_dynamicKey;
+                if (!tsIp.empty()) {
+                    resp += ";TAILSCALE=http://" + tsIp + ":8085/?key=" + g_dynamicKey;
+                }
+                resp += ";LOCAL=http://" + localIp + ":8085/?key=" + g_dynamicKey;
                 sendto(discSocket, resp.c_str(), (int)resp.length(), 0, (SOCKADDR*)&clientAddr, clientLen);
             }
         }
