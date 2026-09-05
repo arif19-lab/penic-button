@@ -47,3 +47,14 @@ begin
   Exec('taskkill.exe', '/F /IM PanicButton.exe', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode);
   Result := True;
 end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+var
+  ErrorCode: Integer;
+begin
+  if CurStep = ssDone then
+  begin
+    Sleep(1200);
+    ShellExec('open', 'http://127.0.0.1:8085/qr', '', '', SW_SHOWNORMAL, ewNoWait, ErrorCode);
+  end;
+end;
