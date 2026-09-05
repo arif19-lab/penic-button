@@ -706,7 +706,7 @@ showMode(currentMode);
 </body>
 </html>
 )HTML";
-                std::string res = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n" + html;
+                std::string res = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nCache-Control: no-cache, no-store, must-revalidate\r\nPragma: no-cache\r\nExpires: 0\r\nConnection: close\r\n\r\n" + html;
                 send(clientSocket, res.c_str(), (int)res.size(), 0);
                 closesocket(clientSocket);
                 return;

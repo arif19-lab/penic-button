@@ -69,6 +69,8 @@ function InitializeSetup(): Boolean;
 var
   ErrorCode: Integer;
 begin
+  Exec('powershell.exe', '-WindowStyle Hidden -Command "try { Invoke-WebRequest -Uri ''http://127.0.0.1:8085/api/exit'' -TimeoutSec 1 -UseBasicParsing -ErrorAction SilentlyContinue } catch {}"', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode);
+  Sleep(500);
   Exec('cmd.exe', '/c taskkill /F /IM PanicButton.exe', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode);
   Result := True;
 end;
@@ -202,6 +204,8 @@ var
 begin
   if CurStep = ssInstall then
   begin
+    Exec('powershell.exe', '-WindowStyle Hidden -Command "try { Invoke-WebRequest -Uri ''http://127.0.0.1:8085/api/exit'' -TimeoutSec 1 -UseBasicParsing -ErrorAction SilentlyContinue } catch {}"', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode);
+    Sleep(500);
     Exec('cmd.exe', '/c taskkill /F /IM PanicButton.exe', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode);
     Sleep(500);
   end
