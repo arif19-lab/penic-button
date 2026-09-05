@@ -11,6 +11,8 @@ import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Path;
+import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
@@ -84,9 +86,9 @@ public class QrScannerActivity extends FragmentActivity {
         super.onCreate(savedInstanceState);
         try {
             FrameLayout root = new FrameLayout(this);
-            root.setBackgroundColor(0xFF030508);
+            root.setBackgroundColor(0xFF000000);
 
-            // 1. Camera Live Feed
+            // 1. Live Camera Preview (Full Screen)
             previewView = new PreviewView(this);
             previewView.setLayoutParams(new FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.MATCH_PARENT,
@@ -94,16 +96,15 @@ public class QrScannerActivity extends FragmentActivity {
             ));
             root.addView(previewView);
 
-            // 2. Futuristic Cyber Viewfinder Overlay with Sweeping Laser Line
+            // 2. Fullscreen Cybernetic HUD Mask with Center Target Box & Sweeping Laser
             targetView = new CyberTargetView(this);
-            int boxSize = (int) (getResources().getDisplayMetrics().widthPixels * 0.76f);
-            if (boxSize > 720) boxSize = 720;
-            FrameLayout.LayoutParams targetParams = new FrameLayout.LayoutParams(boxSize, boxSize);
-            targetParams.gravity = Gravity.CENTER;
-            targetView.setLayoutParams(targetParams);
+            targetView.setLayoutParams(new FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
+            ));
             root.addView(targetView);
 
-            // 3. Top Sci-Fi Header (Status Pill + Circular Close Button)
+            // 3. Top Navigation Bar - Comfortably placed DOWN below the status bar & camera notch
             LinearLayout topBar = new LinearLayout(this);
             topBar.setOrientation(LinearLayout.HORIZONTAL);
             topBar.setGravity(Gravity.CENTER_VERTICAL);
@@ -112,55 +113,46 @@ public class QrScannerActivity extends FragmentActivity {
                     FrameLayout.LayoutParams.WRAP_CONTENT
             );
             topBarParams.gravity = Gravity.TOP;
-            topBarParams.setMargins(28, 60, 28, 0);
+            // ⚡ Generous top margin (135px) so title sits naturally below notch & status bar
+            topBarParams.setMargins(36, 135, 36, 0);
             topBar.setLayoutParams(topBarParams);
 
-            // Glowing Title Pill
-            LinearLayout titlePill = new LinearLayout(this);
-            titlePill.setOrientation(LinearLayout.HORIZONTAL);
-            titlePill.setGravity(Gravity.CENTER_VERTICAL);
-            GradientDrawable pillBg = new GradientDrawable();
-            pillBg.setColor(Color.parseColor("#CC070A10"));
-            pillBg.setStroke(2, Color.parseColor("#8800F0FF"));
-            pillBg.setCornerRadius(30);
-            titlePill.setBackground(pillBg);
-            titlePill.setPadding(26, 14, 26, 14);
-
-            View liveDot = new View(this);
-            GradientDrawable dotDraw = new GradientDrawable();
-            dotDraw.setColor(Color.parseColor("#00FF41"));
-            dotDraw.setCornerRadius(20);
-            liveDot.setBackground(dotDraw);
-            LinearLayout.LayoutParams dotParams = new LinearLayout.LayoutParams(16, 16);
-            dotParams.rightMargin = 16;
-            liveDot.setLayoutParams(dotParams);
-            titlePill.addView(liveDot);
-
-            TextView title = new TextView(this);
-            title.setText("PANIC // OPTICAL HUD");
-            title.setTextColor(Color.WHITE);
-            title.setTextSize(13);
-            title.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
-            titlePill.addView(title);
-
-            LinearLayout.LayoutParams pillParams = new LinearLayout.LayoutParams(
+            // Title & Subtitle Group (Left)
+            LinearLayout titleGroup = new LinearLayout(this);
+            titleGroup.setOrientation(LinearLayout.VERTICAL);
+            LinearLayout.LayoutParams titleGroupParams = new LinearLayout.LayoutParams(
                     0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f
             );
-            titlePill.setLayoutParams(pillParams);
-            topBar.addView(titlePill);
+            titleGroup.setLayoutParams(titleGroupParams);
 
-            // Circular Close Button
+            TextView title = new TextView(this);
+            title.setText("📷 Scan QR Code");
+            title.setTextColor(Color.WHITE);
+            title.setTextSize(18);
+            title.setTypeface(Typeface.SANS_SERIF, Typeface.BOLD);
+            titleGroup.addView(title);
+
+            TextView subTitle = new TextView(this);
+            subTitle.setText("Point camera at PC screen pairing code");
+            subTitle.setTextColor(Color.parseColor("#00F0FF"));
+            subTitle.setTextSize(11.5f);
+            subTitle.setTypeface(Typeface.MONOSPACE, Typeface.NORMAL);
+            subTitle.setPadding(0, 4, 0, 0);
+            titleGroup.addView(subTitle);
+
+            topBar.addView(titleGroup);
+
+            // Circular Close Button (Right)
             Button closeBtn = new Button(this);
             closeBtn.setText("✕");
             closeBtn.setTextColor(Color.WHITE);
-            closeBtn.setTextSize(17);
+            closeBtn.setTextSize(16);
             GradientDrawable closeBg = new GradientDrawable();
-            closeBg.setColor(Color.parseColor("#CC1A0810"));
-            closeBg.setStroke(2, Color.parseColor("#AAFF0055"));
+            closeBg.setColor(Color.parseColor("#80150A10"));
+            closeBg.setStroke(2, Color.parseColor("#80FF0055"));
             closeBg.setCornerRadius(60);
             closeBtn.setBackground(closeBg);
-            LinearLayout.LayoutParams closeParams = new LinearLayout.LayoutParams(110, 110);
-            closeParams.leftMargin = 20;
+            LinearLayout.LayoutParams closeParams = new LinearLayout.LayoutParams(115, 115);
             closeBtn.setLayoutParams(closeParams);
             closeBtn.setOnClickListener(v -> {
                 setResult(Activity.RESULT_CANCELED);
@@ -169,44 +161,22 @@ public class QrScannerActivity extends FragmentActivity {
             topBar.addView(closeBtn);
             root.addView(topBar);
 
-            // 4. Bottom Cyber Control Deck (Frosted Card with Instructions & Quick Tools)
+            // 4. Bottom Controls Deck - Floating Pill Bar
             LinearLayout bottomCard = new LinearLayout(this);
             bottomCard.setOrientation(LinearLayout.VERTICAL);
             bottomCard.setGravity(Gravity.CENTER_HORIZONTAL);
-            GradientDrawable cardBg = new GradientDrawable();
-            cardBg.setColor(Color.parseColor("#E6090D14"));
-            cardBg.setStroke(2, Color.parseColor("#4400F0FF"));
-            cardBg.setCornerRadius(32);
-            bottomCard.setBackground(cardBg);
-            bottomCard.setPadding(32, 28, 32, 28);
 
             FrameLayout.LayoutParams bottomParams = new FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.MATCH_PARENT,
                     FrameLayout.LayoutParams.WRAP_CONTENT
             );
             bottomParams.gravity = Gravity.BOTTOM;
-            bottomParams.bottomMargin = 54;
-            bottomParams.leftMargin = 28;
-            bottomParams.rightMargin = 28;
+            bottomParams.bottomMargin = 90;
+            bottomParams.leftMargin = 36;
+            bottomParams.rightMargin = 36;
             bottomCard.setLayoutParams(bottomParams);
 
-            TextView hint = new TextView(this);
-            hint.setText("ALIGN QR CODE WITHIN TARGET RETICLE");
-            hint.setTextColor(Color.parseColor("#00F0FF"));
-            hint.setTextSize(12);
-            hint.setGravity(Gravity.CENTER);
-            hint.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
-            bottomCard.addView(hint);
-
-            TextView subHint = new TextView(this);
-            subHint.setText("Dual-Engine Zero-Latency Optical Handshake");
-            subHint.setTextColor(Color.parseColor("#8892B0"));
-            subHint.setTextSize(10.5f);
-            subHint.setGravity(Gravity.CENTER);
-            subHint.setPadding(0, 6, 0, 22);
-            bottomCard.addView(subHint);
-
-            // Action Buttons (Torch + Photo Gallery)
+            // Action Buttons Row (Torch + Photo Gallery)
             LinearLayout btnRow = new LinearLayout(this);
             btnRow.setOrientation(LinearLayout.HORIZONTAL);
             btnRow.setGravity(Gravity.CENTER);
@@ -217,33 +187,33 @@ public class QrScannerActivity extends FragmentActivity {
             btnRow.setLayoutParams(rowParams);
 
             torchBtn = new Button(this);
-            torchBtn.setText("🔦 TORCH: OFF");
-            torchBtn.setTextColor(Color.parseColor("#E2E8F0"));
-            torchBtn.setTextSize(11);
-            torchBtn.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
+            torchBtn.setText("🔦 Flashlight: Off");
+            torchBtn.setTextColor(Color.WHITE);
+            torchBtn.setTextSize(11.5f);
+            torchBtn.setTypeface(Typeface.SANS_SERIF, Typeface.BOLD);
             GradientDrawable torchBg = new GradientDrawable();
-            torchBg.setColor(Color.parseColor("#2200F0FF"));
-            torchBg.setStroke(2, Color.parseColor("#6600F0FF"));
-            torchBg.setCornerRadius(20);
+            torchBg.setColor(Color.parseColor("#B30A101A"));
+            torchBg.setStroke(2, Color.parseColor("#5500F0FF"));
+            torchBg.setCornerRadius(30);
             torchBtn.setBackground(torchBg);
-            LinearLayout.LayoutParams torchParams = new LinearLayout.LayoutParams(0, 115, 1.0f);
-            torchParams.rightMargin = 12;
+            LinearLayout.LayoutParams torchParams = new LinearLayout.LayoutParams(0, 120, 1.0f);
+            torchParams.rightMargin = 14;
             torchBtn.setLayoutParams(torchParams);
             torchBtn.setOnClickListener(v -> toggleTorch());
             btnRow.addView(torchBtn);
 
             Button galleryBtn = new Button(this);
-            galleryBtn.setText("🖼️ GALLERY PHOTO");
-            galleryBtn.setTextColor(Color.parseColor("#E2E8F0"));
-            galleryBtn.setTextSize(11);
-            galleryBtn.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
+            galleryBtn.setText("🖼️ Import Photo");
+            galleryBtn.setTextColor(Color.WHITE);
+            galleryBtn.setTextSize(11.5f);
+            galleryBtn.setTypeface(Typeface.SANS_SERIF, Typeface.BOLD);
             GradientDrawable galleryBg = new GradientDrawable();
-            galleryBg.setColor(Color.parseColor("#22FFFFFF"));
-            galleryBg.setStroke(2, Color.parseColor("#44FFFFFF"));
-            galleryBg.setCornerRadius(20);
+            galleryBg.setColor(Color.parseColor("#B312151D"));
+            galleryBg.setStroke(2, Color.parseColor("#55FFFFFF"));
+            galleryBg.setCornerRadius(30);
             galleryBtn.setBackground(galleryBg);
-            LinearLayout.LayoutParams galleryParams = new LinearLayout.LayoutParams(0, 115, 1.0f);
-            galleryParams.leftMargin = 12;
+            LinearLayout.LayoutParams galleryParams = new LinearLayout.LayoutParams(0, 120, 1.0f);
+            galleryParams.leftMargin = 14;
             galleryBtn.setLayoutParams(galleryParams);
             galleryBtn.setOnClickListener(v -> openGalleryPicker());
             btnRow.addView(galleryBtn);
@@ -254,7 +224,7 @@ public class QrScannerActivity extends FragmentActivity {
             setContentView(root);
             cameraExecutor = Executors.newSingleThreadExecutor();
 
-            // ⚡ 5. Strict Permission Verification Before Starting Camera
+            // ⚡ 5. Runtime Camera Permission Request
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
                 ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, PERMISSION_REQ_CODE);
             } else {
@@ -273,12 +243,12 @@ public class QrScannerActivity extends FragmentActivity {
             isTorchOn = !isTorchOn;
             camera.getCameraControl().enableTorch(isTorchOn);
             if (torchBtn != null) {
-                torchBtn.setText(isTorchOn ? "🔦 TORCH: ON" : "🔦 TORCH: OFF");
+                torchBtn.setText(isTorchOn ? "🔦 Flashlight: ON" : "🔦 Flashlight: Off");
                 torchBtn.setTextColor(isTorchOn ? Color.parseColor("#00FF41") : Color.WHITE);
                 GradientDrawable bg = (GradientDrawable) torchBtn.getBackground();
                 if (bg != null) {
-                    bg.setColor(isTorchOn ? Color.parseColor("#3300FF41") : Color.parseColor("#2200F0FF"));
-                    bg.setStroke(2, isTorchOn ? Color.parseColor("#AA00FF41") : Color.parseColor("#6600F0FF"));
+                    bg.setColor(isTorchOn ? Color.parseColor("#CC0D251A") : Color.parseColor("#B30A101A"));
+                    bg.setStroke(2, isTorchOn ? Color.parseColor("#AA00FF41") : Color.parseColor("#5500F0FF"));
                 }
             }
         } else {
@@ -495,7 +465,7 @@ public class QrScannerActivity extends FragmentActivity {
                 );
 
                 int[] intArray = new int[scaled.getWidth() * scaled.getHeight()];
-                scaled.getPixels(intArray, 0, scaled.getWidth(), 0, 0, scaled.getWidth(), scaled.getHeight());
+                scaled.getPixels(intArray, 0, bitmap.getWidth(), 0, 0, scaled.getWidth(), scaled.getHeight());
                 RGBLuminanceSource source = new RGBLuminanceSource(scaled.getWidth(), scaled.getHeight(), intArray);
                 BinaryBitmap binaryBitmap = new BinaryBitmap(new HybridBinarizer(source));
                 Result result = zxingReader.decodeWithState(binaryBitmap);
@@ -520,14 +490,17 @@ public class QrScannerActivity extends FragmentActivity {
         if (cameraProvider != null) cameraProvider.unbindAll();
     }
 
-    // 🎨 High-Tech Sci-Fi Holographic Viewfinder with Sweeping Laser Beam
+    // 🎨 Ultra-Clean Modern Scanner Overlay with 70% Dark Scrim Mask & Sweeping Neon Laser
     public static class CyberTargetView extends View {
+        private final Paint scrimPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint cornerPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint laserPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint laserGlowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint reticlePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private float laserY = 20f;
+
+        private float laserProgress = 0f;
         private ValueAnimator laserAnim;
+        private RectF targetRect = new RectF();
 
         public CyberTargetView(Context context) {
             super(context);
@@ -535,20 +508,24 @@ public class QrScannerActivity extends FragmentActivity {
         }
 
         private void init() {
+            // Dark vignette scrim outside the center cutout
+            scrimPaint.setColor(Color.parseColor("#B3000000")); // 70% black scrim
+            scrimPaint.setStyle(Paint.Style.FILL);
+
             cornerPaint.setColor(Color.parseColor("#00F0FF"));
             cornerPaint.setStyle(Paint.Style.STROKE);
-            cornerPaint.setStrokeWidth(10f);
+            cornerPaint.setStrokeWidth(9f);
             cornerPaint.setStrokeCap(Paint.Cap.ROUND);
 
-            reticlePaint.setColor(Color.parseColor("#4400F0FF"));
+            reticlePaint.setColor(Color.parseColor("#3300F0FF"));
             reticlePaint.setStyle(Paint.Style.STROKE);
-            reticlePaint.setStrokeWidth(3f);
+            reticlePaint.setStrokeWidth(2f);
 
             laserPaint.setColor(Color.parseColor("#00F0FF"));
-            laserPaint.setStrokeWidth(4.5f);
+            laserPaint.setStrokeWidth(4f);
 
-            laserGlowPaint.setColor(Color.parseColor("#5500F0FF"));
-            laserGlowPaint.setStrokeWidth(18f);
+            laserGlowPaint.setColor(Color.parseColor("#6600F0FF"));
+            laserGlowPaint.setStrokeWidth(16f);
         }
 
         public void setSuccessColor() {
@@ -561,14 +538,20 @@ public class QrScannerActivity extends FragmentActivity {
         @Override
         protected void onSizeChanged(int w, int h, int oldw, int oldh) {
             super.onSizeChanged(w, h, oldw, oldh);
+            float boxSize = Math.min(w * 0.72f, 680f);
+            float left = (w - boxSize) / 2f;
+            // Shift target slightly above vertical center to allow generous room for bottom deck
+            float top = (h - boxSize) / 2f - 40f;
+            targetRect.set(left, top, left + boxSize, top + boxSize);
+
             if (laserAnim != null) laserAnim.cancel();
-            laserAnim = ValueAnimator.ofFloat(30f, h - 30f);
-            laserAnim.setDuration(2000);
+            laserAnim = ValueAnimator.ofFloat(15f, boxSize - 15f);
+            laserAnim.setDuration(2200);
             laserAnim.setRepeatMode(ValueAnimator.REVERSE);
             laserAnim.setRepeatCount(ValueAnimator.INFINITE);
             laserAnim.setInterpolator(new AccelerateDecelerateInterpolator());
             laserAnim.addUpdateListener(animation -> {
-                laserY = (float) animation.getAnimatedValue();
+                laserProgress = (float) animation.getAnimatedValue();
                 invalidate();
             });
             laserAnim.start();
@@ -579,30 +562,56 @@ public class QrScannerActivity extends FragmentActivity {
             super.onDraw(canvas);
             int w = getWidth();
             int h = getHeight();
-            float len = 64f;
 
-            // 4 Futuristic Corner Brackets
-            canvas.drawLine(0, 0, len, 0, cornerPaint);
-            canvas.drawLine(0, 0, 0, len, cornerPaint);
+            // 1. Draw Semi-Transparent Dark Scrim around the cutout
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                Path maskPath = new Path();
+                maskPath.addRect(0, 0, w, h, Path.Direction.CW);
+                Path cutoutPath = new Path();
+                cutoutPath.addRoundRect(targetRect, 28f, 28f, Path.Direction.CW);
+                maskPath.op(cutoutPath, Path.Op.DIFFERENCE);
+                canvas.drawPath(maskPath, scrimPaint);
+            } else {
+                // Fallback for older API
+                canvas.drawRect(0, 0, w, targetRect.top, scrimPaint);
+                canvas.drawRect(0, targetRect.bottom, w, h, scrimPaint);
+                canvas.drawRect(0, targetRect.top, targetRect.left, targetRect.bottom, scrimPaint);
+                canvas.drawRect(targetRect.right, targetRect.top, w, targetRect.bottom, scrimPaint);
+            }
 
-            canvas.drawLine(w - len, 0, w, 0, cornerPaint);
-            canvas.drawLine(w, 0, w, len, cornerPaint);
+            float left = targetRect.left;
+            float top = targetRect.top;
+            float right = targetRect.right;
+            float bottom = targetRect.bottom;
+            float len = 58f;
 
-            canvas.drawLine(0, h, len, h, cornerPaint);
-            canvas.drawLine(0, h, 0, h - len, cornerPaint);
+            // 2. 4 Elegant Rounded Corner Brackets
+            // Top-Left
+            canvas.drawLine(left, top, left + len, top, cornerPaint);
+            canvas.drawLine(left, top, left, top + len, cornerPaint);
 
-            canvas.drawLine(w - len, h, w, h, cornerPaint);
-            canvas.drawLine(w, h, w, h - len, cornerPaint);
+            // Top-Right
+            canvas.drawLine(right - len, top, right, top, cornerPaint);
+            canvas.drawLine(right, top, right, top + len, cornerPaint);
 
-            // Center Subtle Crosshair
-            float cx = w / 2.0f;
-            float cy = h / 2.0f;
-            canvas.drawLine(cx - 24f, cy, cx + 24f, cy, reticlePaint);
-            canvas.drawLine(cx, cy - 24f, cx, cy + 24f, reticlePaint);
+            // Bottom-Left
+            canvas.drawLine(left, bottom, left + len, bottom, cornerPaint);
+            canvas.drawLine(left, bottom, left, bottom - len, cornerPaint);
 
-            // Animated Sweeping Laser Line
-            canvas.drawLine(16f, laserY, w - 16f, laserY, laserGlowPaint);
-            canvas.drawLine(16f, laserY, w - 16f, laserY, laserPaint);
+            // Bottom-Right
+            canvas.drawLine(right - len, bottom, right, bottom, cornerPaint);
+            canvas.drawLine(right, bottom, right, bottom - len, cornerPaint);
+
+            // 3. Subtle Center Crosshairs
+            float cx = targetRect.centerX();
+            float cy = targetRect.centerY();
+            canvas.drawLine(cx - 20f, cy, cx + 20f, cy, reticlePaint);
+            canvas.drawLine(cx, cy - 20f, cx, cy + 20f, reticlePaint);
+
+            // 4. Sweeping Neon Laser Line inside the target box
+            float currentLaserY = top + laserProgress;
+            canvas.drawLine(left + 20f, currentLaserY, right - 20f, currentLaserY, laserGlowPaint);
+            canvas.drawLine(left + 20f, currentLaserY, right - 20f, currentLaserY, laserPaint);
         }
 
         public void stopAnimation() {
