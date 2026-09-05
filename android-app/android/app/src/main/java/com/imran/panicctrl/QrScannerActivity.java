@@ -56,7 +56,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class QrScannerActivity extends AppCompatActivity {
+public class QrScannerActivity extends androidx.fragment.app.FragmentActivity {
 
     private static final String TAG = "QrScannerActivity";
     public static final String RESULT_KEY = "qr_result";
@@ -76,9 +76,9 @@ public class QrScannerActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        FrameLayout root = new FrameLayout(this);
-        root.setBackgroundColor(0xFF000000);
+        try {
+            FrameLayout root = new FrameLayout(this);
+            root.setBackgroundColor(0xFF000000);
 
         // 1. Camera Preview View
         previewView = new PreviewView(this);
@@ -201,6 +201,12 @@ public class QrScannerActivity extends AppCompatActivity {
         } else {
             startCamera();
         }
+        } catch (Throwable t) {
+            Log.e(TAG, "Fatal error in QrScannerActivity.onCreate", t);
+            Toast.makeText(this, "Could not open camera: " + t.getMessage(), Toast.LENGTH_LONG).show();
+            setResult(Activity.RESULT_CANCELED);
+            finish();
+        }
     }
 
     private void toggleTorch() {
@@ -241,11 +247,17 @@ public class QrScannerActivity extends AppCompatActivity {
         Preview preview = new Preview.Builder().build();
         preview.setSurfaceProvider(previewView.getSurfaceProvider());
 
-        BarcodeScannerOptions options = new BarcodeScannerOptions.Builder()
-                .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
-                .build();
-        BarcodeScanner scanner = BarcodeScanning.getClient(options);
+        BarcodeScanner scanner = null;
+        try {
+            BarcodeScannerOptions options = new BarcodeScannerOptions.Builder()
+                    .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
+                    .build();
+            scanner = BarcodeScanning.getClient(options);
+        } catch (Throwable t) {
+            Log.w(TAG, "ML Kit not initialized, relying on ZXing", t);
+        }
 
+        final BarcodeScanner finalScanner = scanner;
         ImageAnalysis analysis = new ImageAnalysis.Builder()
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .build();
@@ -255,7 +267,7 @@ public class QrScannerActivity extends AppCompatActivity {
                 imageProxy.close();
                 return;
             }
-            analyzeFrame(imageProxy, scanner);
+            analyzeFrame(imageProxy, finalScanner);
         });
 
         CameraSelector cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA;
