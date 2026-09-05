@@ -3121,6 +3121,7 @@ static const char* DASHBOARD_HTML = R"HTML(
 </style>
 
   <!-- 📦 2. EXTERNAL QR & AUDIO CDN -->
+  <script src="jsqr.min.js"></script>
 
   <!-- 🌐 3. HOST DISCOVERY & LAN ROUTING -->
   

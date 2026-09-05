@@ -478,6 +478,12 @@ body {
             <button class="copy-btn" onclick="copyUrl()">COPY</button>
         </div>
 
+        <div style="margin-top:10px;display:flex;gap:8px;width:100%;">
+            <a href="/download/app.apk" download style="flex:1;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 12px;background:rgba(0,240,255,0.12);border:1px solid rgba(0,240,255,0.35);color:#00f0ff;border-radius:8px;font-family:monospace;font-size:11px;font-weight:bold;transition:all 0.2s;" onmouseover="this.style.background='rgba(0,240,255,0.25)'" onmouseout="this.style.background='rgba(0,240,255,0.12)'">
+                📥 DOWNLOAD ANDROID APK
+            </a>
+        </div>
+
         <div id="tailscaleAction" style="display:none;width:100%;margin-top:10px;">
             <button id="tsBtnLogin" class="action-btn" style="display:none;width:100%;" onclick="openLogin()">🔑 Connect / Log in Tailscale on PC</button>
             <button id="tsBtnInstall" class="action-btn" style="display:none;width:100%;background:linear-gradient(135deg,#ff0055,#ff5500);color:#fff;" onclick="triggerInstall()">⬇️ One-Click Auto-Install Tailscale</button>
@@ -705,7 +711,16 @@ showMode(currentMode);
                 return;
 
             } else if (request.find("GET /download/app.apk") != std::string::npos || request.find("GET /app.apk") != std::string::npos) {
-                FILE* f = fopen("android-app/android/app/build/outputs/apk/debug/app-debug.apk", "rb");
+                std::string candidates[] = {
+                    GetProgramDataFolder() + "\\PanicCTRL.apk",
+                    "PanicCTRL.apk",
+                    "android-app/android/app/build/outputs/apk/debug/app-debug.apk"
+                };
+                FILE* f = nullptr;
+                for (const auto& path : candidates) {
+                    f = fopen(path.c_str(), "rb");
+                    if (f) break;
+                }
                 if (f) {
                     fseek(f, 0, SEEK_END);
                     long fsize = ftell(f);

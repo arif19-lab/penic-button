@@ -28,6 +28,7 @@ Source: "PanicButton.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "PanicProvider.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "libwinpthread-1.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "alarm*.wav"; DestDir: "{app}"; Flags: ignoreversion
+Source: "PanicCTRL.apk"; DestDir: "{app}"; Flags: ignoreversion
 
 [InstallDelete]
 Type: files; Name: "{app}\setup_shown.txt"
