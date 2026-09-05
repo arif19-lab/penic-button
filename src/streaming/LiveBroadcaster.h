@@ -14,6 +14,8 @@
 #include "../capture/DXGICapture.h"
 #include "../capture/ColorConvert.h"
 #include "../encoder/H264Encoder.h"
+#include "../server/WebSocket.h"
+#include "../input/TouchInjector.h"
 #include "../core/Logger.h"
 
 // ============================================================
@@ -34,6 +36,11 @@ public:
     struct RingFrag { uint64_t seq; std::vector<uint8_t> data; bool sync; };
     std::deque<RingFrag> ring; // recent fragments (cap ~2s so new viewers tune in fast)
     uint64_t nextSeq = 1;
+
+    // ⚡ Pure Annex-B Ring Buffer for Zero-Latency WebCodecs GPU Streaming
+    std::deque<RingFrag> annexbRing;
+    uint64_t nextAnnexSeq = 1;
+
     bool encoderRunning = false;
     bool encoderReady = false;
     bool stopRequested = false;
@@ -154,6 +161,20 @@ private:
                 }
                 frag.clear();
             }
+
+            // ⚡ Collect pure Annex-B frames for instant WebCodecs GPU WebSocket streaming
+            std::vector<uint8_t> annexb;
+            bool annexbSync = false;
+            while (streamer.TakeAnnexB(annexb, &annexbSync)) {
+                if (!annexb.empty()) {
+                    std::lock_guard<std::mutex> lk(mtx);
+                    annexbRing.push_back({ nextAnnexSeq++, std::move(annexb), annexbSync });
+                    while (annexbRing.size() > 90) annexbRing.pop_front();
+                    cv.notify_all();
+                }
+                annexb.clear();
+            }
+
             Sleep(16); // ⚡ 60 FPS True Hardware Refresh Sync!
         }
 
@@ -169,6 +190,7 @@ private:
         encoderReady = false;
         initSeg.clear();
         ring.clear();
+        annexbRing.clear();
         cv.notify_all();
         AppLog("[live] encoder thread stopped");
     }
@@ -259,6 +281,184 @@ public:
         }
         AppLog("[live] viewer disconnected");
         closesocket(clientSocket);
+    }
+
+    // ⚡ UNIFIED WEBSOCKET STREAMER: Streams pure Annex-B H.264 NAL units
+    // to browser WebCodecs VideoDecoder with in-flight flow control & touch/mousepad injection!
+    void ServeWebSocketClient(SOCKET sock) {
+        EnsureEncoder();
+        {
+            std::lock_guard<std::mutex> lk(mtx);
+            subscriberCount++;
+            cv.notify_all();
+        }
+
+        u_long mode = 1;
+        ioctlsocket(sock, FIONBIO, &mode);
+        int nodelay = 1;
+        setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (char*)&nodelay, sizeof(int));
+        int sndbuf = 65536;
+        setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (char*)&sndbuf, sizeof(int));
+
+        uint64_t catchUpSeq = 0;
+        bool catchUpSet = false;
+        int inFlight = 0;
+        DWORD lastSentTick = 0;
+        EnsureTouchInjectionInit();
+
+        int screenW = GetSystemMetrics(SM_CXSCREEN);
+        int screenH = GetSystemMetrics(SM_CYSCREEN);
+
+        while (true) {
+            // 1. Read incoming WebSocket commands (ACK or in-socket Touch/Mouse/Keyboard)
+            uint8_t rxBuf[512];
+            int br = recv(sock, (char*)rxBuf, sizeof(rxBuf), 0);
+            if (br > 0) {
+                std::string msg = ReadWebSocketTextMessage(rxBuf, br);
+                if (msg == "CLOSE") break;
+                if (msg == "A") {
+                    if (inFlight > 0) inFlight--;
+                    continue;
+                }
+                if (!msg.empty()) {
+                    if (msg[0] == 'T' && msg.size() > 5) {
+                        char act[16] = {0};
+                        int px = -1, py = -1, tid = 0;
+                        if (sscanf(msg.c_str(), "T:%15[^:]:%d:%d:%d", act, &px, &py, &tid) >= 3 && px >= 0 && py >= 0) {
+                            int targetX = (px * screenW) / 10000;
+                            int targetY = (py * screenH) / 10000;
+                            bool touchHandled = false;
+                            if (g_touchInitialized && g_pfnInjectTouch) {
+                                POINTER_TOUCH_INFO_CUSTOM contact;
+                                memset(&contact, 0, sizeof(POINTER_TOUCH_INFO_CUSTOM));
+                                contact.pointerInfo.pointerType = PT_TOUCH;
+                                contact.pointerInfo.pointerId = tid;
+                                contact.pointerInfo.ptPixelLocation.x = targetX;
+                                contact.pointerInfo.ptPixelLocation.y = targetY;
+                                contact.touchFlags = TOUCH_FLAG_NONE;
+                                contact.touchMask = TOUCH_MASK_CONTACTAREA | TOUCH_MASK_PRESSURE;
+                                contact.pressure = 32000;
+                                contact.rcContact.left   = targetX - 4;
+                                contact.rcContact.right  = targetX + 4;
+                                contact.rcContact.top    = targetY - 4;
+                                contact.rcContact.bottom = targetY + 4;
+                                std::string actStr = act;
+                                if (actStr == "down") {
+                                    contact.pointerInfo.pointerFlags = POINTER_FLAG_DOWN | POINTER_FLAG_INRANGE | POINTER_FLAG_INCONTACT;
+                                    touchHandled = (g_pfnInjectTouch(1, &contact) == TRUE);
+                                } else if (actStr == "move") {
+                                    contact.pointerInfo.pointerFlags = POINTER_FLAG_UPDATE | POINTER_FLAG_INRANGE | POINTER_FLAG_INCONTACT;
+                                    touchHandled = (g_pfnInjectTouch(1, &contact) == TRUE);
+                                } else if (actStr == "up") {
+                                    contact.pointerInfo.pointerFlags = POINTER_FLAG_UP;
+                                    touchHandled = (g_pfnInjectTouch(1, &contact) == TRUE);
+                                } else if (actStr == "tap") {
+                                    contact.pointerInfo.pointerFlags = POINTER_FLAG_DOWN | POINTER_FLAG_INRANGE | POINTER_FLAG_INCONTACT;
+                                    if (g_pfnInjectTouch(1, &contact)) {
+                                        contact.pointerInfo.pointerFlags = POINTER_FLAG_UP;
+                                        g_pfnInjectTouch(1, &contact);
+                                        touchHandled = true;
+                                    }
+                                }
+                            }
+                            if (!touchHandled) {
+                                SetCursorPos(targetX, targetY);
+                                std::string actStr = act;
+                                if (actStr == "down") mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
+                                else if (actStr == "up") mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
+                                else if (actStr == "tap") {
+                                    mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
+                                    mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
+                                }
+                            }
+                        }
+                    } else if (msg[0] == 'M' && msg.size() > 3) {
+                        int dx = 0, dy = 0, sc = 0, clk = 0;
+                        sscanf(msg.c_str(), "M:%d:%d:%d:%d", &dx, &dy, &sc, &clk);
+                        if (dx != 0 || dy != 0) {
+                            POINT cur; GetCursorPos(&cur);
+                            SetCursorPos(cur.x + dx, cur.y + dy);
+                            mouse_event(MOUSEEVENTF_MOVE, dx, dy, 0, 0);
+                        }
+                        if (sc != 0) mouse_event(MOUSEEVENTF_WHEEL, 0, 0, (DWORD)sc, 0);
+                        if (clk == 1) {
+                            mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
+                            Sleep(15);
+                            mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
+                        } else if (clk == 2) {
+                            mouse_event(MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, 0);
+                            Sleep(15);
+                            mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0);
+                        } else if (clk == 3) mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
+                        else if (clk == 4) mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
+                    } else if (msg[0] == 'K' && msg.size() > 3) {
+                        int vk = 0, down = 0;
+                        if (sscanf(msg.c_str(), "K:%d:%d", &vk, &down) >= 2 && vk > 0) {
+                            keybd_event((BYTE)vk, 0, down ? 0 : KEYEVENTF_KEYUP, 0);
+                        }
+                    }
+                }
+            } else if (br == 0) {
+                break;
+            } else {
+                int err = WSAGetLastError();
+                if (err != WSAEWOULDBLOCK) break;
+            }
+
+            // 2. Flow Control: Max 2 in-flight frames in the network pipe
+            DWORD nowTick = GetTickCount();
+            if (inFlight >= 2 && (nowTick - lastSentTick) < 250) {
+                Sleep(2);
+                continue;
+            }
+
+            // 3. Collect next Annex-B packet
+            std::vector<uint8_t> toSend;
+            {
+                std::unique_lock<std::mutex> lk(mtx);
+                cv.wait_for(lk, std::chrono::milliseconds(25), [&]() {
+                    if (stopRequested) return true;
+                    for (auto& p : annexbRing) if (p.seq > catchUpSeq) return true;
+                    return false;
+                });
+                if (stopRequested) break;
+
+                // First frame: tune in to the latest IDR keyframe
+                if (!catchUpSet) {
+                    for (auto it = annexbRing.rbegin(); it != annexbRing.rend(); ++it) {
+                        if (it->sync) {
+                            catchUpSeq = it->seq - 1;
+                            catchUpSet = true;
+                            break;
+                        }
+                    }
+                    if (!catchUpSet) continue; // Wait until an IDR keyframe is ready
+                }
+
+                for (auto& p : annexbRing) {
+                    if (p.seq > catchUpSeq) {
+                        toSend = p.data;
+                        catchUpSeq = p.seq;
+                        break;
+                    }
+                }
+            }
+
+            if (toSend.empty()) continue;
+
+            // 4. Send binary WebSocket frame (100% atomic)
+            std::vector<char> payload(toSend.begin(), toSend.end());
+            if (!SendWebSocketBinaryFrame(sock, payload)) break;
+            inFlight++;
+            lastSentTick = GetTickCount();
+        }
+
+        {
+            std::lock_guard<std::mutex> lk(mtx);
+            subscriberCount--;
+            if (subscriberCount <= 0) cv.notify_all();
+        }
+        closesocket(sock);
     }
 };
 

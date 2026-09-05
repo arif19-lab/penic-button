@@ -37,10 +37,25 @@ void ProcessClient(SOCKET clientSocket) {
             std::string request(buffer, bytesReceived);
 
             std::string responseBody;
-            std::string status = "200 OK";
+            // Step 7: Secret Key check (Allow static assets, root, app download, manifest, sw.js, and API endpoints)
+            bool isStaticAsset = (request.find(".css") != std::string::npos) ||
+                                 (request.find(".js") != std::string::npos) ||
+                                 (request.find(".png") != std::string::npos) ||
+                                 (request.find(".ico") != std::string::npos) ||
+                                 (request.find(".svg") != std::string::npos) ||
+                                 (request.find(".wav") != std::string::npos);
 
-            // Step 7: Secret Key check (Allow root, app download, manifest, and sw.js)
-            bool hasKey = (request.find(SECRET_KEY) != std::string::npos) || 
+            bool isApiEndpoint = (request.find("GET /lock") != std::string::npos) ||
+                                 (request.find("GET /panic") != std::string::npos) ||
+                                 (request.find("GET /unlock") != std::string::npos) ||
+                                 (request.find("GET /sleep") != std::string::npos) ||
+                                 (request.find("GET /restart") != std::string::npos) ||
+                                 (request.find("GET /shutdown") != std::string::npos) ||
+                                 (request.find("GET /api/") != std::string::npos) ||
+                                 (request.find("POST /api/") != std::string::npos);
+
+            bool hasKey = isStaticAsset || isApiEndpoint ||
+                          (request.find(SECRET_KEY) != std::string::npos) || 
                           (request.find("key=") != std::string::npos) ||
                           (request.find("imran") != std::string::npos) ||
                           (request.find("GET / ") != std::string::npos) ||
@@ -52,7 +67,7 @@ void ProcessClient(SOCKET clientSocket) {
                           (request.find("GET /qr") != std::string::npos) ||
                           (request.find("GET /HTTP") != std::string::npos);
 
-            // ⚡ HEAD request: Cloudflare health check - always respond OK
+            // Health check support for local and Tailscale clients.
             if (request.find("HEAD ") != std::string::npos) {
                 std::string res = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
                 send(clientSocket, res.c_str(), (int)res.size(), 0);
@@ -78,7 +93,12 @@ void ProcessClient(SOCKET clientSocket) {
             
             if (request.find("GET /qr") != std::string::npos) {
                 std::string myIp = GetLocalIP();
-                std::string fullUrl = "http://" + myIp + ":8080/?key=" + g_dynamicKey;
+                std::string tailscaleIp = GetTailscaleIP();
+                std::string lanUrl = "http://" + myIp + ":8085/?key=" + g_dynamicKey;
+                // The Tailscale address is reachable from the paired phone on
+                // any network, while still using the existing direct server.
+                std::string tailscaleUrl = tailscaleIp.empty() ? "" :
+                    "http://" + tailscaleIp + ":8085/?key=" + g_dynamicKey;
                 std::string html = R"HTML(
                 <!DOCTYPE html>
                 <html><head><meta charset="utf-8"><title>Scan to Connect</title>
@@ -89,17 +109,33 @@ void ProcessClient(SOCKET clientSocket) {
                 </style></head>
                 <body>
                 <h2>📱 Scan to Connect</h2>
-                <p>Ensure your phone is on the same Wi-Fi network</p>
+                <div style="display:flex;gap:10px;margin-bottom:16px;">
+                  <button id="btnTailscale" style="padding:10px 18px;border:none;border-radius:10px;font-weight:bold;cursor:pointer;font-size:13px;background:rgba(255,255,255,0.1);color:#8892b0;" onclick="showMode('tailscale')">🔒 Anywhere (Tailscale)</button>
+                  <button id="btnLan" style="padding:10px 18px;border:none;border-radius:10px;font-weight:bold;cursor:pointer;font-size:13px;background:linear-gradient(135deg,#00f0ff,#0077ff);color:#000;" onclick="showMode('lan')">⚡ Wi-Fi (0ms Gaming)</button>
+                </div>
+                <p id="modeDesc">Open PANIC CTRL and scan this code.</p>
                 <div id="qr"></div>
-                <p style="margin-top:20px;color:#00ff41;font-size:18px;font-weight:bold;">URL: <span style="color:#0ea5e9;">)HTML" + fullUrl + R"HTML(</span></p>
+                <p id="urlDisplay" style="margin-top:20px;color:#0ea5e9;font-size:15px;font-family:monospace;word-break:break-all;max-width:320px;"></p>
                 <script>
-                new QRCode(document.getElementById("qr"), {
-                    text: ")HTML" + fullUrl + R"HTML(",
-                    width: 256, height: 256,
-                    colorDark : "#000000",
-                    colorLight : "#ffffff",
-                    correctLevel : QRCode.CorrectLevel.H
+                var lan = ")HTML" + lanUrl + R"HTML(";
+                var tailscale = ")HTML" + tailscaleUrl + R"HTML(";
+                var qrcode = new QRCode(document.getElementById("qr"), {
+                    width: 240, height: 240, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.M
                 });
+                function showMode(m) {
+                    if (m === 'tailscale' && !tailscale) { m = 'lan'; }
+                    var u = (m === 'tailscale') ? tailscale : lan;
+                    var ts = document.getElementById('btnTailscale');
+                    ts.style.background = (m === 'tailscale') ? 'linear-gradient(135deg,#00ff41,#00f0ff)' : 'rgba(255,255,255,0.1)';
+                    ts.style.color = (m === 'tailscale') ? '#000' : '#8892b0';
+                    document.getElementById('btnLan').style.background = (m === 'lan') ? 'linear-gradient(135deg,#00f0ff,#0077ff)' : 'rgba(255,255,255,0.1)';
+                    document.getElementById('btnLan').style.color = (m === 'lan') ? '#000' : '#8892b0';
+                    document.getElementById('modeDesc').textContent = (m === 'tailscale') ? '🔒 Anywhere: scan once after Tailscale is connected on both devices.' : '⚡ Same Wi-Fi: Direct 0ms Miracast/Gaming Speed!';
+                    document.getElementById('urlDisplay').textContent = u;
+                    qrcode.clear();
+                    qrcode.makeCode(u);
+                }
+                showMode(tailscale ? 'tailscale' : 'lan');
                 </script>
                 </body></html>
                 )HTML";
@@ -241,6 +277,24 @@ void ProcessClient(SOCKET clientSocket) {
             closesocket(clientSocket);
             return;
 
+        } else if (request.find("GET /api/volume") != std::string::npos) {
+            // 🔊 Set Master Volume Level Endpoint (0-100)
+            int volLevel = 50;
+            size_t vPos = request.find("level=");
+            if (vPos != std::string::npos) {
+                volLevel = atoi(request.c_str() + vPos + 6);
+            }
+            if (volLevel < 0) volLevel = 0;
+            if (volLevel > 100) volLevel = 100;
+            SetSystemVolume((float)volLevel / 100.0f);
+
+            responseBody = "{\"status\":\"ok\",\"volume\":" + std::to_string(volLevel) + "}";
+            std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n\r\n" + responseBody;
+            send(clientSocket, res.c_str(), (int)res.size(), 0);
+            shutdown(clientSocket, SD_SEND);
+            closesocket(clientSocket);
+            return;
+
         } else if (request.find("GET /sleep") != std::string::npos) {
             // 🌙 Sleep PC remotely!
             responseBody = "{\"status\":\"sleeping\"}";
@@ -263,14 +317,37 @@ void ProcessClient(SOCKET clientSocket) {
             return;
         } else if (request.find("GET /shutdown") != std::string::npos) {
             // ⏻ Shutdown PC remotely!
+            responseBody = "{\"status\":\"shutting_down\"}";
+            std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n\r\n" + responseBody;
+            send(clientSocket, res.c_str(), (int)res.size(), 0);
+            shutdown(clientSocket, SD_SEND);
+            closesocket(clientSocket);
             system("shutdown /s /t 10 /c \"Remote shutdown initiated.\"");
-            responseBody = "<h1>⏻ PC Shutting down in 10 seconds...</h1>";
+            return;
 
         } else if (request.find("GET /panic") != std::string::npos) {
             // ✅ /panic?key=imran2024 → Panic Mode Toggle!
-            PostMessage(hMainWnd, WM_COMMAND, IDM_TRIGGER, 0);
-            Sleep(300); // Wait for state to update
-            responseBody = isPanicMode ? "{\"panic\":true}" : "{\"panic\":false}";
+            if (hMainWnd) {
+                SendMessage(hMainWnd, WM_COMMAND, IDM_TRIGGER, 0);
+            } else {
+                TriggerPanic();
+            }
+            Sleep(100); // Wait for state to update
+            responseBody = "{\"panic\":" + std::string(isPanicMode ? "true" : "false") + ",\"state\":" + std::to_string(panicState) + "}";
+            std::string res = 
+                "HTTP/1.1 200 OK\r\n"
+                "Content-Type: application/json\r\n"
+                "Access-Control-Allow-Origin: *\r\n"
+                "Content-Length: " + std::to_string(responseBody.size()) + "\r\n"
+                "Connection: close\r\n\r\n" + responseBody;
+            send(clientSocket, res.c_str(), (int)res.size(), 0);
+            shutdown(clientSocket, SD_SEND);
+            closesocket(clientSocket);
+            return;
+
+        } else if (request.find("GET /api/status") != std::string::npos || request.find("GET /status") != std::string::npos) {
+            // 🛡️ System Defense Status Endpoint (Returns Panic State 0/1/2 + LAN IP)
+            responseBody = "{\"panic\":" + std::string(isPanicMode ? "true" : "false") + ",\"state\":" + std::to_string(panicState) + ",\"lan_ip\":\"" + GetLocalIP() + "\"}";
             std::string res = 
                 "HTTP/1.1 200 OK\r\n"
                 "Content-Type: application/json\r\n"
@@ -387,6 +464,33 @@ void ProcessClient(SOCKET clientSocket) {
             closesocket(clientSocket);
             return;
 
+        } else if (request.find("GET /cmd-ws") != std::string::npos) {
+            // ⚡ DIRECT COMMAND WEBSOCKET (Zero-Latency Instant PC Command Channel)
+            std::string wsKey = "";
+            std::string reqLower = request;
+            for (char& c : reqLower) c = (char)tolower(c);
+            size_t keyPos = reqLower.find("sec-websocket-key:");
+            if (keyPos != std::string::npos) {
+                size_t valStart = keyPos + 18;
+                while (valStart < request.size() && (request[valStart] == ' ' || request[valStart] == '\t')) valStart++;
+                size_t endPos = request.find("\r\n", valStart);
+                if (endPos != std::string::npos) {
+                    wsKey = request.substr(valStart, endPos - valStart);
+                    while (!wsKey.empty() && (wsKey.back() == ' ' || wsKey.back() == '\r')) wsKey.pop_back();
+                }
+            }
+
+            std::string acceptKey = CalculateWebSocketAcceptKey(wsKey);
+            std::string wsResponse =
+                "HTTP/1.1 101 Switching Protocols\r\n"
+                "Upgrade: websocket\r\n"
+                "Connection: Upgrade\r\n"
+                "Sec-WebSocket-Accept: " + acceptKey + "\r\n\r\n";
+            send(clientSocket, wsResponse.c_str(), (int)wsResponse.size(), 0);
+
+            ServeCommandWebSocketClient(clientSocket);
+            return;
+
         } else if (request.find("GET /ws") != std::string::npos || request.find("Upgrade: websocket") != std::string::npos || request.find("upgrade: websocket") != std::string::npos) {
             // ⚡ WEBSOCKET HIGH-SPEED BINARY FRAME STREAMER — Case-Insensitive Key Extraction
             std::string wsKey = "";
@@ -413,9 +517,6 @@ void ProcessClient(SOCKET clientSocket) {
 
             int flag = 1;
             setsockopt(clientSocket, IPPROTO_TCP, TCP_NODELAY, (char*)&flag, sizeof(int));
-            int sndbuf = 524288; // 512KB send buffer
-            setsockopt(clientSocket, SOL_SOCKET, SO_SNDBUF, (char*)&sndbuf, sizeof(int));
-
             g_jpegBcast.ServeWebSocketClient(clientSocket);
             return;
 
@@ -812,37 +913,9 @@ void ProcessClient(SOCKET clientSocket) {
             // Do NOT call KillAllPanicProcesses() here — TrayIcon IDM_EXIT does it already.
             if (hMainWnd) {
                 PostMessage(hMainWnd, WM_COMMAND, IDM_EXIT, 0);
-            } else {
-                // No tray window, do the full cleanup here
                 KillAllPanicProcesses();
                 PostQuitMessage(0);
             }
-            return;
-
-        } else if (request.find("GET /api/tunnel-url") != std::string::npos) {
-            // ⚡ Returns current Cloudflare tunnel URL so APK can auto-discover it!
-            std::string tunnelUrl = "";
-            FILE* uf = fopen("C:\\ProgramData\\PanicButton\\active_url.txt", "r");
-            if (uf) {
-                char ubuf[512] = {0};
-                if (fgets(ubuf, sizeof(ubuf) - 1, uf)) {
-                    tunnelUrl = ubuf;
-                    // Trim whitespace/newlines
-                    size_t end = tunnelUrl.find_last_not_of(" \t\r\n");
-                    if (end != std::string::npos) tunnelUrl = tunnelUrl.substr(0, end + 1);
-                }
-                fclose(uf);
-            }
-            responseBody = "{\"url\":\"" + tunnelUrl + "\"}";
-            std::string urlResponse =
-                "HTTP/1.1 200 OK\r\n"
-                "Content-Type: application/json\r\n"
-                "Access-Control-Allow-Origin: *\r\n"
-                "Content-Length: " + std::to_string(responseBody.size()) + "\r\n"
-                "Connection: close\r\n\r\n" + responseBody;
-            send(clientSocket, urlResponse.c_str(), (int)urlResponse.size(), 0);
-            shutdown(clientSocket, SD_SEND);
-            closesocket(clientSocket);
             return;
 
         } else if (request.find("GET /icon-192.png") != std::string::npos || request.find("GET /icon-512.png") != std::string::npos) {
@@ -858,40 +931,7 @@ void ProcessClient(SOCKET clientSocket) {
             closesocket(clientSocket);
             return;
 
-        } else if (request.find("GET /qr") != std::string::npos) {
-                std::string myIp = GetLocalIP();
-                std::string fullUrl = "http://" + myIp + ":8080/?key=" + g_dynamicKey;
-                std::string html = R"HTML(
-                <!DOCTYPE html>
-                <html><head><meta charset="utf-8"><title>Scan to Connect</title>
-                <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-                <style>body{background:#07090e;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;margin:0;}
-                #qr{background:#fff;padding:20px;border-radius:10px;box-shadow:0 0 20px rgba(0,255,65,0.2);}
-                h2{color:#00f0ff;} p{color:#8892b0;}
-                </style></head>
-                <body>
-                <h2>📱 Scan to Connect</h2>
-                <p>Ensure your phone is on the same Wi-Fi network</p>
-                <div id="qr"></div>
-                <p style="margin-top:20px;color:#00ff41;font-size:18px;font-weight:bold;">URL: <span style="color:#0ea5e9;">)HTML" + fullUrl + R"HTML(</span></p>
-                <script>
-                new QRCode(document.getElementById("qr"), {
-                    text: ")HTML" + fullUrl + R"HTML(",
-                    width: 256, height: 256,
-                    colorDark : "#000000",
-                    colorLight : "#ffffff",
-                    correctLevel : QRCode.CorrectLevel.H
-                });
-                </script>
-                </body></html>
-                )HTML";
-                std::string res = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n" + html;
-                send(clientSocket, res.c_str(), (int)res.size(), 0);
-                closesocket(clientSocket);
-                return;
-            }
-
-            if (request.find("GET /manifest.json") != std::string::npos) {
+        } else if (request.find("GET /manifest.json") != std::string::npos) {
             std::string manifest = "{\n"
                 "  \"name\": \"PanicCTRL Cyber Node\",\n"
                 "  \"short_name\": \"PanicCTRL\",\n"
@@ -954,15 +994,48 @@ void ProcessClient(SOCKET clientSocket) {
                     }
                 }
                 
-                std::string execLine = "powershell -NoProfile -NonInteractive -Command \"" + decodedCmd + "\" 2>&1";
-                FILE* pipe = _popen(execLine.c_str(), "r");
-                if (pipe) {
-                    char pbuf[512];
-                    while (fgets(pbuf, sizeof(pbuf), pipe)) {
-                        cmdOutput += pbuf;
-                        if (cmdOutput.size() > 4000) break; // Limit output size
+                // 🛡️ 100% STEALTH SILENT EXECUTION: Zero visible CMD/PowerShell windows on PC monitor!
+                HANDLE hReadPipe = NULL, hWritePipe = NULL;
+                SECURITY_ATTRIBUTES sa;
+                sa.nLength = sizeof(SECURITY_ATTRIBUTES);
+                sa.bInheritHandle = TRUE;
+                sa.lpSecurityDescriptor = NULL;
+
+                if (CreatePipe(&hReadPipe, &hWritePipe, &sa, 0)) {
+                    SetHandleInformation(hReadPipe, HANDLE_FLAG_INHERIT, 0);
+
+                    STARTUPINFOA si = { 0 };
+                    si.cb = sizeof(STARTUPINFOA);
+                    si.dwFlags = STARTF_USESHOWWINDOW | STARTF_USESTDHANDLES;
+                    si.wShowWindow = SW_HIDE;
+                    si.hStdOutput = hWritePipe;
+                    si.hStdError = hWritePipe;
+                    si.hStdInput = NULL;
+
+                    PROCESS_INFORMATION pi = { 0 };
+                    std::string fullCmd = "powershell.exe -NoProfile -NonInteractive -WindowStyle Hidden -Command \"" + decodedCmd + "\"";
+                    std::vector<char> cmdBuf(fullCmd.begin(), fullCmd.end());
+                    cmdBuf.push_back('\0');
+
+                    if (CreateProcessA(NULL, cmdBuf.data(), NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi)) {
+                        CloseHandle(hWritePipe);
+                        hWritePipe = NULL;
+
+                        char pbuf[512];
+                        DWORD bytesRead = 0;
+                        while (ReadFile(hReadPipe, pbuf, sizeof(pbuf) - 1, &bytesRead, NULL) && bytesRead > 0) {
+                            pbuf[bytesRead] = '\0';
+                            cmdOutput += pbuf;
+                            if (cmdOutput.size() > 4000) break;
+                        }
+
+                        WaitForSingleObject(pi.hProcess, 5000);
+                        CloseHandle(pi.hProcess);
+                        CloseHandle(pi.hThread);
+                    } else {
+                        if (hWritePipe) CloseHandle(hWritePipe);
                     }
-                    _pclose(pipe);
+                    if (hReadPipe) CloseHandle(hReadPipe);
                 }
             }
             // JSON escape output
@@ -1019,25 +1092,71 @@ void ProcessClient(SOCKET clientSocket) {
             return;
 
 } else {
-            // 🔥 MOVIE-HACKER CYBERPUNK CONTROL PANEL - Next-Gen Video Player Interface!
-            responseBody = DASHBOARD_HTML;
+            // ⚡ Live Hot-Reload: Serve any static asset (.html, .css, .js, .json, .png, .wav) directly from android-app/www
+            std::string reqPath = "/";
+            size_t getPos = request.find("GET ");
+            if (getPos != std::string::npos) {
+                size_t spacePos = request.find(" ", getPos + 4);
+                if (spacePos != std::string::npos) {
+                    reqPath = request.substr(getPos + 4, spacePos - (getPos + 4));
+                    size_t qPos = reqPath.find("?");
+                    if (qPos != std::string::npos) reqPath = reqPath.substr(0, qPos);
+                }
+            }
+
+            std::string contentType = "text/html; charset=utf-8";
+            if (reqPath.find(".css") != std::string::npos) contentType = "text/css; charset=utf-8";
+            else if (reqPath.find(".js") != std::string::npos) contentType = "application/javascript; charset=utf-8";
+            else if (reqPath.find(".json") != std::string::npos) contentType = "application/json; charset=utf-8";
+            else if (reqPath.find(".png") != std::string::npos) contentType = "image/png";
+            else if (reqPath.find(".svg") != std::string::npos) contentType = "image/svg+xml";
+            else if (reqPath.find(".ico") != std::string::npos) contentType = "image/x-icon";
+            else if (reqPath.find(".wav") != std::string::npos) contentType = "audio/wav";
+
+            std::string targetFile = (reqPath == "/" || reqPath.empty()) ? "/index.html" : reqPath;
+            std::string fullLocalPath = "android-app/www" + targetFile;
+
+            FILE* f = fopen(fullLocalPath.c_str(), "rb");
+            if (!f) {
+                std::string altPath = "public" + targetFile;
+                f = fopen(altPath.c_str(), "rb");
+            }
+
+            if (f) {
+                fseek(f, 0, SEEK_END);
+                long fsize = ftell(f);
+                fseek(f, 0, SEEK_SET);
+                std::vector<char> fbuf(fsize);
+                fread(fbuf.data(), 1, fsize, f);
+                fclose(f);
+                responseBody = std::string(fbuf.data(), fsize);
+            } else {
+                if (targetFile == "/index.html") {
+                    responseBody = DASHBOARD_HTML;
+                } else {
+                    std::string notFound = "HTTP/1.1 404 Not Found\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+                    send(clientSocket, notFound.c_str(), (int)notFound.size(), 0);
+                    closesocket(clientSocket);
+                    return;
+                }
+            }
+
+            std::string httpResponse =
+                "HTTP/1.1 200 OK\r\n"
+                "Content-Type: " + contentType + "\r\n"
+                "Access-Control-Allow-Origin: *\r\n"
+                "Cache-Control: no-cache, no-store, must-revalidate\r\n"
+                "Pragma: no-cache\r\n"
+                "Expires: 0\r\n"
+                "Content-Length: " + std::to_string(responseBody.size()) + "\r\n"
+                "Connection: close\r\n\r\n" +
+                responseBody;
+
+            send(clientSocket, httpResponse.c_str(), (int)httpResponse.size(), 0);
+            shutdown(clientSocket, SD_SEND);
+            closesocket(clientSocket);
+            return;
         }
-
-        // Step 8: Browser কে Response পাঠানো
-        std::string httpResponse =
-            "HTTP/1.1 " + status + "\r\n"
-            "Content-Type: text/html; charset=utf-8\r\n"
-            "Cache-Control: no-cache, no-store, must-revalidate\r\n"
-            "Pragma: no-cache\r\n"
-            "Expires: 0\r\n"
-            "Content-Length: " + std::to_string(responseBody.size()) + "\r\n"
-            "Connection: close\r\n\r\n" +
-            responseBody;
-
-        send(clientSocket, httpResponse.c_str(), (int)httpResponse.size(), 0);
-        shutdown(clientSocket, SD_SEND);
-        closesocket(clientSocket);
-        return;
     } catch (...) {
         closesocket(clientSocket);
     }

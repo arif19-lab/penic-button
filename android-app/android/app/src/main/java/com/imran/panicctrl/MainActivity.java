@@ -19,6 +19,9 @@ import android.webkit.JavascriptInterface;
 import android.webkit.WebSettings;
 import android.widget.FrameLayout;
 
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
+
 import com.getcapacitor.BridgeActivity;
 
 import java.io.ByteArrayOutputStream;
@@ -74,27 +77,39 @@ public class MainActivity extends BridgeActivity {
             mDisplayW = p.x;
             mDisplayH = p.y;
         } catch (Exception e) {}
-
-        // 🚀 2. Enforce Hardware Acceleration & Edge-to-Edge System Bar Matching
+ 
+        // 🚀 2. Enforce 100% True Edge-to-Edge System Window (Zero-Gap AMOLED Fullscreen)
         try {
-            getWindow().setFlags(
-                WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
-                WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
-            );
-            getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
 
-            int appBgColor = Color.parseColor("#07090e");
-            getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(appBgColor));
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                getWindow().addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
-                getWindow().setStatusBarColor(appBgColor);
-                getWindow().setNavigationBarColor(appBgColor);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                WindowManager.LayoutParams params = getWindow().getAttributes();
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    params.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
+                } else {
+                    params.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+                }
+                getWindow().setAttributes(params);
             }
 
+            applySystemTheme("#ffffff", false);
+
             if (this.bridge != null && this.bridge.getWebView() != null) {
+                View webView = this.bridge.getWebView();
+                webView.setFitsSystemWindows(false);
+                View parent = (View) webView.getParent();
+                while (parent != null) {
+                    parent.setFitsSystemWindows(false);
+                    parent.setPadding(0, 0, 0, 0);
+                    if (parent.getParent() instanceof View) {
+                        parent = (View) parent.getParent();
+                    } else {
+                        break;
+                    }
+                }
+
                 this.bridge.getWebView().setLayerType(View.LAYER_TYPE_HARDWARE, null);
-                this.bridge.getWebView().setBackgroundColor(Color.parseColor("#07090e"));
+                this.bridge.getWebView().setBackgroundColor(Color.TRANSPARENT);
 
                 WebSettings settings = this.bridge.getWebView().getSettings();
                 settings.setJavaScriptEnabled(true);
@@ -103,6 +118,8 @@ public class MainActivity extends BridgeActivity {
                 settings.setMediaPlaybackRequiresUserGesture(false);
                 settings.setAllowFileAccess(true);
                 settings.setAllowContentAccess(true);
+                settings.setAllowFileAccessFromFileURLs(true);
+                settings.setAllowUniversalAccessFromFileURLs(true);
                 settings.setRenderPriority(WebSettings.RenderPriority.HIGH);
                 settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -465,6 +482,42 @@ public class MainActivity extends BridgeActivity {
                 startActivityForResult(intent, 1337);
             });
         }
+
+        @JavascriptInterface
+        public void setSystemTheme(final String colorHex, final boolean isLightIcons) {
+            applySystemTheme(colorHex, isLightIcons);
+        }
+    }
+
+    private String mCurrentThemeColor = "#ffffff";
+    private boolean mCurrentIsLightIcons = false;
+
+    public void applySystemTheme(final String colorHex, final boolean isLightIcons) {
+        mCurrentThemeColor = colorHex;
+        mCurrentIsLightIcons = isLightIcons;
+        runOnUiThread(() -> {
+            try {
+                int color = Color.parseColor(colorHex);
+                getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(color));
+                getWindow().getDecorView().setBackgroundColor(color);
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    getWindow().addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+                    getWindow().clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
+                    getWindow().clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION);
+                    getWindow().setStatusBarColor(Color.TRANSPARENT);
+                    getWindow().setNavigationBarColor(Color.TRANSPARENT);
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    getWindow().setStatusBarContrastEnforced(false);
+                    getWindow().setNavigationBarContrastEnforced(false);
+                }
+                
+                WindowInsetsControllerCompat insetsController = new WindowInsetsControllerCompat(getWindow(), getWindow().getDecorView());
+                insetsController.setAppearanceLightStatusBars(!isLightIcons);
+                insetsController.setAppearanceLightNavigationBars(!isLightIcons);
+            } catch (Exception e) {}
+        });
     }
 
     @Override
@@ -484,6 +537,20 @@ public class MainActivity extends BridgeActivity {
                     );
                 }
             }
+        }
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        applySystemTheme(mCurrentThemeColor, mCurrentIsLightIcons);
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus) {
+            applySystemTheme(mCurrentThemeColor, mCurrentIsLightIcons);
         }
     }
 }

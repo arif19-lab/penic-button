@@ -43,14 +43,14 @@ DWORD WINAPI RemoteServerThread(LPVOID lpParam) {
 
         if (bind(serverSocket, (sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
             int err = WSAGetLastError();
-            if (logF) { fprintf(logF, "Bind attempt %d failed: err=%d\n", attempt, err); fflush(logF); }
+            if (logF) { fprintf(logF, "Bind attempt %d failed on port %d: err=%d\n", attempt, REMOTE_PORT, err); fflush(logF); }
             closesocket(serverSocket);
             serverSocket = INVALID_SOCKET;
             Sleep(500);
         }
     }
 
-    if (logF) { fprintf(logF, "Bind SUCCESS on port 8080!\n"); fflush(logF); fclose(logF); }
+    if (logF) { fprintf(logF, "Bind SUCCESS on port %d!\n", REMOTE_PORT); fflush(logF); fclose(logF); }
 
     int listenRes = listen(serverSocket, SOMAXCONN);
 

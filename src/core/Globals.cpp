@@ -72,6 +72,39 @@ std::string GetLocalIP() {
     return "127.0.0.1";
 }
 
+std::string GetTailscaleIP() {
+    ULONG outBufLen = 15000;
+    std::vector<BYTE> buffer(outBufLen);
+    PIP_ADAPTER_ADDRESSES addresses = (PIP_ADAPTER_ADDRESSES)buffer.data();
+
+    DWORD result = GetAdaptersAddresses(AF_INET, 0, NULL, addresses, &outBufLen);
+    if (result == ERROR_BUFFER_OVERFLOW) {
+        buffer.resize(outBufLen);
+        addresses = (PIP_ADAPTER_ADDRESSES)buffer.data();
+        result = GetAdaptersAddresses(AF_INET, 0, NULL, addresses, &outBufLen);
+    }
+    if (result != NO_ERROR) return "";
+
+    for (PIP_ADAPTER_ADDRESSES adapter = addresses; adapter; adapter = adapter->Next) {
+        if (adapter->OperStatus != IfOperStatusUp) continue;
+        for (PIP_ADAPTER_UNICAST_ADDRESS address = adapter->FirstUnicastAddress;
+             address; address = address->Next) {
+            sockaddr_in* ipv4 = (sockaddr_in*)address->Address.lpSockaddr;
+            if (!ipv4 || ipv4->sin_family != AF_INET) continue;
+
+            unsigned long hostOrder = ntohl(ipv4->sin_addr.S_un.S_addr);
+            // Tailscale allocates IPv4 addresses from 100.64.0.0/10.
+            if ((hostOrder & 0xFFC00000UL) != 0x64400000UL) continue;
+
+            char text[INET_ADDRSTRLEN] = {};
+            if (inet_ntop(AF_INET, &ipv4->sin_addr, text, sizeof(text))) {
+                return std::string(text);
+            }
+        }
+    }
+    return "";
+}
+
 void GenerateDynamicKey() {
     const char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     g_dynamicKey = "";
@@ -88,4 +121,13 @@ bool IsWorkstationLocked() {
     }
     CloseDesktop(hDesktop);
     return false;
+}
+
+std::string GetProgramDataFolder() {
+    char buf[MAX_PATH] = {0};
+    DWORD len = GetEnvironmentVariableA("ProgramData", buf, MAX_PATH);
+    if (len > 0 && len < MAX_PATH) {
+        return std::string(buf) + "\\PanicButton";
+    }
+    return "C:\\ProgramData\\PanicButton";
 }

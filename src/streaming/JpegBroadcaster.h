@@ -58,11 +58,12 @@ public:
         ioctlsocket(sock, FIONBIO, &mode);
         int nodelay = 1;
         setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (char*)&nodelay, sizeof(int));
-        int sndbuf = 524288;
+        int sndbuf = 65536; // ⚡ 64KB Bufferbloat Killer: Eliminates kernel packet queuing & stale lag
         setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (char*)&sndbuf, sizeof(int));
 
         uint64_t lastSent = 0;
-        bool clientReady = true;
+        int inFlight = 0;
+        DWORD lastSentTick = 0;
         EnsureTouchInjectionInit();
 
         int screenW = GetSystemMetrics(SM_CXSCREEN);
@@ -75,8 +76,11 @@ public:
             if (br > 0) {
                 std::string msg = ReadWebSocketTextMessage(rxBuf, br);
                 if (msg == "CLOSE") break;
+                if (msg == "A") {
+                    if (inFlight > 0) inFlight--;
+                    continue;
+                }
                 if (!msg.empty()) {
-                    clientReady = true;
                     // In-socket Touch Command: "T:action:px:py:id"
                     if (msg[0] == 'T' && msg.size() > 5) {
                         char act[16] = {0};
@@ -170,16 +174,31 @@ public:
                 if (err != WSAEWOULDBLOCK) break;
             }
 
-            if (!clientReady) {
-                Sleep(2);
+            // ⚡ Non-blocking Adaptive Pacing: Check if socket is writable (prevents TCP buffer bloat & eliminates Stop-and-Wait lag)
+            fd_set checkWfds; FD_ZERO(&checkWfds); FD_SET(sock, &checkWfds);
+            timeval checkTv = {0, 0}; // 0ms instantaneous check
+            int checkSel = select(0, NULL, &checkWfds, NULL, &checkTv);
+            if (checkSel <= 0) {
+                // Network output buffer congested; drop stale frame and yield briefly
+                Sleep(8);
                 continue;
+            }
+
+            // 🛑 ZERO-LAG FLOW CONTROL: Cap in-flight frames to max 1 in the tunnel pipe!
+            DWORD nowTick = GetTickCount();
+            if (inFlight >= 1) {
+                if ((nowTick - lastSentTick) < 150) {
+                    Sleep(2);
+                    continue;
+                }
+                inFlight = 0; // ⚡ Auto-recover: ACK timed out, clear inFlight to avoid stalls!
             }
 
             std::vector<uint8_t> frame;
             uint64_t currentSeq = 0;
             {
                 std::unique_lock<std::mutex> lk(mtx);
-                cv.wait_for(lk, std::chrono::milliseconds(50), [&]() {
+                cv.wait_for(lk, std::chrono::milliseconds(33), [&]() {
                     return frameSeq > lastSent || stopReq;
                 });
                 if (stopReq) break;
@@ -192,7 +211,8 @@ public:
             std::vector<char> frameChar(frame.begin(), frame.end());
             if (!SendWebSocketBinaryFrame(sock, frameChar)) break;
             lastSent = currentSeq;
-            clientReady = false; // Zero-buffer pacing: wait for client to draw or ACK
+            inFlight++;
+            lastSentTick = GetTickCount();
         }
         ClientDone();
         closesocket(sock);
@@ -208,7 +228,7 @@ private:
         ep.Parameter[0].Guid = EncoderQuality;
         ep.Parameter[0].Type = EncoderParameterValueTypeLong;
         ep.Parameter[0].NumberOfValues = 1;
-        ULONG quality = 70; // 💎 70% Balanced Quality: Crystal Clear Text + Ultra-Fast Video Fluidity!
+        ULONG quality = 50; // Balanced quality for low-bandwidth fallback streaming.
         ep.Parameter[0].Value = &quality;
 
         HDC hScreen = GetDC(NULL);
@@ -305,7 +325,7 @@ private:
 
             auto tEnd = std::chrono::steady_clock::now();
             int elapsedMs = (int)std::chrono::duration_cast<std::chrono::milliseconds>(tEnd - tStart).count();
-            int sleepMs = 11 - elapsedMs; // ⚡ 90 FPS Gaming Refresh (11.1ms step!)
+            int sleepMs = 33 - elapsedMs; // ⚡ 30 FPS Rock-Solid Smooth Streaming (33.3ms step, zero network overload!)
             if (sleepMs > 0) Sleep((DWORD)sleepMs);
         }
 

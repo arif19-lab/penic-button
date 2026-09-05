@@ -18,4 +18,5 @@ IAudioEndpointVolume* GetAudioEndpoint();
 void SilentZeroVolume();
 void RestoreVolume();
 void MaxSystemVolume();
+void SetSystemVolume(float level);
 void TriggerAlarm();

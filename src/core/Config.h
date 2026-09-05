@@ -37,7 +37,7 @@
 // Browser থেকে Panic Mode কন্ট্রোল করার জন্য!
 // PC 1 থেকে PC 2 কন্ট্রোল করা যাবে!
 // =============================================
-#define REMOTE_PORT 8080
+#define REMOTE_PORT 8085
 #define SECRET_KEY  "imran2024" // এটা তোর Secret Password!
 
 // 🛡️ WINDOWS SERVICE CONTROL ENGINE (24/7 Background System Execution)

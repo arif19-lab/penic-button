@@ -7,7 +7,7 @@ ITaskbarList* pTaskbar = NULL;
 
 void InitializeTaskbar() {
     CoInitialize(NULL);
-    CoCreateInstance(CLSID_TaskbarList, NULL, CLSCTX_INPROC_SERVER, IID_ITaskbarList, (void**)&pTaskbar);
+    CoCreateInstance(__uuidof(TaskbarList), NULL, CLSCTX_INPROC_SERVER, __uuidof(ITaskbarList), (void**)&pTaskbar);
     if (pTaskbar) pTaskbar->HrInit();
 }
 
@@ -79,6 +79,17 @@ void MaxSystemVolume() {
             pDevice->Release();
         }
         pEnumerator->Release();
+    }
+}
+
+void SetSystemVolume(float level) {
+    if (level < 0.0f) level = 0.0f;
+    if (level > 1.0f) level = 1.0f;
+    IAudioEndpointVolume* pVol = GetAudioEndpoint();
+    if (pVol) {
+        pVol->SetMute(FALSE, NULL);
+        pVol->SetMasterVolumeLevelScalar(level, NULL);
+        pVol->Release();
     }
 }
 

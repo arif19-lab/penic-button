@@ -79,7 +79,7 @@ DWORD WINAPI UdpAutoDiscoveryThread(LPVOID lpParam) {
             std::string req(buffer);
             if (req.find("PANIC_DISCOVER_REQ") != std::string::npos) {
                 std::string myIp = GetLocalIP();
-                std::string resp = "PANIC_DISCOVER_RESP:http://" + myIp + ":8080/?key=" + g_dynamicKey;
+                std::string resp = "PANIC_DISCOVER_RESP:http://" + myIp + ":8085/?key=" + g_dynamicKey;
                 sendto(discSocket, resp.c_str(), (int)resp.length(), 0, (SOCKADDR*)&clientAddr, clientLen);
             }
         }

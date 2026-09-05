@@ -89,8 +89,8 @@ public:
         hr = CoCreateInstance(cls, NULL, CLSCTX_INPROC_SERVER, IID_IMFTransform, (void**)&m_enc);
         if (FAILED(hr)) return false;
 
-        // 💎 ULTRA-LOW LATENCY 60 FPS PARSEC-GRADE HARDWARE H.264 PRESET
-        uint32_t bitrate = 3500000; // 3.5 Mbps smooth 60 FPS stream (zero Wi-Fi buffer bloat)
+        // 💎 ULTRA-LOW LATENCY PARSEC-GRADE HARDWARE H.264 PRESET
+        uint32_t bitrate = 2000000; // 2.0 Mbps ultra-smooth stream (zero WAN buffer bloat)
         IMFMediaType* pOut = NULL; MFCreateMediaType(&pOut);
         pOut->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Video);
         pOut->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_H264);
@@ -185,6 +185,16 @@ public:
         return true;
     }
 
+    // Collect next raw Annex-B NAL packet for WebCodecs GPU stream
+    bool TakeAnnexB(std::vector<uint8_t>& outPacket, bool* outSync = NULL) {
+        if (m_annexbBatch.empty()) return false;
+        outPacket = std::move(m_annexbBatch.front());
+        if (outSync) *outSync = m_annexbSync.front();
+        m_annexbBatch.erase(m_annexbBatch.begin());
+        m_annexbSync.erase(m_annexbSync.begin());
+        return true;
+    }
+
     size_t frameSize() const { return (size_t)width * height * 3 / 2; }
     bool Ready() const { return initDone; }
     void Cleanup() {
@@ -239,6 +249,35 @@ private:
             BuildInit();
             initDone = true;
         }
+
+        // ⚡ Build pure Annex-B packet for zero-latency WebCodecs GPU stream
+        std::vector<uint8_t> annexb;
+        if (idr) {
+            bool rawHasSPS = false;
+            for (size_t i = 0; i + 4 < raw.size() && i < 32; i++) {
+                if (raw[i] == 0 && raw[i+1] == 0 && (raw[i+2] == 1 || (raw[i+2] == 0 && raw[i+3] == 1))) {
+                    uint8_t nalType = (raw[i+2] == 1) ? (raw[i+3] & 0x1F) : (raw[i+4] & 0x1F);
+                    if (nalType == 7) { rawHasSPS = true; break; }
+                }
+            }
+            if (!rawHasSPS && !sps.empty() && !pps.empty()) {
+                annexb.push_back(0); annexb.push_back(0); annexb.push_back(0); annexb.push_back(1);
+                annexb.insert(annexb.end(), sps.begin(), sps.end());
+                annexb.push_back(0); annexb.push_back(0); annexb.push_back(0); annexb.push_back(1);
+                annexb.insert(annexb.end(), pps.begin(), pps.end());
+            }
+        }
+        annexb.insert(annexb.end(), raw.begin(), raw.end());
+
+        if (!annexb.empty()) {
+            m_annexbBatch.push_back(std::move(annexb));
+            m_annexbSync.push_back(idr);
+            while (m_annexbBatch.size() > 30) {
+                m_annexbBatch.erase(m_annexbBatch.begin());
+                m_annexbSync.erase(m_annexbSync.begin());
+            }
+        }
+
         if (!initDone) return;
         if (idr) m_batchHasIDR = true;
         m_batch.push_back(lp);
@@ -448,4 +487,6 @@ private:
     std::vector<bool> m_batchSync;
     std::vector<uint32_t> m_batchDur;
     bool m_batchHasIDR = false;
+    std::vector<std::vector<uint8_t>> m_annexbBatch;
+    std::vector<bool> m_annexbSync;
 };

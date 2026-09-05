@@ -1,4 +1,6 @@
 #include "WebSocket.h"
+#include "../core/Config.h"
+#include "../security/PanicEngine.h"
 #include <wincrypt.h>
 
 // 📡 WEBSOCKET SHA-1 & BINARY FRAME ENCODER (Sub-1ms Browser GPU Canvas Stream)
@@ -110,4 +112,99 @@ std::string ReadWebSocketTextMessage(const uint8_t* buf, int len) {
         out[i] = (char)(buf[headerLen + i] ^ mask[i % 4]);
     }
     return out;
+}
+
+bool SendWebSocketTextMessage(SOCKET sock, const std::string& message) {
+    size_t len = message.size();
+    std::vector<char> frameHeader;
+    frameHeader.push_back((char)0x81); // 0x80 (FIN) | 0x01 (Text Frame)
+
+    if (len < 125) {
+        frameHeader.push_back((char)len);
+    } else if (len <= 65535) {
+        frameHeader.push_back((char)126);
+        frameHeader.push_back((char)((len >> 8) & 0xFF));
+        frameHeader.push_back((char)(len & 0xFF));
+    } else {
+        frameHeader.push_back((char)127);
+        for (int i = 7; i >= 0; i--) {
+            frameHeader.push_back((char)((len >> (i * 8)) & 0xFF));
+        }
+    }
+
+    std::vector<char> fullBuf;
+    fullBuf.reserve(frameHeader.size() + message.size());
+    fullBuf.insert(fullBuf.end(), frameHeader.begin(), frameHeader.end());
+    fullBuf.insert(fullBuf.end(), message.begin(), message.end());
+
+    int n = send(sock, fullBuf.data(), (int)fullBuf.size(), 0);
+    return n > 0;
+}
+
+// ⚡ Direct High-Speed Command WebSocket Handler for /cmd-ws
+void ServeCommandWebSocketClient(SOCKET sock) {
+    u_long mode = 1;
+    ioctlsocket(sock, FIONBIO, &mode);
+    int nodelay = 1;
+    setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (char*)&nodelay, sizeof(int));
+
+    while (true) {
+        fd_set rfds;
+        FD_ZERO(&rfds);
+        FD_SET(sock, &rfds);
+        timeval tv = { 5, 0 }; // 5s select timeout
+        int sel = select(0, &rfds, NULL, NULL, &tv);
+        if (sel < 0) break;
+        if (sel == 0) continue; // Heartbeat
+
+        uint8_t rxBuf[2048];
+        int br = recv(sock, (char*)rxBuf, sizeof(rxBuf), 0);
+        if (br <= 0) {
+            int err = WSAGetLastError();
+            if (err == WSAEWOULDBLOCK) {
+                Sleep(10);
+                continue;
+            }
+            break;
+        }
+
+        std::string msg = ReadWebSocketTextMessage(rxBuf, br);
+        if (msg == "CLOSE") break;
+        if (msg.empty()) continue;
+
+        if (msg == "LOCK") {
+            LockWorkStation();
+            SendWebSocketTextMessage(sock, "{\"status\":\"locked\"}");
+        } else if (msg == "PANIC") {
+            if (hMainWnd) {
+                SendMessage(hMainWnd, WM_COMMAND, IDM_TRIGGER, 0);
+            } else {
+                TriggerPanic();
+            }
+            SendWebSocketTextMessage(sock, isPanicMode ? "{\"panic\":true,\"state\":" + std::to_string(panicState) + "}" : "{\"panic\":false,\"state\":0}");
+        } else if (msg == "SLEEP") {
+            SendWebSocketTextMessage(sock, "{\"status\":\"sleeping\"}");
+            SetSystemPowerState(TRUE, FALSE);
+        } else if (msg == "RESTART") {
+            SendWebSocketTextMessage(sock, "{\"status\":\"restarting\"}");
+            system("shutdown /r /t 5 /c \"Remote restart initiated.\"");
+        } else if (msg == "SHUTDOWN") {
+            SendWebSocketTextMessage(sock, "{\"status\":\"shutting_down\"}");
+            system("shutdown /s /t 10 /c \"Remote shutdown initiated.\"");
+        } else if (msg.rfind("UNLOCK:", 0) == 0) {
+            std::string pin = msg.substr(7);
+            HANDLE hPipe = CreateFileA("\\\\.\\pipe\\PanicUnlockPipe", GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
+            if (hPipe != INVALID_HANDLE_VALUE) {
+                DWORD bytesWritten;
+                WriteFile(hPipe, pin.c_str(), (DWORD)pin.length(), &bytesWritten, NULL);
+                CloseHandle(hPipe);
+                SendWebSocketTextMessage(sock, "{\"status\":\"unlock_sent\"}");
+            } else {
+                SendWebSocketTextMessage(sock, "{\"status\":\"pipe_error\"}");
+            }
+        } else if (msg == "PING") {
+            SendWebSocketTextMessage(sock, "PONG");
+        }
+    }
+    closesocket(sock);
 }

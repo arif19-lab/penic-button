@@ -1,5 +1,7 @@
 #include "SystemDeploy.h"
+#include "../core/Globals.h"
 #include "../security/PanicEngine.h"
+#include "../core/Logger.h"
 #include <string>
 #include <vector>
 #include <shellapi.h>
@@ -20,22 +22,36 @@ void AddToStartup() {
     size_t pos = exeDir.find_last_of("\\/");
     if (pos != std::string::npos) exeDir = exeDir.substr(0, pos);
 
-    CreateDirectoryA("C:\\ProgramData\\PanicButton", NULL);
+    std::string pData = GetProgramDataFolder();
+    CreateDirectoryA(pData.c_str(), NULL);
+    ExecSilentCommand(("icacls \"" + pData + "\" /grant Users:(OI)(CI)(F) /T /Q").c_str());
+
+    // Remove obsolete public-tunnel helpers left by older releases.  Remote
+    // access is now deliberately limited to the user's Tailscale network.
+    DeleteFileA((pData + "\\cloudflared.exe").c_str());
+    DeleteFileA((pData + "\\ngrok.exe").c_str());
+    DeleteFileA((pData + "\\active_url.txt").c_str());
+    DeleteFileA((pData + "\\cf_tunnel.log").c_str());
 
     // 1. Copy PanicButton.exe, PanicService.exe, PanicProvider.dll and all alarm wavs
-    CopyFileA(szPathToExe, "C:\\ProgramData\\PanicButton\\PanicButton.exe", FALSE);
-    CopyFileA((exeDir + "\\PanicService.exe").c_str(), "C:\\ProgramData\\PanicButton\\PanicService.exe", FALSE);
-    CopyFileA((exeDir + "\\PanicProvider.dll").c_str(), "C:\\ProgramData\\PanicButton\\PanicProvider.dll", FALSE);
-    CopyFileA((exeDir + "\\libwinpthread-1.dll").c_str(), "C:\\ProgramData\\PanicButton\\libwinpthread-1.dll", FALSE); // MinGW runtime for the provider
+    std::string currentExe = szPathToExe;
+    std::string targetExe = pData + "\\PanicButton.exe";
+    if (currentExe != targetExe) {
+        BOOL cpOk = CopyFileA(szPathToExe, targetExe.c_str(), FALSE);
+        AppLog(cpOk ? "[deploy] Successfully synced fresh PanicButton.exe to ProgramData" : "[deploy] Copy to ProgramData failed");
+    }
+    CopyFileA((exeDir + "\\PanicService.exe").c_str(), (pData + "\\PanicService.exe").c_str(), FALSE);
+    CopyFileA((exeDir + "\\PanicProvider.dll").c_str(), (pData + "\\PanicProvider.dll").c_str(), FALSE);
+    CopyFileA((exeDir + "\\libwinpthread-1.dll").c_str(), (pData + "\\libwinpthread-1.dll").c_str(), FALSE); // MinGW runtime for the provider
     for (int i = 1; i <= 13; i++) {
         std::string wName = "\\alarm" + std::to_string(i) + ".wav";
-        CopyFileA((exeDir + wName).c_str(), ("C:\\ProgramData\\PanicButton" + wName).c_str(), FALSE);
+        CopyFileA((exeDir + wName).c_str(), (pData + wName).c_str(), FALSE);
     }
 
     // 2. Install & Start PanicMasterService.
     // We are ALREADY elevated (manifest) -> CreateProcess inherits the token, so NO second UAC prompt!
     {
-        std::string svcDst = "C:\\ProgramData\\PanicButton\\PanicService.exe";
+        std::string svcDst = pData + "\\PanicService.exe";
         std::string svcCmd = "\"" + svcDst + "\" -install";
         std::vector<char> cmdBuf(svcCmd.begin(), svcCmd.end());
         cmdBuf.push_back('\0');
@@ -61,7 +77,7 @@ void AddToStartup() {
     }
 
     // 4. Auto-start PanicButton.exe at every Windows logon (elevated, no UAC prompt)
-    std::string quotedSysTarget = "\"C:\\ProgramData\\PanicButton\\PanicButton.exe\"";
+    std::string quotedSysTarget = "\"" + targetExe + "\"";
     std::string cmdLogon = "schtasks /Create /F /TN PanicButton_Autostart /TR " + quotedSysTarget + " /SC ONLOGON /RL HIGHEST";
     ExecSilentCommand(cmdLogon.c_str());
 }

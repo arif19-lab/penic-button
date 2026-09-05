@@ -2,7 +2,7 @@
   "appId": "com.imran.panicctrl",
   "appName": "PANIC CTRL",
   "webDir": "www",
-  "backgroundColor": "#07090e",
+  "backgroundColor": "#ffffff",
   "server": {
     "cleartext": true,
     "allowNavigation": [
@@ -11,6 +11,12 @@
   },
   "android": {
     "allowMixedContent": true,
-    "backgroundColor": "#07090e"
+    "backgroundColor": "#ffffff"
+  },
+  "plugins": {
+    "StatusBar": {
+      "overlaysWebView": true,
+      "style": "DARK"
+    }
   }
 }

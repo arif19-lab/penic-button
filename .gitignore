@@ -6,6 +6,9 @@ build_*.txt
 *.mp4
 *key*.txt
 gemini_key.txt
+resource.res
+android-app/www/download/
+android-app/www/index.html.bak
 
 # Node & JS dependencies
 node_modules/

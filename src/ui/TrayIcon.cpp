@@ -13,8 +13,7 @@ void KillAllPanicProcesses() {
     ExecSilentCommand("sc stop PanicButtonService");
     Sleep(200);
 
-    // 2. Force kill only external helper processes that may be left behind.
-    ExecSilentCommand("taskkill /F /IM cloudflared.exe");
+    // 2. Force kill only the companion service that may be left behind.
     ExecSilentCommand("taskkill /F /IM PanicService.exe");
 }
 
@@ -70,7 +69,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                     Shell_NotifyIcon(NIM_MODIFY, &nid); // Update the hover text
                     break;
                 case IDM_SCAN_MOBILE:
-                ShellExecute(NULL, "open", "http://127.0.0.1:8080/qr", NULL, NULL, SW_SHOWNORMAL);
+                ShellExecute(NULL, "open", "http://127.0.0.1:8085/qr", NULL, NULL, SW_SHOWNORMAL);
                 break;
             case IDM_EXIT:
                     KillAllPanicProcesses();
