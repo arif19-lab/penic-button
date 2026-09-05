@@ -124,9 +124,18 @@ begin
   TailscaleInstallCheck.Left := 0;
   TailscaleInstallCheck.Top := 168;
   TailscaleInstallCheck.Width := TailscalePage.SurfaceWidth;
-  TailscaleInstallCheck.Caption := 'Automatically download and install Tailscale on this PC during setup';
-  TailscaleInstallCheck.Checked := not IsTailscaleInstalled;
-  TailscaleInstallCheck.Enabled := not IsTailscaleInstalled;
+  TailscaleInstallCheck.Enabled := True;
+
+  if IsTailscaleInstalled then
+  begin
+    TailscaleInstallCheck.Caption := 'Download and update/repair Tailscale on this PC during setup';
+    TailscaleInstallCheck.Checked := False;
+  end
+  else
+  begin
+    TailscaleInstallCheck.Caption := 'Automatically download and install Tailscale on this PC during setup';
+    TailscaleInstallCheck.Checked := True;
+  end;
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
@@ -135,9 +144,9 @@ var
 begin
   if CurStep = ssPostInstall then
   begin
-    if (not IsTailscaleInstalled) and TailscaleInstallCheck.Checked then
+    if TailscaleInstallCheck.Checked then
     begin
-      WizardForm.StatusLabel.Caption := 'Installing Tailscale WireGuard engine...';
+      WizardForm.StatusLabel.Caption := 'Updating / Installing Tailscale WireGuard engine...';
       Exec('powershell.exe', '-WindowStyle Hidden -Command "winget install --id Tailscale.Tailscale --silent --accept-package-agreements --accept-source-agreements; if (!(Test-Path ''$env:ProgramFiles\Tailscale\tailscale.exe'')) { $t = \"$env:TEMP\tailscale-setup.msi\"; Invoke-WebRequest ''https://pkgs.tailscale.com/stable/tailscale-setup-latest.msi'' -OutFile $t; Start-Process msiexec.exe -ArgumentList \"/i `\"$t`\" /quiet /norestart\" -Wait; Remove-Item $t -Force -ErrorAction SilentlyContinue } sc.exe start Tailscale"', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode);
     end;
   end
