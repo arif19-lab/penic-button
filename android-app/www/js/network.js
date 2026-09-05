@@ -38,8 +38,7 @@ var PC_ENDPOINT = (function() {
   if (saved && !saved.includes('127.0.0.1') && !saved.includes('localhost')) {
     return saved;
   }
-  // ⚡ Default to Tailscale Worldwide IP (Works Everywhere)
-  return 'http://100.83.195.91:8085';
+  return '';
 })();
 
 function getApiUrl(path) {
@@ -230,12 +229,20 @@ function updateQuickConnectButtons(lanIp, tailscaleIp) {
 }
 
 function quickConnectTailscale() {
-  var ip = localStorage.getItem('panic_tailscale_ip') || '100.83.195.91';
+  var ip = localStorage.getItem('panic_tailscale_ip');
+  if (!ip) {
+    if (typeof startInAppQrScanner === 'function') startInAppQrScanner();
+    return;
+  }
   quickConnectIp(ip + ':8085');
 }
 
 function quickConnectLan() {
-  var ip = localStorage.getItem('panic_lan_ip') || '192.168.0.100';
+  var ip = localStorage.getItem('panic_lan_ip');
+  if (!ip) {
+    if (typeof startInAppQrScanner === 'function') startInAppQrScanner();
+    return;
+  }
   quickConnectIp(ip + ':8085');
 }
 
@@ -280,10 +287,10 @@ function probeBestEndpoint(force, callback) {
   var candidates = [];
   var dynLan = localStorage.getItem('panic_lan_ip');
   var dynTs = localStorage.getItem('panic_tailscale_ip');
-  if (dynLan) candidates.push('http://' + dynLan + ':8085');
-  if (dynTs) candidates.push('http://' + dynTs + ':8085');
-  if (!candidates.includes('http://192.168.0.100:8085')) candidates.push('http://192.168.0.100:8085');
-  if (!candidates.includes('http://100.83.195.91:8085')) candidates.push('http://100.83.195.91:8085');
+  var savedEp = localStorage.getItem('panic_pc_endpoint');
+  if (savedEp && !candidates.includes(savedEp)) candidates.push(savedEp);
+  if (dynLan && !candidates.includes('http://' + dynLan + ':8085')) candidates.push('http://' + dynLan + ':8085');
+  if (dynTs && !candidates.includes('http://' + dynTs + ':8085')) candidates.push('http://' + dynTs + ':8085');
 
   var probeIndex = 0;
   function tryNext() {
