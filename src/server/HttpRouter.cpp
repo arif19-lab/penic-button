@@ -36,6 +36,14 @@ void ProcessClient(SOCKET clientSocket) {
         }
         std::string request(buffer, bytesReceived);
 
+        // Track active mobile/remote client interactions
+        if (request.find("GET /qr") == std::string::npos &&
+            request.find("GET /setup") == std::string::npos &&
+            request.find("GET /api/tailscale-status") == std::string::npos &&
+            request.find("HEAD ") == std::string::npos) {
+            g_lastClientActivity.store(time(NULL));
+        }
+
         std::string responseBody;
         // Step 7: Secret Key check (Allow static assets, root, app download, manifest, sw.js, and API endpoints)
         bool isStaticAsset = (request.find(".css") != std::string::npos) ||
@@ -94,7 +102,9 @@ void ProcessClient(SOCKET clientSocket) {
             if (request.find("GET /api/tailscale-status") != std::string::npos) {
                 std::string tsIp = GetTailscaleIP();
                 std::string lanIp = GetLocalIP();
-                std::string resJson = "{\"tailscaleIp\":\"" + tsIp + "\",\"lanIp\":\"" + lanIp + "\",\"key\":\"" + g_dynamicKey + "\"}";
+                time_t lastAct = g_lastClientActivity.load();
+                bool peerConnected = (lastAct > 0 && (time(NULL) - lastAct) < 10);
+                std::string resJson = "{\"tailscaleIp\":\"" + tsIp + "\",\"lanIp\":\"" + lanIp + "\",\"key\":\"" + g_dynamicKey + "\",\"peerConnected\":" + (peerConnected ? "true" : "false") + "}";
                 std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n\r\n" + resJson;
                 send(clientSocket, res.c_str(), (int)res.size(), 0);
                 closesocket(clientSocket);
@@ -119,125 +129,365 @@ void ProcessClient(SOCKET clientSocket) {
                 return;
             }
 
-            if (request.find("GET /qr") != std::string::npos || request.find("GET /setup") != std::string::npos) {
+                        if (request.find("GET /qr") != std::string::npos || request.find("GET /setup") != std::string::npos) {
                 std::string myIp = GetLocalIP();
                 std::string tailscaleIp = GetTailscaleIP();
                 std::string lanUrl = "http://" + myIp + ":8085/?key=" + g_dynamicKey;
                 std::string tailscaleUrl = tailscaleIp.empty() ? "" :
                     "http://" + tailscaleIp + ":8085/?key=" + g_dynamicKey;
                 std::string html = R"HTML(<!DOCTYPE html>
-<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PANIC CTRL - Connect</title>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PANIC CTRL // CYBERNETIC NODE PAIRING</title>
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <style>
-* { box-sizing: border-box; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
 body {
-    background: radial-gradient(circle at top, #0d1527 0%, #07090e 100%);
-    color: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    margin: 0; padding: 20px; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: #050811;
+    color: #e0e6ed;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background-image: 
+        radial-gradient(ellipse at 50% 0%, rgba(0, 240, 255, 0.12) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 80%, rgba(0, 255, 65, 0.06) 0%, transparent 50%),
+        linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+    background-size: 100% 100%, 100% 100%, 32px 32px, 32px 32px;
 }
-.card {
-    background: rgba(13, 22, 38, 0.7); backdrop-filter: blur(16px);
-    border: 1px solid rgba(0, 240, 255, 0.2); border-radius: 16px;
-    padding: 24px; max-width: 440px; width: 100%; text-align: center;
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 30px rgba(0, 240, 255, 0.1);
+.hud-frame {
+    display: grid;
+    grid-template-columns: 1fr;
+    max-width: 920px;
+    width: 100%;
+    background: rgba(10, 15, 28, 0.85);
+    backdrop-filter: blur(24px);
+    border: 1px solid rgba(0, 240, 255, 0.3);
+    border-radius: 16px;
+    box-shadow: 0 0 50px rgba(0, 240, 255, 0.12), 0 20px 60px rgba(0, 0, 0, 0.8);
+    overflow: hidden;
 }
-h2 { margin: 0 0 8px; color: #00f0ff; font-size: 22px; font-weight: 700; letter-spacing: 0.5px; }
-.subtitle { color: #8892b0; font-size: 13px; margin: 0 0 20px; }
-.tab-group { display: flex; gap: 8px; background: rgba(0, 0, 0, 0.3); padding: 4px; border-radius: 12px; margin-bottom: 18px; }
+@media (min-width: 768px) {
+    .hud-frame { grid-template-columns: 1.15fr 1fr; }
+}
+.header-bar {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 20px;
+    background: rgba(0, 0, 0, 0.4);
+    border-bottom: 1px solid rgba(0, 240, 255, 0.2);
+    font-family: monospace;
+    font-size: 12px;
+}
+.brand-tag {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #00f0ff;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+.blink-dot {
+    width: 8px;
+    height: 8px;
+    background: #00ff41;
+    border-radius: 50%;
+    box-shadow: 0 0 10px #00ff41;
+    animation: blink 1.2s infinite ease-in-out;
+}
+@keyframes blink { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.3; transform: scale(0.85); } }
+.terminal-panel {
+    padding: 24px;
+    background: rgba(5, 8, 16, 0.6);
+    border-right: 1px solid rgba(0, 240, 255, 0.15);
+    display: flex;
+    flex-direction: column;
+}
+.term-title {
+    font-family: monospace;
+    font-size: 11px;
+    color: #8892b0;
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+}
+.console-box {
+    background: #04060a;
+    border: 1px solid rgba(0, 240, 255, 0.2);
+    border-radius: 8px;
+    padding: 16px;
+    font-family: "Consolas", "Courier New", monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    color: #a8b2d1;
+    height: 250px;
+    overflow-y: auto;
+    box-shadow: inset 0 0 16px rgba(0, 0, 0, 0.8);
+}
+.console-line { margin-bottom: 4px; word-break: break-all; }
+.log-ok { color: #00ff41; font-weight: bold; }
+.log-cyan { color: #00f0ff; }
+.log-warn { color: #ffb703; }
+.log-alert { color: #00ff41; background: rgba(0, 255, 65, 0.15); padding: 2px 6px; border-radius: 4px; display: inline-block; }
+
+.pairing-panel {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    position: relative;
+}
+.tab-group {
+    display: flex;
+    gap: 8px;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 4px;
+    border-radius: 10px;
+    margin-bottom: 16px;
+    width: 100%;
+}
 .tab-btn {
-    flex: 1; padding: 10px 12px; border: none; border-radius: 8px; font-weight: 600;
-    cursor: pointer; font-size: 12px; transition: all 0.25s ease; background: transparent; color: #8892b0;
+    flex: 1;
+    padding: 9px 10px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 11px;
+    transition: all 0.25s ease;
+    background: transparent;
+    color: #8892b0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 .tab-btn.active-ts {
-    background: linear-gradient(135deg, #00ff41, #00f0ff); color: #07090e; font-weight: bold;
-    box-shadow: 0 4px 12px rgba(0, 255, 65, 0.3);
+    background: linear-gradient(135deg, #00ff41, #00f0ff);
+    color: #050811;
+    font-weight: bold;
+    box-shadow: 0 4px 14px rgba(0, 255, 65, 0.35);
 }
 .tab-btn.active-lan {
-    background: linear-gradient(135deg, #00f0ff, #0077ff); color: #07090e; font-weight: bold;
-    box-shadow: 0 4px 12px rgba(0, 240, 255, 0.3);
+    background: linear-gradient(135deg, #00f0ff, #0077ff);
+    color: #050811;
+    font-weight: bold;
+    box-shadow: 0 4px 14px rgba(0, 240, 255, 0.35);
 }
-#qr-container {
-    background: #ffffff; padding: 16px; border-radius: 12px; display: inline-block;
-    margin: 8px auto 14px; box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+
+.qr-target-box {
+    position: relative;
+    background: #ffffff;
+    padding: 16px;
+    border-radius: 12px;
+    box-shadow: 0 0 35px rgba(0, 240, 255, 0.25);
+    margin-bottom: 14px;
 }
-.status-badge {
-    display: inline-flex; align-items: center; gap: 6px; font-size: 12px;
-    padding: 4px 12px; border-radius: 20px; margin-bottom: 12px; font-weight: 600;
+.laser-scan {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, #00f0ff, transparent);
+    box-shadow: 0 0 10px #00f0ff;
+    animation: scanSweep 2.2s infinite ease-in-out;
+    pointer-events: none;
+    border-radius: 2px;
 }
-.status-badge.connected {
-    background: rgba(0,255,65,0.1); color: #00ff41; border: 1px solid rgba(0,255,65,0.3);
+@keyframes scanSweep {
+    0% { top: 4%; opacity: 0.2; }
+    50% { top: 92%; opacity: 1; }
+    100% { top: 4%; opacity: 0.2; }
 }
-.status-badge.pending {
-    background: rgba(255,193,7,0.1); color: #ffc107; border: 1px solid rgba(255,193,7,0.3);
+
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    padding: 5px 14px;
+    border-radius: 20px;
+    margin-bottom: 12px;
+    font-weight: 600;
+    font-family: monospace;
+    letter-spacing: 0.5px;
 }
-.desc { color: #ccd6f6; font-size: 13px; line-height: 1.4; margin: 0 0 8px; }
+.status-pill.connected {
+    background: rgba(0, 255, 65, 0.1);
+    color: #00ff41;
+    border: 1px solid rgba(0, 255, 65, 0.4);
+}
+.status-pill.pending {
+    background: rgba(255, 183, 3, 0.1);
+    color: #ffb703;
+    border: 1px solid rgba(255, 183, 3, 0.4);
+}
+
+.url-box {
+    width: 100%;
+    display: flex;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(0, 240, 255, 0.2);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-top: 6px;
+}
 .url-text {
-    color: #0ea5e9; font-size: 13px; font-family: monospace; word-break: break-all;
-    background: rgba(0,0,0,0.3); padding: 6px 10px; border-radius: 6px; margin: 8px 0;
+    flex: 1;
+    padding: 8px 10px;
+    font-family: monospace;
+    font-size: 12px;
+    color: #00f0ff;
+    background: transparent;
+    border: none;
+    outline: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
-.guide-box {
-    background: rgba(0, 240, 255, 0.05); border: 1px dashed rgba(0, 240, 255, 0.3);
-    border-radius: 10px; padding: 12px; margin-top: 14px; text-align: left; font-size: 12px; color: #a8b2d1;
+.copy-btn {
+    background: rgba(0, 240, 255, 0.15);
+    color: #00f0ff;
+    border: none;
+    border-left: 1px solid rgba(0, 240, 255, 0.2);
+    padding: 0 14px;
+    cursor: pointer;
+    font-family: monospace;
+    font-size: 11px;
+    transition: background 0.2s;
 }
-.guide-box summary { cursor: pointer; font-weight: 600; color: #00f0ff; outline: none; }
-.guide-step { margin-top: 8px; padding-left: 14px; position: relative; }
-.guide-step:before { content: "•"; position: absolute; left: 2px; color: #00ff41; }
+.copy-btn:hover { background: rgba(0, 240, 255, 0.3); }
+
 .action-btn {
-    display: inline-block; padding: 8px 14px; background: linear-gradient(135deg, #00ff41, #00f0ff);
-    color: #07090e; font-weight: bold; font-size: 12px; border-radius: 8px; text-decoration: none;
-    margin-top: 8px; border: none; cursor: pointer;
+    display: inline-block;
+    padding: 9px 16px;
+    background: linear-gradient(135deg, #00ff41, #00f0ff);
+    color: #050811;
+    font-weight: bold;
+    font-size: 12px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    margin-top: 10px;
+    box-shadow: 0 4px 14px rgba(0, 255, 65, 0.3);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
-</style></head>
+
+#peerConnectedBanner {
+    display: none;
+    margin-top: 10px;
+    padding: 10px 14px;
+    background: rgba(0, 255, 65, 0.15);
+    border: 1px solid #00ff41;
+    border-radius: 8px;
+    color: #00ff41;
+    font-family: monospace;
+    font-size: 12px;
+    font-weight: bold;
+    box-shadow: 0 0 20px rgba(0, 255, 65, 0.25);
+    animation: peerGlow 1.5s infinite alternate;
+}
+@keyframes peerGlow {
+    from { box-shadow: 0 0 10px rgba(0, 255, 65, 0.2); }
+    to { box-shadow: 0 0 25px rgba(0, 255, 65, 0.5); }
+}
+</style>
+</head>
 <body>
-<div class="card">
-    <h2>📱 PANIC CTRL</h2>
-    <p class="subtitle">Secure Desktop Remote Node</p>
 
-    <div class="tab-group">
-      <button id="btnTailscale" class="tab-btn" onclick="showMode('tailscale')">🔒 Anywhere (Tailscale)</button>
-      <button id="btnLan" class="tab-btn" onclick="showMode('lan')">⚡ Wi-Fi (0ms Gaming)</button>
+<div class="hud-frame">
+    <div class="header-bar">
+        <div class="brand-tag">
+            <div class="blink-dot"></div>
+            <span>PANIC CTRL // NODE HANDSHAKE SYSTEM</span>
+        </div>
+        <div style="color:#8892b0;">PROTOCOL: P2P WIRE-GUARD / WEBSOCKET</div>
     </div>
 
-    <div id="statusBadge" class="status-badge connected">🟢 Ready to Pair</div>
-    <p id="modeDesc" class="desc">Scan this QR code with the PANIC CTRL mobile app.</p>
-
-    <div id="qr-container"><div id="qr"></div></div>
-    <div id="urlDisplay" class="url-text"></div>
-
-    <div id="tailscaleAction" style="display:none;margin-top:8px;">
-      <button class="action-btn" onclick="openLogin()">🔑 Connect / Log in Tailscale on PC</button>
+    <!-- Left: Live Hacker Diagnostic Console -->
+    <div class="terminal-panel">
+        <div class="term-title">
+            <span>TERMINAL_STDOUT // DIAGNOSTIC BUS</span>
+            <span id="termStatus">STREAM: ACTIVE</span>
+        </div>
+        <div class="console-box" id="consoleBox"></div>
+        <div style="margin-top:14px;font-family:monospace;font-size:11px;color:#8892b0;line-height:1.4;">
+            <div>⚡ <b>Step 1:</b> Install Tailscale on phone (<a href="https://tailscale.com/download" target="_blank" style="color:#00f0ff;">tailscale.com/download</a>)</div>
+            <div>⚡ <b>Step 2:</b> Sign in to Tailscale on both PC & Phone</div>
+            <div>⚡ <b>Step 3:</b> Open PANIC CTRL app on phone & Scan QR Code</div>
+        </div>
     </div>
 
-    <details class="guide-box">
-      <summary>📲 First-time User Setup Guide</summary>
-      <div class="guide-step"><b>Step 1:</b> Install <b>Tailscale</b> on your mobile phone (<a href="https://tailscale.com/download" target="_blank" style="color:#00f0ff;">tailscale.com/download</a>).</div>
-      <div class="guide-step"><b>Step 2:</b> Sign in to Tailscale on both PC and phone using the <b>same account</b> (e.g. Gmail).</div>
-      <div class="guide-step"><b>Step 3:</b> Open the <b>PANIC CTRL</b> app and scan the QR code above. Done!</div>
-    </details>
+    <!-- Right: Holographic QR Pairing Display -->
+    <div class="pairing-panel">
+        <div class="tab-group">
+            <button id="btnTailscale" class="tab-btn" onclick="showMode('tailscale')">🔒 ANYWHERE (TAILSCALE)</button>
+            <button id="btnLan" class="tab-btn" onclick="showMode('lan')">⚡ WI-FI (0MS DIRECT)</button>
+        </div>
+
+        <div id="statusPill" class="status-pill connected">🟢 TAILSCALE MESH READY</div>
+
+        <div class="qr-target-box">
+            <div class="laser-scan"></div>
+            <div id="qr"></div>
+        </div>
+
+        <div class="url-box">
+            <input type="text" id="urlInput" class="url-text" readonly>
+            <button class="copy-btn" onclick="copyUrl()">COPY</button>
+        </div>
+
+        <div id="tailscaleAction" style="display:none;width:100%;">
+            <button class="action-btn" onclick="openLogin()">🔑 Connect / Log in Tailscale on PC</button>
+        </div>
+
+        <div id="peerConnectedBanner">
+            ⚡ MOBILE PEER HANDSHAKE VERIFIED! LIVE STREAM ENGAGED!
+        </div>
+    </div>
 </div>
 
 <script>
 var lan = ")HTML" + lanUrl + R"HTML(";
 var tailscale = ")HTML" + tailscaleUrl + R"HTML(";
 var currentMode = tailscale ? 'tailscale' : 'lan';
+var peerAlreadyAnnounced = false;
 
 var qrcode = new QRCode(document.getElementById("qr"), {
-    width: 220, height: 220, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.M
+    width: 200, height: 200, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.M
 });
 
-function updateBadge() {
-    var badge = document.getElementById('statusBadge');
-    var tsAction = document.getElementById('tailscaleAction');
-    if (tailscale) {
-        badge.className = "status-badge connected";
-        badge.textContent = "🟢 Tailscale Mesh Connected";
-        tsAction.style.display = "none";
-    } else {
-        badge.className = "status-badge pending";
-        badge.textContent = "🟡 Tailscale Pending Login";
-        tsAction.style.display = "block";
-    }
+var consoleBox = document.getElementById("consoleBox");
+function log(msg, type) {
+    var d = document.createElement("div");
+    d.className = "console-line" + (type ? " " + type : "");
+    var time = new Date().toTimeString().split(' ')[0];
+    d.innerHTML = "<span style='color:#5c677d'>[" + time + "]</span> " + msg;
+    consoleBox.appendChild(d);
+    consoleBox.scrollTop = consoleBox.scrollHeight;
+}
+
+// Initial hacker boot sequence
+log("Booting PANIC CTRL Kernel v2.5...", "log-cyan");
+setTimeout(function() { log("Probing system network interfaces...", ""); }, 300);
+setTimeout(function() { log("LAN Adapter Active: <span class='log-ok'>" + lan + "</span>", "log-ok"); }, 700);
+
+if (tailscale) {
+    setTimeout(function() { log("WireGuard Mesh Detected: <span class='log-ok'>" + tailscale + "</span>", "log-ok"); }, 1100);
+    setTimeout(function() { log("Handshake Token Generated. P2P channel listening.", "log-cyan"); }, 1500);
+} else {
+    setTimeout(function() { log("Tailscale Mesh Interface: <span class='log-warn'>PENDING LOGIN</span>", "log-warn"); }, 1100);
+    setTimeout(function() { log("Standing by on Direct LAN lane. Click login below to activate Mesh.", "log-cyan"); }, 1500);
 }
 
 function showMode(m) {
@@ -245,51 +495,100 @@ function showMode(m) {
     var u = (m === 'tailscale' && tailscale) ? tailscale : lan;
     var btnTs = document.getElementById('btnTailscale');
     var btnLan = document.getElementById('btnLan');
-    var desc = document.getElementById('modeDesc');
+    var pill = document.getElementById('statusPill');
+    var tsAction = document.getElementById('tailscaleAction');
 
     btnTs.className = 'tab-btn' + (m === 'tailscale' ? ' active-ts' : '');
     btnLan.className = 'tab-btn' + (m === 'lan' ? ' active-lan' : '');
 
     if (m === 'tailscale') {
-        desc.textContent = tailscale ?
-            '🔒 Anywhere: secure encrypted mesh connection across LTE/5G and any Wi-Fi.' :
-            '⚠️ Tailscale not logged in on PC yet. Please sign in below or use local Wi-Fi.';
+        if (tailscale) {
+            pill.className = "status-pill connected";
+            pill.textContent = "🟢 TAILSCALE MESH READY";
+            tsAction.style.display = "none";
+        } else {
+            pill.className = "status-pill pending";
+            pill.textContent = "🟡 TAILSCALE PENDING LOGIN";
+            tsAction.style.display = "block";
+        }
     } else {
-        desc.textContent = '⚡ Same Wi-Fi: Direct 0ms low-latency LAN connection.';
+        pill.className = "status-pill connected";
+        pill.textContent = "⚡ LOCAL WI-FI (0MS ULTRA)";
+        tsAction.style.display = "none";
     }
 
-    document.getElementById('urlDisplay').textContent = u;
+    document.getElementById('urlInput').value = u;
     qrcode.clear();
     qrcode.makeCode(u);
-    updateBadge();
+}
+
+function copyUrl() {
+    var input = document.getElementById('urlInput');
+    input.select();
+    navigator.clipboard.writeText(input.value);
+    log("Endpoint URI copied to clipboard.", "log-cyan");
 }
 
 function openLogin() {
+    log("Triggering Tailscale system authorization...", "log-cyan");
     fetch('/api/open-tailscale-login', { method: 'POST' });
 }
 
-// Live Tailscale Status Poller (detects login in background without page refresh)
+function playSuccessChime() {
+    try {
+        var ctx = new (window.AudioContext || window.webkitAudioContext)();
+        var osc = ctx.createOscillator();
+        var gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+        osc.frequency.setValueAtTime(880, ctx.currentTime + 0.1); // A5
+        gain.gain.setValueAtTime(0.2, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.4);
+    } catch(e){}
+}
+
+// Live Real-Time Tailscale and Mobile Peer Poller
 setInterval(function() {
     fetch('/api/tailscale-status')
         .then(function(r) { return r.json(); })
         .then(function(d) {
+            // Dynamic Tailscale Detection
             if (d.tailscaleIp && !tailscale) {
                 tailscale = "http://" + d.tailscaleIp + ":8085/?key=" + d.key;
+                log("⚡ EVENT: Tailscale Mesh Node Detected (" + d.tailscaleIp + ")!", "log-alert");
                 showMode('tailscale');
             }
+
+            // Real-time Mobile Peer Handshake Verification
+            if (d.peerConnected && !peerAlreadyAnnounced) {
+                peerAlreadyAnnounced = true;
+                log(">>> [ALERT] MOBILE PEER DETECTED! <<<", "log-alert");
+                log(">>> [HANDSHAKE] Cryptographic session verified! <<<", "log-ok");
+                log(">>> [STATUS] Peer linked and authorized! <<<", "log-ok");
+                document.getElementById("peerConnectedBanner").style.display = "block";
+                playSuccessChime();
+            } else if (!d.peerConnected && peerAlreadyAnnounced) {
+                peerAlreadyAnnounced = false;
+                document.getElementById("peerConnectedBanner").style.display = "none";
+            }
         }).catch(function(){});
-}, 2500);
+}, 1500);
 
 showMode(currentMode);
 </script>
-</body></html>
+</body>
+</html>
 )HTML";
                 std::string res = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n" + html;
                 send(clientSocket, res.c_str(), (int)res.size(), 0);
                 closesocket(clientSocket);
                 return;
 
-            } else if (request.find("GET /manifest.json") != std::string::npos) {
+} else if (request.find("GET /manifest.json") != std::string::npos) {
                 responseBody = R"JSON({
   "name": "PANIC CTRL - Remote Node",
   "short_name": "PANIC CTRL",

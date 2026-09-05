@@ -2,8 +2,10 @@
 #include <winsock2.h>
 #include <windows.h>
 #include <string>
+#include <atomic>
 
 extern std::string g_dynamicKey;
+extern std::atomic<time_t> g_lastClientActivity;
 
 std::string GetLocalIP();
 // Returns the IPv4 address assigned by Tailscale (100.64.0.0/10), or an

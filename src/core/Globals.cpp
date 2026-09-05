@@ -4,6 +4,7 @@
 #include <wtsapi32.h>
 
 std::string g_dynamicKey = "imran2024";
+std::atomic<time_t> g_lastClientActivity{0};
 
 #include <winsock2.h>
 #include <ws2tcpip.h>
