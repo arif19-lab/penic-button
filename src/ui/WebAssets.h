@@ -3824,6 +3824,11 @@ var PC_ENDPOINT = (function() {
   if (window.location.protocol.startsWith('http') && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
     return window.location.origin;
   }
+  // ⚡ Priority 1: Official Tailscale HTTPS if enabled by user!
+  var savedHttps = localStorage.getItem('panic_https_url');
+  if (savedHttps && savedHttps.startsWith('https://')) {
+    return sanitizeEndpoint(savedHttps);
+  }
   var saved = sanitizeEndpoint(localStorage.getItem('panic_pc_endpoint'));
   if (saved && !saved.includes('127.0.0.1') && !saved.includes('localhost')) {
     return saved;
@@ -3917,9 +3922,11 @@ function getNetworkInfo() {
     }
   }
 
-  var type = isTailscale ? 'TAILSCALE' : (isLocal ? 'LOCAL WI-FI' : 'REMOTE');
+  var isHttps = ep.startsWith('https://') || (window.location.protocol === 'https:' && !ep.startsWith('http://'));
+  var type = isHttps ? 'TAILSCALE HTTPS 🔒' : (isTailscale ? 'TAILSCALE' : (isLocal ? 'LOCAL WI-FI' : 'REMOTE'));
   return {
     type: type,
+    isHttps: isHttps,
     isTailscale: isTailscale,
     isLocal: isLocal,
     host: host,
@@ -3938,8 +3945,15 @@ function updateNetworkUi(isConnected, ms) {
   var detailPing = document.getElementById('detailPingMs');
 
   if (isConnected) {
-    var color = net.isTailscale ? '#00f0ff' : '#00ff41';
-    var label = net.isTailscale ? '🌐 TAILSCALE' : '📡 LOCAL WI-FI';
+    var color = '#00ff41';
+    var label = '📡 LOCAL WI-FI';
+    if (net.isHttps) {
+      color = '#00ff88';
+      label = '🔒 TAILSCALE HTTPS';
+    } else if (net.isTailscale) {
+      color = '#00f0ff';
+      label = '🌐 TAILSCALE';
+    }
 
     if (dot) {
       dot.style.background = color;
@@ -3950,11 +3964,17 @@ function updateNetworkUi(isConnected, ms) {
       txt.style.color = color;
     }
     if (badge) {
-      badge.style.borderColor = net.isTailscale ? 'rgba(0,240,255,0.6)' : 'rgba(0,255,65,0.6)';
-      badge.style.background = net.isTailscale ? 'rgba(0,240,255,0.12)' : 'rgba(0,255,65,0.12)';
+      badge.style.borderColor = net.isHttps ? 'rgba(0,255,136,0.6)' : (net.isTailscale ? 'rgba(0,240,255,0.6)' : 'rgba(0,255,65,0.6)');
+      badge.style.background = net.isHttps ? 'rgba(0,255,136,0.12)' : (net.isTailscale ? 'rgba(0,240,255,0.12)' : 'rgba(0,255,65,0.12)');
     }
     if (detailType) {
-      detailType.textContent = net.isTailscale ? '🌐 TAILSCALE (Worldwide WireGuard)' : '📡 LOCAL WI-FI (High-Speed LAN)';
+      if (net.isHttps) {
+        detailType.textContent = '🔒 TAILSCALE HTTPS (Official Let\'s Encrypt)';
+      } else if (net.isTailscale) {
+        detailType.textContent = '🌐 TAILSCALE (Worldwide WireGuard)';
+      } else {
+        detailType.textContent = '📡 LOCAL WI-FI (High-Speed LAN)';
+      }
       detailType.style.color = color;
     }
     if (detailHost) {
@@ -4092,12 +4112,16 @@ function probeBestEndpoint(force, callback) {
 
   var key = localStorage.getItem('panic_key') || KEY || 'imran2024';
   var candidates = [];
+  var dynHttps = localStorage.getItem('panic_https_url');
   var dynLan = localStorage.getItem('panic_lan_ip');
   var dynTs = localStorage.getItem('panic_tailscale_ip');
   var savedEp = localStorage.getItem('panic_pc_endpoint');
+
+  // ⚡ Priority 1 (Highest): Official Tailscale HTTPS if enabled!
+  if (dynHttps && !candidates.includes(dynHttps)) candidates.push(dynHttps);
   if (savedEp && !candidates.includes(savedEp)) candidates.push(savedEp);
-  if (dynLan && !candidates.includes('http://' + dynLan + ':8085')) candidates.push('http://' + dynLan + ':8085');
   if (dynTs && !candidates.includes('http://' + dynTs + ':8085')) candidates.push('http://' + dynTs + ':8085');
+  if (dynLan && !candidates.includes('http://' + dynLan + ':8085')) candidates.push('http://' + dynLan + ':8085');
 
   var probeIndex = 0;
   function tryNext() {

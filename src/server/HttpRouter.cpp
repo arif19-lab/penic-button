@@ -102,7 +102,9 @@ void ProcessClient(SOCKET clientSocket) {
 
             if (request.find("GET /api/tailscale-status") != std::string::npos) {
                 std::string tsIp = GetTailscaleIP();
+                std::string tsDns = GetTailscaleDNS();
                 std::string lanIp = GetLocalIP();
+                std::string httpsUrl = tsDns.empty() ? "" : ("https://" + tsDns + "/?key=" + g_dynamicKey);
                 time_t lastAct = g_lastClientActivity.load();
                 bool peerConnected = (lastAct > 0 && (time(NULL) - lastAct) < 10);
                 
@@ -119,6 +121,8 @@ void ProcessClient(SOCKET clientSocket) {
                 else if (stateCode == 4) stateStr = "ready";
 
                 std::string resJson = "{\"tailscaleIp\":\"" + tsIp + 
+                                      "\",\"tailscaleDns\":\"" + tsDns + 
+                                      "\",\"httpsUrl\":\"" + httpsUrl + 
                                       "\",\"lanIp\":\"" + lanIp + 
                                       "\",\"key\":\"" + g_dynamicKey + 
                                       "\",\"peerConnected\":" + (peerConnected ? "true" : "false") + 
@@ -163,9 +167,12 @@ void ProcessClient(SOCKET clientSocket) {
                         if (request.find("GET /qr") != std::string::npos || request.find("GET /setup") != std::string::npos) {
                 std::string myIp = GetLocalIP();
                 std::string tailscaleIp = GetTailscaleIP();
+                std::string tailscaleDns = GetTailscaleDNS();
                 std::string lanUrl = "http://" + myIp + ":8085/?key=" + g_dynamicKey;
                 std::string tailscaleUrl = tailscaleIp.empty() ? "" :
                     "http://" + tailscaleIp + ":8085/?key=" + g_dynamicKey;
+                std::string tailscaleHttpsUrl = tailscaleDns.empty() ? "" :
+                    "https://" + tailscaleDns + "/?key=" + g_dynamicKey;
                 std::string html = R"HTML(<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -300,6 +307,12 @@ body {
     color: #8892b0;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+}
+.tab-btn.active-https {
+    background: linear-gradient(135deg, #00ff88, #00d2ff);
+    color: #050811;
+    font-weight: bold;
+    box-shadow: 0 4px 14px rgba(0, 255, 136, 0.4);
 }
 .tab-btn.active-ts {
     background: linear-gradient(135deg, #00ff41, #00f0ff);
@@ -462,7 +475,8 @@ body {
     <!-- Right: Holographic QR Pairing Display -->
     <div class="pairing-panel">
         <div class="tab-group">
-            <button id="btnTailscale" class="tab-btn" onclick="showMode('tailscale')">🔒 ANYWHERE (TAILSCALE)</button>
+            <button id="btnHttps" class="tab-btn" onclick="showMode('https')">🔒 SECURE HTTPS</button>
+            <button id="btnTailscale" class="tab-btn" onclick="showMode('tailscale')">🌐 ANYWHERE (TAILSCALE)</button>
             <button id="btnLan" class="tab-btn" onclick="showMode('lan')">⚡ WI-FI (0MS DIRECT)</button>
         </div>
 
@@ -499,7 +513,8 @@ body {
 <script>
 var lan = ")HTML" + lanUrl + R"HTML(";
 var tailscale = ")HTML" + tailscaleUrl + R"HTML(";
-var currentMode = tailscale ? 'tailscale' : 'lan';
+var httpsUrl = ")HTML" + tailscaleHttpsUrl + R"HTML(";
+var currentMode = httpsUrl ? 'https' : (tailscale ? 'tailscale' : 'lan');
 var peerAlreadyAnnounced = false;
 var lastTsState = "";
 
@@ -521,16 +536,27 @@ function log(msg, type) {
 log("Booting PANIC CTRL Kernel v2.5...", "log-cyan");
 setTimeout(function() { log("Probing system network interfaces...", ""); }, 300);
 setTimeout(function() { log("LAN Adapter Active: <span class='log-ok'>" + lan + "</span>", "log-ok"); }, 600);
+if (httpsUrl) {
+    setTimeout(function() { log("Tailscale HTTPS Active: <span class='log-ok'>" + httpsUrl + "</span>", "log-ok"); }, 800);
+}
 setTimeout(function() { log("Scanning host for Tailscale WireGuard engine...", "log-cyan"); }, 1000);
 
 function showMode(m) {
     currentMode = m;
-    var u = (m === 'tailscale' && tailscale) ? tailscale : lan;
+    var u = lan;
+    if (m === 'https' && httpsUrl) u = httpsUrl;
+    else if (m === 'tailscale' && tailscale) u = tailscale;
+
+    var btnHttps = document.getElementById('btnHttps');
     var btnTs = document.getElementById('btnTailscale');
     var btnLan = document.getElementById('btnLan');
 
-    btnTs.className = 'tab-btn' + (m === 'tailscale' ? ' active-ts' : '');
-    btnLan.className = 'tab-btn' + (m === 'lan' ? ' active-lan' : '');
+    if (btnHttps) {
+        btnHttps.style.display = httpsUrl ? 'inline-block' : 'none';
+        btnHttps.className = 'tab-btn' + (m === 'https' ? ' active-https' : '');
+    }
+    if (btnTs) btnTs.className = 'tab-btn' + (m === 'tailscale' ? ' active-ts' : '');
+    if (btnLan) btnLan.className = 'tab-btn' + (m === 'lan' ? ' active-lan' : '');
 
     renderPillAndActions();
 
@@ -545,6 +571,13 @@ function renderPillAndActions() {
     var bLogin = document.getElementById('tsBtnLogin');
     var bInstall = document.getElementById('tsBtnInstall');
     var bInstalling = document.getElementById('tsBtnInstalling');
+
+    if (currentMode === 'https') {
+        pill.className = "status-pill connected";
+        pill.textContent = "🔒 TAILSCALE HTTPS (OFFICIAL SSL)";
+        tsBox.style.display = "none";
+        return;
+    }
 
     if (currentMode === 'lan') {
         pill.className = "status-pill connected";
@@ -644,9 +677,13 @@ setInterval(function() {
             }
 
             // Dynamic Tailscale Detection & QR update
-            if (d.tailscaleIp && !tailscale) {
+            if (d.httpsUrl && !httpsUrl) {
+                httpsUrl = d.httpsUrl;
+                log("🔒 Tailscale HTTPS (SSL) active: <span class='log-ok'>" + httpsUrl + "</span>", "log-ok");
+                showMode('https');
+            } else if (d.tailscaleIp && !tailscale) {
                 tailscale = "http://" + d.tailscaleIp + ":8085/?key=" + d.key;
-                showMode('tailscale');
+                if (!httpsUrl) showMode('tailscale');
             }
 
             // Real-time Mobile Peer Handshake Verification
