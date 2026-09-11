@@ -7,7 +7,7 @@ class CPanicCredential : public ICredentialProviderCredential
 {
 public:
     CPanicCredential();
-    ~CPanicCredential();
+    virtual ~CPanicCredential();
 
     // IUnknown
     IFACEMETHODIMP QueryInterface(REFIID riid, void** ppv);

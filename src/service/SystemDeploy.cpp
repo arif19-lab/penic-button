@@ -10,7 +10,21 @@
 
 // ⚡ Kernel & Driver Level: Programmatically enable Wake-on-LAN Magic Packet on all Windows Network Adapters
 void EnableKernelWakeOnLAN() {
+    // 1. Enable Wake on LAN / Magic Packet for traditional NICs
     ExecSilentCommand("powershell -WindowStyle Hidden -Command \"Get-NetAdapter | Enable-NetAdapterPowerManagement -WakeOnMagicPacket -Confirm:$false\"");
+    ExecSilentCommand("powershell -WindowStyle Hidden -Command \"Set-NetAdapterAdvancedProperty -Name 'Wi-Fi' -DisplayName 'Wake on Magic Packet' -DisplayValue 'Enabled' -ErrorAction SilentlyContinue\"");
+    ExecSilentCommand("powershell -WindowStyle Hidden -Command \"Set-NetAdapterAdvancedProperty -Name 'Wi-Fi' -DisplayName 'Wake on Pattern Match' -DisplayValue 'Enabled' -ErrorAction SilentlyContinue\"");
+
+    // 2. ⚡ Modern Standby (S0 Low Power Idle) Connected Standby Enforcer:
+    // Forces Windows to KEEP Wi-Fi and Tailscale networking fully ACTIVE in Standby on both AC and DC (battery)
+    // Setting GUID: f15576e8-98b7-4186-b944-eafa664402d9 (Networking connectivity in Standby = 1 [Always Connected])
+    ExecSilentCommand("powercfg /setacvalueindex SCHEME_CURRENT SUB_NONE f15576e8-98b7-4186-b944-eafa664402d9 1");
+    ExecSilentCommand("powercfg /setdcvalueindex SCHEME_CURRENT SUB_NONE f15576e8-98b7-4186-b944-eafa664402d9 1");
+
+    // 3. ⚡ Prevent Immediate Screen Turn-Off: extend unattended lock-screen timeout to 300 seconds
+    ExecSilentCommand("powercfg /setacvalueindex SCHEME_CURRENT SUB_SLEEP 7bc4a2f9-d8fc-4469-b07b-33eb785aaca0 300");
+    ExecSilentCommand("powercfg /setdcvalueindex SCHEME_CURRENT SUB_SLEEP 7bc4a2f9-d8fc-4469-b07b-33eb785aaca0 300");
+    ExecSilentCommand("powercfg /setactive SCHEME_CURRENT");
 }
 
 // Function to add the program to Windows Startup automatically via Registry
@@ -80,6 +94,7 @@ void AddToStartup() {
     std::string quotedSysTarget = "\"" + targetExe + "\"";
     std::string cmdLogon = "schtasks /Create /F /TN PanicButton_Autostart /TR " + quotedSysTarget + " /SC ONLOGON /RL HIGHEST";
     ExecSilentCommand(cmdLogon.c_str());
+    ExecSilentCommand("powershell -WindowStyle Hidden -Command \"$t = Get-ScheduledTask -TaskName 'PanicButton_Autostart' -ErrorAction SilentlyContinue; if ($t) { $t.Settings.DisallowStartIfOnBatteries = $false; $t.Settings.StopIfGoingOnBatteries = $false; Set-ScheduledTask -InputObject $t -ErrorAction SilentlyContinue }\"");
 }
 
 void AutoInstallProvider() {
@@ -89,16 +104,18 @@ void AutoInstallProvider() {
     size_t lastSlash = exePath.find_last_of("\\/");
     std::string sourceDllPath = (lastSlash != std::string::npos) ? (exePath.substr(0, lastSlash) + "\\PanicProvider.dll") : "PanicProvider.dll";
     
-    // LogonUI runs as SYSTEM, so it often cannot read DLLs from User/OneDrive folders.
-    // We MUST copy it to System32!
-    char sysDir[MAX_PATH];
-    GetSystemDirectoryA(sysDir, MAX_PATH);
-    std::string targetDllPath = std::string(sysDir) + "\\PanicProvider.dll";
-    
+    std::string pData = GetProgramDataFolder();
+    std::string targetDllPath = pData + "\\PanicProvider.dll";
     CopyFileA(sourceDllPath.c_str(), targetDllPath.c_str(), FALSE);
 
-    // Also copy the MinGW runtime DLL the provider needs (LogonUI runs as SYSTEM and cannot see the user's PATH)
+    // Also copy to System32 if accessible
+    char sysDir[MAX_PATH];
+    GetSystemDirectoryA(sysDir, MAX_PATH);
+    CopyFileA(sourceDllPath.c_str(), (std::string(sysDir) + "\\PanicProvider.dll").c_str(), FALSE);
+
+    // Also copy the MinGW runtime DLL the provider needs (LogonUI runs as SYSTEM)
     std::string sourceWinThread = (lastSlash != std::string::npos) ? (exePath.substr(0, lastSlash) + "\\libwinpthread-1.dll") : "libwinpthread-1.dll";
+    CopyFileA(sourceWinThread.c_str(), (pData + "\\libwinpthread-1.dll").c_str(), FALSE);
     CopyFileA(sourceWinThread.c_str(), (std::string(sysDir) + "\\libwinpthread-1.dll").c_str(), FALSE);
 
     HKEY hKey;
@@ -118,15 +135,16 @@ void AutoInstallProvider() {
     
     std::string inprocKeyPath = clsidKeyPath + "\\InprocServer32";
     if (RegCreateKeyExA(HKEY_LOCAL_MACHINE, inprocKeyPath.c_str(), 0, NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL, &hKey, NULL) == ERROR_SUCCESS) {
-        RegSetValueExA(hKey, NULL, 0, REG_SZ, (const BYTE*)targetDllPath.c_str(), targetDllPath.length() + 1);
+        RegSetValueExA(hKey, NULL, 0, REG_SZ, (const BYTE*)targetDllPath.c_str(), (DWORD)(targetDllPath.length() + 1));
         RegSetValueExA(hKey, "ThreadingModel", 0, REG_SZ, (const BYTE*)"Apartment", 10);
         RegCloseKey(hKey);
     }
 
-    // Explicitly delete NoLockScreen key so original Windows Lock Screen displays normally
+    // Set NoLockScreen policy so screen wakes up directly to LogonUI without requiring swipe/drag
     HKEY hKeyPol;
-    if (RegOpenKeyExA(HKEY_LOCAL_MACHINE, "SOFTWARE\\Policies\\Microsoft\\Windows\\Personalization", 0, KEY_SET_VALUE, &hKeyPol) == ERROR_SUCCESS) {
-        RegDeleteValueA(hKeyPol, "NoLockScreen");
+    if (RegCreateKeyExA(HKEY_LOCAL_MACHINE, "SOFTWARE\\Policies\\Microsoft\\Windows\\Personalization", 0, NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL, &hKeyPol, NULL) == ERROR_SUCCESS) {
+        DWORD val = 1;
+        RegSetValueExA(hKeyPol, "NoLockScreen", 0, REG_DWORD, (const BYTE*)&val, sizeof(val));
         RegCloseKey(hKeyPol);
     }
 }

@@ -96,7 +96,7 @@ bool CaptureDXGIFrame(HDC hTargetDC, int targetW, int targetH) {
                 bmi.bmiHeader.biCompression = BI_RGB;
 
                 uint8_t* pSrc = (uint8_t*)mapped.pData;
-                SetStretchBltMode(hTargetDC, HALFTONE);
+                SetStretchBltMode(hTargetDC, COLORONCOLOR);
                 SetBrushOrgEx(hTargetDC, 0, 0, NULL);
                 StretchDIBits(
                     hTargetDC, 0, 0, targetW, targetH,
@@ -173,7 +173,7 @@ bool CaptureDXGIFrame(HDC hTargetDC, int targetW, int targetH) {
                     );
                 }
             } else {
-                SetStretchBltMode(hTargetDC, HALFTONE);
+                SetStretchBltMode(hTargetDC, COLORONCOLOR);
                 SetBrushOrgEx(hTargetDC, 0, 0, NULL);
                 if (mapped.RowPitch == rowBytes) {
                     StretchDIBits(

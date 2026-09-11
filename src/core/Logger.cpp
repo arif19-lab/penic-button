@@ -14,7 +14,7 @@ void AppLog(const char* msg) {
 }
 
 LONG WINAPI CrashFilter(EXCEPTION_POINTERS* pEx) {
-    FILE* f = fopen("crash_dump.log", "w");
+    FILE* f = fopen("C:\\ProgramData\\PanicButton\\crash_dump.log", "w");
     if (f) {
         fprintf(f, "CRASH DETECTED! Code: 0x%lX, Addr: %p\n", pEx->ExceptionRecord->ExceptionCode, pEx->ExceptionRecord->ExceptionAddress);
         fflush(f);

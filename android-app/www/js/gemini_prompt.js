@@ -85,7 +85,7 @@ window.GEMINI_CONFIG = {
         },
         {
           name: "media_control",
-          description: "Controls PC audio and media playback (play_pause, next_track, prev_track, volume_up, volume_down, mute).",
+          description: "Controls PC audio and media playback (play_pause, next_track, prev_track, volume_up, volume_down, mute). ONLY call when user explicitly says: volume up, volume down, mute, pause. NEVER call during greetings or chit-chat.",
           parameters: {
             type: "OBJECT",
             properties: {
@@ -99,7 +99,7 @@ window.GEMINI_CONFIG = {
         },
         {
           name: "set_volume",
-          description: "Sets the Windows master volume percentage (0 to 100).",
+          description: "Sets the Windows master volume percentage (0 to 100). ONLY call when user explicitly asks to change volume to a specific percentage. NEVER call during greetings.",
           parameters: {
             type: "OBJECT",
             properties: {
@@ -113,7 +113,7 @@ window.GEMINI_CONFIG = {
         },
         {
           name: "get_pc_hardware_status",
-          description: "Gets real-time CPU, RAM, battery, disk space, and lock status of the Windows PC."
+          description: "Gets real-time CPU, RAM, battery, disk space, and lock status of the Windows PC. ONLY call if user explicitly asks for CPU, RAM, or PC hardware status. NEVER call during greetings or conversation."
         },
         {
           name: "run_powershell_command",

@@ -72,6 +72,42 @@ std::string GetLocalIP() {
     return "127.0.0.1";
 }
 
+std::string GetPrimaryMacAddress() {
+    ULONG outBufLen = 15000;
+    std::vector<BYTE> buffer(outBufLen);
+    PIP_ADAPTER_ADDRESSES pAddresses = (IP_ADAPTER_ADDRESSES*)buffer.data();
+
+    if (GetAdaptersAddresses(AF_INET, GAA_FLAG_INCLUDE_GATEWAYS, NULL, pAddresses, &outBufLen) == ERROR_BUFFER_OVERFLOW) {
+        buffer.resize(outBufLen);
+        pAddresses = (IP_ADAPTER_ADDRESSES*)buffer.data();
+    }
+
+    if (GetAdaptersAddresses(AF_INET, GAA_FLAG_INCLUDE_GATEWAYS, NULL, pAddresses, &outBufLen) == NO_ERROR) {
+        for (PIP_ADAPTER_ADDRESSES pCurr = pAddresses; pCurr != NULL; pCurr = pCurr->Next) {
+            if (pCurr->OperStatus != IfOperStatusUp) continue;
+            if (pCurr->IfType == IF_TYPE_SOFTWARE_LOOPBACK || pCurr->IfType == IF_TYPE_TUNNEL) continue;
+            if (pCurr->PhysicalAddressLength != 6) continue;
+
+            char descA[256] = {0};
+            if (pCurr->Description) {
+                WideCharToMultiByte(CP_ACP, 0, pCurr->Description, -1, descA, sizeof(descA), NULL, NULL);
+            }
+            std::string descStr(descA);
+            if (descStr.find("Virtual") != std::string::npos || descStr.find("Pseudo") != std::string::npos || descStr.find("Bluetooth") != std::string::npos) {
+                continue;
+            }
+
+            char macBuf[32];
+            snprintf(macBuf, sizeof(macBuf), "%02X:%02X:%02X:%02X:%02X:%02X",
+                pCurr->PhysicalAddress[0], pCurr->PhysicalAddress[1],
+                pCurr->PhysicalAddress[2], pCurr->PhysicalAddress[3],
+                pCurr->PhysicalAddress[4], pCurr->PhysicalAddress[5]);
+            return std::string(macBuf);
+        }
+    }
+    return "";
+}
+
 std::string GetTailscaleIP() {
     ULONG outBufLen = 15000;
     std::vector<BYTE> buffer(outBufLen);

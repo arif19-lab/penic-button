@@ -12,7 +12,7 @@
   <title>PANIC CTRL - CYBER REMOTE NODE</title>
 
   <!-- 🎨 1. MODULAR CYBERPUNK STYLESHEET -->
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/style.css?v=2.7.0">
 
   <!-- 📦 2. EXTERNAL QR & AUDIO CDN -->
   <script src="jsqr.min.js"></script>
@@ -180,11 +180,11 @@
             </svg>
           </button>
 
-          <!-- 👤 Avatar Icon in Top-Left of this HUD Card -->
-          <div class="cg-drawer-avatar-left" onclick="if(window.innerWidth>=860&&(document.getElementById('cgSidebarDrawer').classList.contains('mini-rail')||document.getElementById('cgSidebarDrawer').classList.contains('collapsed'))) toggleCgSidebar()" style="cursor:pointer" title="Click avatar to expand">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#0f172a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-              <circle cx="12" cy="7" r="4"></circle>
+          <!-- 🌀 CYBER VORTEX INSIGNIA (User-Selected Design) -->
+          <div class="cg-drawer-avatar-left" onclick="if(window.innerWidth>=860&&(document.getElementById('cgSidebarDrawer').classList.contains('mini-rail')||document.getElementById('cgSidebarDrawer').classList.contains('collapsed'))) toggleCgSidebar()" style="cursor:pointer" title="PanicCTRL">
+            <svg width="30" height="30" viewBox="0 0 100 100" fill="currentColor">
+              <circle cx="50" cy="50" r="12.4" />
+              <path fill-rule="evenodd" d="M 45.12,0.49 C 46.42,0.37 47.72,0.41 49.02,0.49 C 50.33,0.57 51.63,0.73 52.93,0.98 C 54.23,1.22 55.53,1.50 56.83,1.95 C 58.13,2.40 59.43,3.01 60.73,3.66 C 62.03,4.31 63.33,4.96 64.63,5.85 C 65.93,6.75 67.32,7.85 68.54,9.02 C 69.76,10.20 70.93,11.63 71.95,12.93 C 72.97,14.23 73.86,15.53 74.63,16.83 C 75.41,18.13 76.02,19.43 76.59,20.73 C 77.15,22.03 77.64,23.33 78.05,24.63 C 78.46,25.93 78.74,27.24 79.02,28.54 C 79.31,29.84 79.59,31.14 79.76,32.44 C 79.92,33.74 80.00,35.04 80.00,36.34 C 80.00,37.64 79.88,38.94 79.76,40.24 C 79.63,41.54 79.47,42.85 79.27,44.15 C 79.07,45.45 78.86,46.75 78.54,48.05 C 78.21,49.35 77.80,50.65 77.32,51.95 C 76.83,53.25 76.26,54.55 75.61,55.85 C 74.96,57.15 74.27,58.46 73.41,59.76 C 72.56,61.06 71.63,62.40 70.49,63.66 C 69.35,64.92 67.56,66.50 66.59,67.32 C 65.61,68.13 64.39,68.94 64.63,68.54 C 64.88,68.13 67.07,66.14 68.05,64.88 C 69.02,63.62 69.80,62.28 70.49,60.98 C 71.18,59.67 71.75,58.37 72.20,57.07 C 72.64,55.77 72.93,54.47 73.17,53.17 C 73.41,51.87 73.58,50.57 73.66,49.27 C 73.74,47.97 73.74,46.67 73.66,45.37 C 73.58,44.07 73.37,42.76 73.17,41.46 C 72.97,40.16 72.76,38.86 72.44,37.56 C 72.11,36.26 71.67,34.96 71.22,33.66 C 70.77,32.36 70.37,31.06 69.76,29.76 C 69.15,28.46 68.33,27.15 67.56,25.85 C 66.79,24.55 66.06,23.25 65.12,21.95 C 64.19,20.65 63.13,19.31 61.95,18.05 C 60.77,16.79 59.35,15.49 58.05,14.39 C 56.75,13.29 55.45,12.32 54.15,11.46 C 52.85,10.61 51.54,9.84 50.24,9.27 C 48.94,8.70 47.64,8.41 46.34,8.05 C 45.04,7.68 43.74,7.28 42.44,7.07 C 41.14,6.87 39.84,6.83 38.54,6.83 C 37.24,6.83 35.93,6.87 34.63,7.07 C 33.33,7.28 32.03,7.56 30.73,8.05 C 29.43,8.54 28.13,9.19 26.83,10.00 C 25.53,10.81 24.11,11.79 22.93,12.93 C 21.75,14.07 19.88,16.83 19.76,16.83 C 19.63,16.83 21.22,14.23 22.20,12.93 C 23.17,11.63 24.39,10.16 25.61,9.02 C 26.83,7.89 28.21,6.95 29.51,6.10 C 30.81,5.24 32.11,4.55 33.41,3.90 C 34.72,3.25 36.02,2.64 37.32,2.20 C 38.62,1.75 39.92,1.50 41.22,1.22 C 42.52,0.93 43.82,0.61 45.12,0.49 Z M 33.66,19.27 C 34.88,19.19 36.26,19.23 37.56,19.27 C 38.86,19.31 40.16,19.39 41.46,19.51 C 42.76,19.63 44.07,19.72 45.37,20.00 C 46.67,20.28 47.97,20.77 49.27,21.22 C 50.57,21.67 51.87,22.11 53.17,22.68 C 54.47,23.25 55.77,23.86 57.07,24.63 C 58.37,25.41 59.67,26.30 60.98,27.32 C 62.28,28.33 63.74,29.51 64.88,30.73 C 66.02,31.95 67.80,34.43 67.80,34.63 C 67.80,34.84 66.02,32.85 64.88,31.95 C 63.74,31.06 62.28,30.00 60.98,29.27 C 59.67,28.54 58.37,28.01 57.07,27.56 C 55.77,27.11 54.47,26.87 53.17,26.59 C 51.87,26.30 50.57,25.98 49.27,25.85 C 47.97,25.73 46.67,25.77 45.37,25.85 C 44.07,25.93 42.76,26.14 41.46,26.34 C 40.16,26.54 38.86,26.79 37.56,27.07 C 36.26,27.36 34.96,27.60 33.66,28.05 C 32.36,28.50 31.06,29.15 29.76,29.76 C 28.46,30.37 27.15,30.93 25.85,31.71 C 24.55,32.48 23.25,33.37 21.95,34.39 C 20.65,35.41 19.27,36.59 18.05,37.80 C 16.83,39.02 15.65,40.41 14.63,41.71 C 13.62,43.01 12.72,44.31 11.95,45.61 C 11.18,46.91 10.53,48.21 10.00,49.51 C 9.47,50.81 9.11,52.11 8.78,53.41 C 8.46,54.72 8.21,56.02 8.05,57.32 C 7.89,58.62 7.80,59.92 7.80,61.22 C 7.80,62.52 7.85,63.82 8.05,65.12 C 8.25,66.42 8.54,67.72 9.02,69.02 C 9.51,70.33 10.12,71.63 10.98,72.93 C 11.83,74.23 13.21,75.81 14.15,76.83 C 15.08,77.85 16.83,79.11 16.59,79.02 C 16.34,78.94 13.94,77.40 12.68,76.34 C 11.42,75.28 10.12,73.94 9.02,72.68 C 7.93,71.42 6.91,70.08 6.10,68.78 C 5.28,67.48 4.72,66.18 4.15,64.88 C 3.58,63.58 3.05,62.28 2.68,60.98 C 2.32,59.67 2.15,58.37 1.95,57.07 C 1.75,55.77 1.50,54.47 1.46,53.17 C 1.42,51.87 1.59,50.57 1.71,49.27 C 1.83,47.97 1.91,46.67 2.20,45.37 C 2.48,44.07 2.93,42.76 3.41,41.46 C 3.90,40.16 4.43,38.86 5.12,37.56 C 5.81,36.26 6.63,34.96 7.56,33.66 C 8.50,32.36 9.55,30.98 10.73,29.76 C 11.91,28.54 13.33,27.32 14.63,26.34 C 15.93,25.37 17.24,24.63 18.54,23.90 C 19.84,23.17 21.14,22.48 22.44,21.95 C 23.74,21.42 25.04,21.10 26.34,20.73 C 27.64,20.37 29.02,20.00 30.24,19.76 C 31.46,19.51 32.44,19.35 33.66,19.27 Z M 82.68,20.73 C 82.80,20.69 85.28,22.15 86.59,23.17 C 87.89,24.19 89.35,25.57 90.49,26.83 C 91.63,28.09 92.56,29.43 93.41,30.73 C 94.27,32.03 95.00,33.33 95.61,34.63 C 96.22,35.93 96.67,37.24 97.07,38.54 C 97.48,39.84 97.80,41.14 98.05,42.44 C 98.29,43.74 98.50,45.04 98.54,46.34 C 98.58,47.64 98.41,48.94 98.29,50.24 C 98.17,51.54 98.05,52.85 97.80,54.15 C 97.56,55.45 97.24,56.75 96.83,58.05 C 96.42,59.35 95.98,60.65 95.37,61.95 C 94.76,63.25 94.07,64.55 93.17,65.85 C 92.28,67.15 91.18,68.50 90.00,69.76 C 88.82,71.02 87.40,72.40 86.10,73.41 C 84.80,74.43 83.50,75.12 82.20,75.85 C 80.89,76.59 79.59,77.24 78.29,77.80 C 76.99,78.37 75.69,78.86 74.39,79.27 C 73.09,79.67 71.79,80.00 70.49,80.24 C 69.19,80.49 67.89,80.61 66.59,80.73 C 65.28,80.85 63.98,80.98 62.68,80.98 C 61.38,80.98 60.08,80.89 58.78,80.73 C 57.48,80.57 56.18,80.28 54.88,80.00 C 53.58,79.72 52.28,79.43 50.98,79.02 C 49.67,78.62 48.37,78.13 47.07,77.56 C 45.77,76.99 44.47,76.38 43.17,75.61 C 41.87,74.84 40.57,73.94 39.27,72.93 C 37.97,71.91 36.54,70.73 35.37,69.51 C 34.19,68.29 32.24,65.81 32.20,65.61 C 32.15,65.41 33.98,67.44 35.12,68.29 C 36.26,69.15 37.72,70.04 39.02,70.73 C 40.33,71.42 41.63,71.95 42.93,72.44 C 44.23,72.93 45.53,73.37 46.83,73.66 C 48.13,73.94 49.43,74.07 50.73,74.15 C 52.03,74.23 53.33,74.19 54.63,74.15 C 55.93,74.11 57.24,74.07 58.54,73.90 C 59.84,73.74 61.14,73.50 62.44,73.17 C 63.74,72.85 65.04,72.40 66.34,71.95 C 67.64,71.50 68.94,71.06 70.24,70.49 C 71.54,69.92 72.85,69.31 74.15,68.54 C 75.45,67.76 76.75,66.87 78.05,65.85 C 79.35,64.84 80.73,63.66 81.95,62.44 C 83.17,61.22 84.35,59.84 85.37,58.54 C 86.38,57.24 87.28,55.93 88.05,54.63 C 88.82,53.33 89.47,52.03 90.00,50.73 C 90.53,49.43 90.85,48.13 91.22,46.83 C 91.59,45.53 91.99,44.23 92.20,42.93 C 92.40,41.63 92.48,40.33 92.44,39.02 C 92.40,37.72 92.20,36.42 91.95,35.12 C 91.71,33.82 91.46,32.52 90.98,31.22 C 90.49,29.92 89.88,28.62 89.02,27.32 C 88.17,26.02 86.91,24.51 85.85,23.41 C 84.80,22.32 82.56,20.77 82.68,20.73 Z M 36.34,30.73 C 35.77,31.34 33.54,33.29 32.44,34.63 C 31.34,35.98 30.53,37.40 29.76,38.78 C 28.98,40.16 28.29,41.54 27.80,42.93 C 27.32,44.31 27.07,45.69 26.83,47.07 C 26.59,48.46 26.42,49.84 26.34,51.22 C 26.26,52.60 26.26,53.98 26.34,55.37 C 26.42,56.75 26.59,58.13 26.83,59.51 C 27.07,60.89 27.40,62.28 27.80,63.66 C 28.21,65.04 28.74,66.42 29.27,67.80 C 29.80,69.19 30.28,70.57 30.98,71.95 C 31.67,73.33 32.52,74.72 33.41,76.10 C 34.31,77.48 35.20,78.86 36.34,80.24 C 37.48,81.63 38.90,83.13 40.24,84.39 C 41.59,85.65 43.01,86.83 44.39,87.80 C 45.77,88.78 47.15,89.55 48.54,90.24 C 49.92,90.93 51.30,91.46 52.68,91.95 C 54.07,92.44 55.45,92.93 56.83,93.17 C 58.21,93.41 59.59,93.41 60.98,93.41 C 62.36,93.41 63.74,93.37 65.12,93.17 C 66.50,92.97 67.89,92.68 69.27,92.20 C 70.65,91.71 72.03,91.14 73.41,90.24 C 74.80,89.35 76.38,88.01 77.56,86.83 C 78.74,85.65 80.45,83.09 80.49,83.17 C 80.53,83.25 78.86,85.93 77.80,87.32 C 76.75,88.70 75.45,90.24 74.15,91.46 C 72.85,92.68 71.38,93.70 70.00,94.63 C 68.62,95.57 67.24,96.42 65.85,97.07 C 64.47,97.72 63.09,98.13 61.71,98.54 C 60.33,98.94 58.94,99.31 57.56,99.51 C 56.18,99.72 54.80,99.72 53.41,99.76 C 52.03,99.80 50.65,99.88 49.27,99.76 C 47.89,99.63 46.50,99.39 45.12,99.02 C 43.74,98.66 42.36,98.17 40.98,97.56 C 39.59,96.95 38.21,96.26 36.83,95.37 C 35.45,94.47 34.02,93.41 32.68,92.20 C 31.34,90.98 29.92,89.43 28.78,88.05 C 27.64,86.67 26.71,85.28 25.85,83.90 C 25.00,82.52 24.31,81.14 23.66,79.76 C 23.01,78.37 22.40,76.99 21.95,75.61 C 21.50,74.23 21.26,72.85 20.98,71.46 C 20.69,70.08 20.41,68.70 20.24,67.32 C 20.08,65.93 20.00,64.55 20.00,63.17 C 20.00,61.79 20.08,60.41 20.24,59.02 C 20.41,57.64 20.69,56.26 20.98,54.88 C 21.26,53.50 21.54,52.11 21.95,50.73 C 22.36,49.35 22.85,47.97 23.41,46.59 C 23.98,45.20 24.59,43.82 25.37,42.44 C 26.14,41.06 26.99,39.67 28.05,38.29 C 29.11,36.91 30.41,35.37 31.71,34.15 C 33.01,32.93 35.08,31.54 35.85,30.98 C 36.63,30.41 36.91,30.12 36.34,30.73 Z" />
             </svg>
           </div>
 
@@ -195,43 +195,10 @@
         </div>
 
         <div class="cg-drawer-nav">
-          <!-- 📂 SECTION 1: মেনু (MAIN MENU) -->
-          <div class="cg-menu-group-label">মেনু</div>
+          <!-- 📂 SECTION: CONTROLS -->
+          <div class="cg-menu-group-label">Controls</div>
           <div class="cg-menu-card-group">
-            <button type="button" class="cg-menu-card-row" onclick="clearGeminiTerminal(); if(window.innerWidth < 860) closeCgSidebar();">
-              <span class="cg-menu-row-icon">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0f172a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                </svg>
-              </span>
-              <span class="cg-menu-row-text">নতুন চ্যাট</span>
-            </button>
-
-            <button type="button" class="cg-menu-card-row" onclick="toggleGeminiKeyModal(); if(window.innerWidth < 860) closeCgSidebar();">
-              <span class="cg-menu-row-icon">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0f172a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21 2l-2 2m-1.5 1.5L14 9l-3 3-2-2-5 5a2.828 2.828 0 1 0 4 4l5-5-2-2 3-3 3.5-3.5z"></path>
-                </svg>
-              </span>
-              <span class="cg-menu-row-text">Gemini API Key</span>
-            </button>
-
-            <button type="button" id="sidebarApkBtn" class="cg-menu-card-row" style="display:none;" onclick="window.open('/download/app.apk', '_blank'); if(window.innerWidth < 860) closeCgSidebar();">
-              <span class="cg-menu-row-icon">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0f172a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                  <polyline points="7 10 12 15 17 10"></polyline>
-                  <line x1="12" y1="15" x2="12" y2="3"></line>
-                </svg>
-              </span>
-              <span class="cg-menu-row-text">মোবাইল APK</span>
-            </button>
-          </div>
-
-          <!-- 📂 SECTION 2: অপশন (OPTIONS) -->
-          <div class="cg-menu-group-label">অপশন</div>
-          <div class="cg-menu-card-group">
-            <button type="button" class="cg-menu-card-row" onclick="switchTab('home'); if(window.innerWidth < 860) closeCgSidebar();">
+            <button type="button" class="cg-menu-card-row" data-preview="monitor" onclick="switchTab('home'); if(window.innerWidth < 860) closeCgSidebar();">
               <span class="cg-menu-row-icon">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0f172a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
@@ -239,33 +206,141 @@
                   <line x1="12" y1="17" x2="12" y2="21"></line>
                 </svg>
               </span>
-              <span class="cg-menu-row-text">পিসি মনিটর</span>
+              <span class="cg-menu-row-text">PC Monitor</span>
             </button>
 
-            <button type="button" class="cg-menu-card-row" onclick="triggerPanic(); if(window.innerWidth < 860) closeCgSidebar();">
+            <button type="button" class="cg-menu-card-row" data-preview="panic" onclick="triggerPanic(); if(window.innerWidth < 860) closeCgSidebar();">
               <span class="cg-menu-row-icon">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0f172a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
                   <line x1="12" y1="9" x2="12" y2="13"></line>
                   <line x1="12" y1="17" x2="12.01" y2="17"></line>
                 </svg>
               </span>
-              <span class="cg-menu-row-text">ইমার্জেন্সি প্যানিক</span>
+              <span class="cg-menu-row-text" style="color:#ef4444; font-weight:600;">Emergency Panic</span>
+            </button>
+
+            <button type="button" id="sidebarApkBtn" class="cg-menu-card-row" data-preview="apk" style="display:none;" onclick="window.open('/download/app.apk', '_blank'); if(window.innerWidth < 860) closeCgSidebar();">
+              <span class="cg-menu-row-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0f172a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+              </span>
+              <span class="cg-menu-row-text">Mobile APK</span>
             </button>
           </div>
         </div>
 
-        <!-- 🏷️ Footer Version -->
-        <div class="cg-drawer-footer-version">
-          <span>v১.০.০</span>
+        <!-- 👤 CHATGPT-STYLE BOTTOM USER CARD (GROWS BIGGER UPWARDS ON TOP OF PANEL) -->
+        <div class="cg-drawer-footer" id="cgDrawerFooter">
+          <div id="cgUserCard" class="cg-user-accordion-card">
+            
+            <!-- 📂 EXPANDABLE SETTINGS BODY (Expands inside the card upwards) -->
+            <div id="cgUserExpandBody" class="cg-user-expand-body">
+              <div class="cg-expand-inner">
+                <div class="cg-popover-header">
+                  <div class="cg-popover-title-wrap">
+                    <div class="cg-popover-dot"></div>
+                    <span class="cg-popover-user-name">Quick Settings & Tools</span>
+                  </div>
+                  <span class="cg-popover-user-badge">PanicCTRL</span>
+                </div>
+
+                <div class="cg-menu-items-group">
+                  <!-- 🔑 Gemini API Key -->
+                  <div class="cg-menu-item" data-preview="key" onclick="toggleGeminiKeyModal(); closeUserCard();">
+                    <div class="cg-menu-icon-box cg-icon-amber">
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="8" cy="15" r="5"/>
+                        <path d="m11.5 11.5 8.5-8.5"/>
+                        <path d="m15.5 7.5 2 2"/>
+                        <path d="m18.5 4.5 2 2"/>
+                      </svg>
+                    </div>
+                    <div class="cg-menu-item-content">
+                      <div class="cg-menu-item-name">Gemini API Key</div>
+                      <div class="cg-menu-item-desc">API Key & connection settings</div>
+                    </div>
+                    <svg class="cg-menu-item-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                  </div>
+
+                  <!-- 🎭 AI Persona -->
+                  <div class="cg-menu-item" data-preview="persona" onclick="togglePersonaPicker(event); closeUserCard();">
+                    <div class="cg-menu-icon-box cg-icon-purple">
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>
+                        <path d="M20 3v4"/>
+                        <path d="M22 5h-4"/>
+                      </svg>
+                    </div>
+                    <div class="cg-menu-item-content">
+                      <div class="cg-menu-item-name">AI Persona</div>
+                      <div id="cgActivePersonaSubtitleBottom" class="cg-menu-item-desc">Default • Smart Assistant</div>
+                    </div>
+                    <svg class="cg-menu-item-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                  </div>
+
+                  <!-- 📱 Mobile QR Pairing -->
+                  <div class="cg-menu-item" data-preview="pairing" onclick="openPairingModal(); closeUserCard();">
+                    <div class="cg-menu-icon-box cg-icon-cyan">
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect width="13" height="19" x="5.5" y="2.5" rx="3"/>
+                        <path d="M12 17.5h.01"/>
+                        <path d="M9 6h6"/>
+                      </svg>
+                    </div>
+                    <div class="cg-menu-item-content">
+                      <div class="cg-menu-item-name">Mobile QR Pairing</div>
+                      <div class="cg-menu-item-desc">Connect phone to PC</div>
+                    </div>
+                    <svg class="cg-menu-item-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                  </div>
+
+                  <div class="cg-menu-divider"></div>
+
+                  <!-- 🗑️ Clear Chat -->
+                  <div class="cg-menu-item cg-danger-item" data-preview="clear" onclick="clearGeminiTerminal(); closeUserCard();">
+                    <div class="cg-menu-icon-box cg-icon-rose">
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 6h18"/>
+                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                        <line x1="10" x2="10" y1="11" y2="17"/>
+                        <line x1="14" x2="14" y1="11" y2="17"/>
+                      </svg>
+                    </div>
+                    <div class="cg-menu-item-content">
+                      <div class="cg-menu-item-name">Clear Chat</div>
+                      <div class="cg-menu-item-desc">Reset active message history</div>
+                    </div>
+                    <svg class="cg-menu-item-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 👤 BOTTOM USER ROW (Anchored at the bottom of the card) -->
+            <div class="cg-drawer-user-card" id="cgDrawerUserBtn" onclick="toggleUserCard(event)">
+              <div class="cg-user-left">
+                <div class="cg-user-avatar-badge" title="Imran">
+                  <span>IM</span>
+                </div>
+                <div class="cg-user-meta">
+                  <span class="cg-user-name">imran</span>
+                  <span class="cg-user-tier">Free</span>
+                </div>
+              </div>
+              <div class="cg-user-chevron-wrap">
+                <svg class="cg-user-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="18 15 12 9 6 15"></polyline>
+                </svg>
+              </div>
+            </div>
+
+          </div>
         </div>
-        <div class="cg-mini-divider"></div>
-        <button class="cg-mini-settings-btn" onclick="toggleGeminiKeyModal()" title="Settings">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="3"></circle>
-            <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
-          </svg>
-        </button>
       </aside>
 
       <!-- ↔️ ANTIGRAVITY DRAGGABLE RESIZE DIVIDER -->
@@ -284,8 +359,8 @@
             </svg>
           </button>
           <!-- ChatGPT / Gemini Model Dropdown — moved to left -->
-          <div class="cg-model-title" onclick="toggleGemini3DotMenu(event)">
-            <span>PanicCTRL AI</span>
+          <div class="cg-model-title" onclick="toggleGeminiModelMenu(event)" title="Switch AI Model">
+            <span id="cgCurrentModelName">Gemini 3.1 Flash Live</span>
             <svg class="cg-caret" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="6 9 12 15 18 9"></polyline>
             </svg>
@@ -296,34 +371,156 @@
               <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
             </svg>
           </button>
-          <!-- Panel now directly below PanicCTRL AI button -->
-          <div id="gemini3DotDropdown" class="cg-menu-dropdown" style="display:none; left:0; right:auto; top:42px;">
-            <div class="cg-menu-item" onclick="toggleGeminiLiveConnection(); closeGemini3DotMenu();">
-              <span>🎙️</span>
-              <span>Live Voice On / Off</span>
+          
+          <!-- 🧠 AI MODEL SELECTION MENU -->
+          <div id="geminiModelDropdown" class="cg-menu-dropdown cg-model-dropdown" style="display:none;">
+            <!-- Header -->
+            <div class="cg-model-header">
+              <div class="cg-model-header-left">
+                <div class="cg-model-header-sparkle">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/>
+                  </svg>
+                </div>
+                <span class="cg-model-header-title">Switch AI Model</span>
+              </div>
+              <span class="cg-model-header-badge">Google Gemini</span>
             </div>
-            <div class="cg-menu-item" onclick="toggleGeminiKeyModal(); closeGemini3DotMenu();">
-              <span>🔑</span>
-              <span>Gemini API Key</span>
+
+            <div class="cg-model-section-title">
+              <span>⚡ REALTIME LIVE (VOICE & MULTIMODAL)</span>
             </div>
+
+            <!-- Gemini 3.1 Flash Live -->
+            <div class="cg-model-option active" data-model="models/gemini-3.1-flash-live-preview" onclick="selectGeminiModel('models/gemini-3.1-flash-live-preview', 'Gemini 3.1 Flash Live', true)">
+              <div class="cg-model-icon cg-model-icon-cyan">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                  <line x1="12" x2="12" y1="19" y2="22"/>
+                </svg>
+              </div>
+              <div class="cg-model-info">
+                <div class="cg-model-row">
+                  <span class="cg-model-label">Gemini 3.1 Flash Live</span>
+                  <span class="cg-model-pill cg-pill-new">NEW 2026</span>
+                </div>
+                <div class="cg-model-desc">Sub-second 24kHz audio-to-audio & PC tools</div>
+              </div>
+              <div class="cg-model-radio">
+                <span class="cg-model-check">✓</span>
+              </div>
+            </div>
+
+            <!-- Gemini 2.5 Native Audio -->
+            <div class="cg-model-option" data-model="models/gemini-2.5-flash-native-audio-latest" onclick="selectGeminiModel('models/gemini-2.5-flash-native-audio-latest', 'Gemini 2.5 Native Audio', true)">
+              <div class="cg-model-icon cg-model-icon-purple">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 18v-6a9 9 0 0 1 18 0v6"/>
+                  <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>
+                </svg>
+              </div>
+              <div class="cg-model-info">
+                <div class="cg-model-row">
+                  <span class="cg-model-label">Gemini 2.5 Native Audio</span>
+                  <span class="cg-model-pill cg-pill-audio">VOICE</span>
+                </div>
+                <div class="cg-model-desc">Conversational real-time voice streaming</div>
+              </div>
+              <div class="cg-model-radio">
+                <span class="cg-model-check"></span>
+              </div>
+            </div>
+
             <div class="cg-menu-divider"></div>
-            <div class="cg-menu-item cg-danger-item" onclick="clearGeminiTerminal(); closeGemini3DotMenu();">
-              <span>🗑️</span>
-              <span>Clear Chat</span>
+
+            <div class="cg-model-section-title">
+              <span>🧠 TEXT, CODE & DEEP REASONING</span>
+            </div>
+
+            <!-- Gemini 3.1 Pro -->
+            <div class="cg-model-option" data-model="gemini-3.1-pro-preview" onclick="selectGeminiModel('gemini-3.1-pro-preview', 'Gemini 3.1 Pro', false)">
+              <div class="cg-model-icon cg-model-icon-indigo">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 4.44-2.04z"/>
+                  <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-4.44-2.04z"/>
+                </svg>
+              </div>
+              <div class="cg-model-info">
+                <div class="cg-model-row">
+                  <span class="cg-model-label">Gemini 3.1 Pro</span>
+                  <span class="cg-model-pill cg-pill-pro">PRO REASONING</span>
+                </div>
+                <div class="cg-model-desc">Deep reasoning, complex code & architecture</div>
+              </div>
+              <div class="cg-model-radio">
+                <span class="cg-model-check"></span>
+              </div>
+            </div>
+
+            <!-- Gemini 2.5 Flash -->
+            <div class="cg-model-option" data-model="gemini-2.5-flash" onclick="selectGeminiModel('gemini-2.5-flash', 'Gemini 2.5 Flash', false)">
+              <div class="cg-model-icon cg-model-icon-emerald">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+                </svg>
+              </div>
+              <div class="cg-model-info">
+                <div class="cg-model-row">
+                  <span class="cg-model-label">Gemini 2.5 Flash</span>
+                  <span class="cg-model-pill cg-pill-fast">FAST</span>
+                </div>
+                <div class="cg-model-desc">Ultra-fast general intelligence & tool execution</div>
+              </div>
+              <div class="cg-model-radio">
+                <span class="cg-model-check"></span>
+              </div>
+            </div>
+
+            <!-- Gemini 3.1 Flash Lite -->
+            <div class="cg-model-option" data-model="gemini-3.1-flash-lite" onclick="selectGeminiModel('gemini-3.1-flash-lite', 'Gemini 3.1 Flash Lite', false)">
+              <div class="cg-model-icon cg-model-icon-sky">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"/>
+                  <line x1="16" x2="2" y1="8" y2="22"/>
+                  <line x1="17.5" x2="9" y1="15" y2="15"/>
+                </svg>
+              </div>
+              <div class="cg-model-info">
+                <div class="cg-model-row">
+                  <span class="cg-model-label">Gemini 3.1 Flash Lite</span>
+                  <span class="cg-model-pill cg-pill-lite">LIGHT</span>
+                </div>
+                <div class="cg-model-desc">Super lightweight, instant responses</div>
+              </div>
+              <div class="cg-model-radio">
+                <span class="cg-model-check"></span>
+              </div>
+            </div>
+
+            <!-- Gemini Computer Use -->
+            <div class="cg-model-option" data-model="gemini-2.5-computer-use-preview-10-2025" onclick="selectGeminiModel('gemini-2.5-computer-use-preview-10-2025', 'Gemini Computer Use', false)">
+              <div class="cg-model-icon cg-model-icon-amber">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect width="20" height="14" x="2" y="3" rx="2"/>
+                  <line x1="8" x2="16" y1="21" y2="21"/>
+                  <line x1="12" x2="12" y1="17" y2="21"/>
+                </svg>
+              </div>
+              <div class="cg-model-info">
+                <div class="cg-model-row">
+                  <span class="cg-model-label">Gemini Computer Use</span>
+                  <span class="cg-model-pill cg-pill-pc">AUTOMATION</span>
+                </div>
+                <div class="cg-model-desc">Windows desktop & UI automation agent</div>
+              </div>
+              <div class="cg-model-radio">
+                <span class="cg-model-check"></span>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- Header Right: 3-Dot Menu trigger only -->
-        <div class="cg-header-right">
-          <button class="cg-icon-btn cg-3dot-trigger" onclick="toggleGemini3DotMenu(event)" title="Settings">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-              <circle cx="12" cy="5" r="2"></circle>
-              <circle cx="12" cy="12" r="2"></circle>
-              <circle cx="12" cy="19" r="2"></circle>
-            </svg>
-          </button>
-        </div>
       </header>
 
       <!-- 📜 MAIN CHAT & HERO BODY -->
@@ -387,10 +584,210 @@
       <!-- 🚀 FLOATING COMPOSER CAPSULE (Exact from Screenshot) -->
       <footer class="cg-footer-composer">
         <form class="cg-input-capsule" onsubmit="event.preventDefault(); executeManualTerminalCmd(); return false;">
+          <!-- 🎙️ MODERN FLOATING VOICE PICKER PANEL (Aligned with chat input box left & top header lines) -->
+          <div id="geminiVoicePickerPanel" class="cg-voice-picker-panel" style="display:none;" onclick="event.stopPropagation();">
+            <div class="cg-voice-picker-header">
+              <div class="cg-voice-picker-header-left">
+                <div class="cg-voice-header-icon">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                    <line x1="12" x2="12" y1="19" y2="22"/>
+                  </svg>
+                </div>
+                <span class="cg-voice-picker-title">AI Voice Persona</span>
+              </div>
+              <div class="cg-voice-header-right">
+                <span class="cg-voice-picker-badge">Gemini Live</span>
+                <button type="button" class="cg-voice-picker-close" onclick="closeVoicePicker()" title="Close">✕</button>
+              </div>
+            </div>
+
+            <div class="cg-voice-list-scroll">
+              <!-- Puck -->
+              <div class="cg-voice-item active" data-voice="Puck" onclick="selectVoice('Puck')">
+                <div class="cg-voice-icon-box cg-vbox-amber">
+                  <span>⚡</span>
+                </div>
+                <div class="cg-voice-info">
+                  <div class="cg-voice-row">
+                    <span class="cg-voice-name">Puck</span>
+                    <span class="cg-vtag-pill cg-vpill-default">DEFAULT</span>
+                  </div>
+                  <div class="cg-voice-tag">Lively &amp; Energetic • Expressive</div>
+                </div>
+                <div class="cg-voice-radio">
+                  <span class="cg-voice-check">✓</span>
+                </div>
+              </div>
+
+              <!-- Achird -->
+              <div class="cg-voice-item" data-voice="Achird" onclick="selectVoice('Achird')">
+                <div class="cg-voice-icon-box cg-vbox-emerald">
+                  <span>🌿</span>
+                </div>
+                <div class="cg-voice-info">
+                  <div class="cg-voice-row">
+                    <span class="cg-voice-name">Achird</span>
+                    <span class="cg-vtag-pill cg-vpill-new">NEW</span>
+                  </div>
+                  <div class="cg-voice-tag">Friendly &amp; Natural • Warm</div>
+                </div>
+                <div class="cg-voice-radio">
+                  <span class="cg-voice-check"></span>
+                </div>
+              </div>
+
+              <!-- Aoede -->
+              <div class="cg-voice-item" data-voice="Aoede" onclick="selectVoice('Aoede')">
+                <div class="cg-voice-icon-box cg-vbox-violet">
+                  <span>✨</span>
+                </div>
+                <div class="cg-voice-info">
+                  <div class="cg-voice-row">
+                    <span class="cg-voice-name">Aoede</span>
+                    <span class="cg-vtag-pill cg-vpill-melodic">MELODIC</span>
+                  </div>
+                  <div class="cg-voice-tag">Elegant, Melodic &amp; Inspiring</div>
+                </div>
+                <div class="cg-voice-radio">
+                  <span class="cg-voice-check"></span>
+                </div>
+              </div>
+
+              <!-- Charon -->
+              <div class="cg-voice-item" data-voice="Charon" onclick="selectVoice('Charon')">
+                <div class="cg-voice-icon-box cg-vbox-indigo">
+                  <span>🛡️</span>
+                </div>
+                <div class="cg-voice-info">
+                  <div class="cg-voice-row">
+                    <span class="cg-voice-name">Charon</span>
+                    <span class="cg-vtag-pill cg-vpill-deep">DEEP</span>
+                  </div>
+                  <div class="cg-voice-tag">Deep, Grounded &amp; Authoritative</div>
+                </div>
+                <div class="cg-voice-radio">
+                  <span class="cg-voice-check"></span>
+                </div>
+              </div>
+
+              <!-- Fenrir -->
+              <div class="cg-voice-item" data-voice="Fenrir" onclick="selectVoice('Fenrir')">
+                <div class="cg-voice-icon-box cg-vbox-cyan">
+                  <span>🐺</span>
+                </div>
+                <div class="cg-voice-info">
+                  <div class="cg-voice-row">
+                    <span class="cg-voice-name">Fenrir</span>
+                    <span class="cg-vtag-pill cg-vpill-fast">FAST</span>
+                  </div>
+                  <div class="cg-voice-tag">Fast, Bold &amp; Confident</div>
+                </div>
+                <div class="cg-voice-radio">
+                  <span class="cg-voice-check"></span>
+                </div>
+              </div>
+
+              <!-- Kore -->
+              <div class="cg-voice-item" data-voice="Kore" onclick="selectVoice('Kore')">
+                <div class="cg-voice-icon-box cg-vbox-pink">
+                  <span>🌸</span>
+                </div>
+                <div class="cg-voice-info">
+                  <div class="cg-voice-row">
+                    <span class="cg-voice-name">Kore</span>
+                    <span class="cg-vtag-pill cg-vpill-soft">CALM</span>
+                  </div>
+                  <div class="cg-voice-tag">Soft, Sweet &amp; Empathetic</div>
+                </div>
+                <div class="cg-voice-radio">
+                  <span class="cg-voice-check"></span>
+                </div>
+              </div>
+
+              <!-- Zephyr -->
+              <div class="cg-voice-item" data-voice="Zephyr" onclick="selectVoice('Zephyr')">
+                <div class="cg-voice-icon-box cg-vbox-sky">
+                  <span>🌊</span>
+                </div>
+                <div class="cg-voice-info">
+                  <div class="cg-voice-row">
+                    <span class="cg-voice-name">Zephyr</span>
+                    <span class="cg-vtag-pill cg-vpill-warm">WARM</span>
+                  </div>
+                  <div class="cg-voice-tag">Warm, Casual &amp; Conversational</div>
+                </div>
+                <div class="cg-voice-radio">
+                  <span class="cg-voice-check"></span>
+                </div>
+              </div>
+
+              <!-- Orus -->
+              <div class="cg-voice-item" data-voice="Orus" onclick="selectVoice('Orus')">
+                <div class="cg-voice-icon-box cg-vbox-rose">
+                  <span>🎯</span>
+                </div>
+                <div class="cg-voice-info">
+                  <div class="cg-voice-row">
+                    <span class="cg-voice-name">Orus</span>
+                    <span class="cg-vtag-pill cg-vpill-crisp">CRISP</span>
+                  </div>
+                  <div class="cg-voice-tag">Clear, Precise &amp; Articulate</div>
+                </div>
+                <div class="cg-voice-radio">
+                  <span class="cg-voice-check"></span>
+                </div>
+              </div>
+
+              <!-- Algenib -->
+              <div class="cg-voice-item" data-voice="Algenib" onclick="selectVoice('Algenib')">
+                <div class="cg-voice-icon-box cg-vbox-blue">
+                  <span>👔</span>
+                </div>
+                <div class="cg-voice-info">
+                  <div class="cg-voice-row">
+                    <span class="cg-voice-name">Algenib</span>
+                    <span class="cg-vtag-pill cg-vpill-pro">PRO</span>
+                  </div>
+                  <div class="cg-voice-tag">Steady, Calm &amp; Professional</div>
+                </div>
+                <div class="cg-voice-radio">
+                  <span class="cg-voice-check"></span>
+                </div>
+              </div>
+
+              <!-- Vindemiatrix -->
+              <div class="cg-voice-item" data-voice="Vindemiatrix" onclick="selectVoice('Vindemiatrix')">
+                <div class="cg-voice-icon-box cg-vbox-purple">
+                  <span>💎</span>
+                </div>
+                <div class="cg-voice-info">
+                  <div class="cg-voice-row">
+                    <span class="cg-voice-name">Vindemiatrix</span>
+                    <span class="cg-vtag-pill cg-vpill-sharp">SHARP</span>
+                  </div>
+                  <div class="cg-voice-tag">Sharp, Sophisticated &amp; Elegant</div>
+                </div>
+                <div class="cg-voice-radio">
+                  <span class="cg-voice-check"></span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 🍎 Apple iOS Smooth Curved Beak Pointer -->
+            <div class="cg-ios-arrow-anchor">
+              <svg class="cg-ios-beak-svg" width="22" height="10" viewBox="0 0 22 10" fill="none">
+                <path d="M0 0C3.5 0 6 2 8 5.5L9.5 8.2C10.2 9.4 11.8 9.4 12.5 8.2L14 5.5C16 2 18.5 0 22 0" fill="#ffffff" stroke="rgba(226, 232, 240, 0.95)" stroke-width="1.5"/>
+                <line x1="1" y1="0" x2="21" y2="0" stroke="#ffffff" stroke-width="2.5"/>
+              </svg>
+            </div>
+          </div>
+
           <input type="text" id="manualTerminalInput" class="cg-text-input" placeholder="Message..." autocomplete="off">
 
           <div class="cg-capsule-actions">
-            <button type="button" class="cg-circle-btn" onclick="toggleGemini3DotMenu(event)" title="Add Attachment / Actions">
+            <button type="button" class="cg-circle-btn" onclick="toggleGeminiKeyModal()" title="Gemini Settings & API Key">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
                 <line x1="12" y1="5" x2="12" y2="19"></line>
                 <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -405,27 +802,24 @@
               </svg>
               <span>Search</span>
             </button>
-            <select id="geminiVoiceSelect" class="cg-voice-select" onchange="changeGeminiVoice(this.value)" title="Voice Persona" style="padding:4px 6px; font-size:10px; border:1px solid #e2e8f0; border-radius:8px; background:#fff; outline:none; flex-shrink:0; max-width:90px;">
-              <option value="Puck">🎙️ Puck</option>
-              <option value="Aoede">🎙️ Aoede</option>
-              <option value="Charon">🎙️ Charon</option>
-              <option value="Fenrir">🎙️ Fenrir</option>
-              <option value="Kore">🎙️ Kore</option>
-              <option value="Zephyr">🎙️ Zephyr</option>
-            </select>
 
-            <!-- 🎙️ Live Voice Dynamic Audio Waveform Button -->
+            <!-- 🎙️ Sleek Voice Persona Pill Button -->
+            <div class="cg-voice-trigger-wrapper">
+              <button type="button" id="geminiVoiceTrigger" class="cg-voice-pill" onclick="toggleVoicePicker(event)" title="Choose Voice Persona">
+                <span class="cg-voice-pill-icon">🎙️</span>
+                <span id="geminiVoiceCurrentName" class="cg-voice-pill-text">Puck</span>
+                <svg class="cg-voice-pill-caret" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </button>
+            </div>
+
+            <!-- 🎙️ Live Voice Cyber Vortex Button -->
             <button type="button" id="btnGoLive" class="cg-go-live-btn" onclick="toggleGeminiLiveConnection()" title="Live Voice Mode">
-              <div class="cg-live-waveform">
-                <span class="cg-wave-bar bar-1"></span>
-                <span class="cg-wave-bar bar-2"></span>
-                <span class="cg-wave-bar bar-3"></span>
-                <span class="cg-wave-bar bar-4"></span>
-                <span class="cg-wave-bar bar-5"></span>
-                <span class="cg-wave-bar bar-6"></span>
-                <span class="cg-wave-bar bar-7"></span>
-              </div>
+              <svg class="cg-vortex-svg" width="22" height="22" viewBox="0 0 100 100" fill="currentColor" style="transform-origin: center; overflow: visible;">
+                <circle class="cg-vortex-core" cx="50" cy="50" r="12.4" />
+                <path class="cg-vortex-blades" fill-rule="evenodd" d="M 45.12,0.49 C 46.42,0.37 47.72,0.41 49.02,0.49 C 50.33,0.57 51.63,0.73 52.93,0.98 C 54.23,1.22 55.53,1.50 56.83,1.95 C 58.13,2.40 59.43,3.01 60.73,3.66 C 62.03,4.31 63.33,4.96 64.63,5.85 C 65.93,6.75 67.32,7.85 68.54,9.02 C 69.76,10.20 70.93,11.63 71.95,12.93 C 72.97,14.23 73.86,15.53 74.63,16.83 C 75.41,18.13 76.02,19.43 76.59,20.73 C 77.15,22.03 77.64,23.33 78.05,24.63 C 78.46,25.93 78.74,27.24 79.02,28.54 C 79.31,29.84 79.59,31.14 79.76,32.44 C 79.92,33.74 80.00,35.04 80.00,36.34 C 80.00,37.64 79.88,38.94 79.76,40.24 C 79.63,41.54 79.47,42.85 79.27,44.15 C 79.07,45.45 78.86,46.75 78.54,48.05 C 78.21,49.35 77.80,50.65 77.32,51.95 C 76.83,53.25 76.26,54.55 75.61,55.85 C 74.96,57.15 74.27,58.46 73.41,59.76 C 72.56,61.06 71.63,62.40 70.49,63.66 C 69.35,64.92 67.56,66.50 66.59,67.32 C 65.61,68.13 64.39,68.94 64.63,68.54 C 64.88,68.13 67.07,66.14 68.05,64.88 C 69.02,63.62 69.80,62.28 70.49,60.98 C 71.18,59.67 71.75,58.37 72.20,57.07 C 72.64,55.77 72.93,54.47 73.17,53.17 C 73.41,51.87 73.58,50.57 73.66,49.27 C 73.74,47.97 73.74,46.67 73.66,45.37 C 73.58,44.07 73.37,42.76 73.17,41.46 C 72.97,40.16 72.76,38.86 72.44,37.56 C 72.11,36.26 71.67,34.96 71.22,33.66 C 70.77,32.36 70.37,31.06 69.76,29.76 C 69.15,28.46 68.33,27.15 67.56,25.85 C 66.79,24.55 66.06,23.25 65.12,21.95 C 64.19,20.65 63.13,19.31 61.95,18.05 C 60.77,16.79 59.35,15.49 58.05,14.39 C 56.75,13.29 55.45,12.32 54.15,11.46 C 52.85,10.61 51.54,9.84 50.24,9.27 C 48.94,8.70 47.64,8.41 46.34,8.05 C 45.04,7.68 43.74,7.28 42.44,7.07 C 41.14,6.87 39.84,6.83 38.54,6.83 C 37.24,6.83 35.93,6.87 34.63,7.07 C 33.33,7.28 32.03,7.56 30.73,8.05 C 29.43,8.54 28.13,9.19 26.83,10.00 C 25.53,10.81 24.11,11.79 22.93,12.93 C 21.75,14.07 19.88,16.83 19.76,16.83 C 19.63,16.83 21.22,14.23 22.20,12.93 C 23.17,11.63 24.39,10.16 25.61,9.02 C 26.83,7.89 28.21,6.95 29.51,6.10 C 30.81,5.24 32.11,4.55 33.41,3.90 C 34.72,3.25 36.02,2.64 37.32,2.20 C 38.62,1.75 39.92,1.50 41.22,1.22 C 42.52,0.93 43.82,0.61 45.12,0.49 Z M 33.66,19.27 C 34.88,19.19 36.26,19.23 37.56,19.27 C 38.86,19.31 40.16,19.39 41.46,19.51 C 42.76,19.63 44.07,19.72 45.37,20.00 C 46.67,20.28 47.97,20.77 49.27,21.22 C 50.57,21.67 51.87,22.11 53.17,22.68 C 54.47,23.25 55.77,23.86 57.07,24.63 C 58.37,25.41 59.67,26.30 60.98,27.32 C 62.28,28.33 63.74,29.51 64.88,30.73 C 66.02,31.95 67.80,34.43 67.80,34.63 C 67.80,34.84 66.02,32.85 64.88,31.95 C 63.74,31.06 62.28,30.00 60.98,29.27 C 59.67,28.54 58.37,28.01 57.07,27.56 C 55.77,27.11 54.47,26.87 53.17,26.59 C 51.87,26.30 50.57,25.98 49.27,25.85 C 47.97,25.73 46.67,25.77 45.37,25.85 C 44.07,25.93 42.76,26.14 41.46,26.34 C 40.16,26.54 38.86,26.79 37.56,27.07 C 36.26,27.36 34.96,27.60 33.66,28.05 C 32.36,28.50 31.06,29.15 29.76,29.76 C 28.46,30.37 27.15,30.93 25.85,31.71 C 24.55,32.48 23.25,33.37 21.95,34.39 C 20.65,35.41 19.27,36.59 18.05,37.80 C 16.83,39.02 15.65,40.41 14.63,41.71 C 13.62,43.01 12.72,44.31 11.95,45.61 C 11.18,46.91 10.53,48.21 10.00,49.51 C 9.47,50.81 9.11,52.11 8.78,53.41 C 8.46,54.72 8.21,56.02 8.05,57.32 C 7.89,58.62 7.80,59.92 7.80,61.22 C 7.80,62.52 7.85,63.82 8.05,65.12 C 8.25,66.42 8.54,67.72 9.02,69.02 C 9.51,70.33 10.12,71.63 10.98,72.93 C 11.83,74.23 13.21,75.81 14.15,76.83 C 15.08,77.85 16.83,79.11 16.59,79.02 C 16.34,78.94 13.94,77.40 12.68,76.34 C 11.42,75.28 10.12,73.94 9.02,72.68 C 7.93,71.42 6.91,70.08 6.10,68.78 C 5.28,67.48 4.72,66.18 4.15,64.88 C 3.58,63.58 3.05,62.28 2.68,60.98 C 2.32,59.67 2.15,58.37 1.95,57.07 C 1.75,55.77 1.50,54.47 1.46,53.17 C 1.42,51.87 1.59,50.57 1.71,49.27 C 1.83,47.97 1.91,46.67 2.20,45.37 C 2.48,44.07 2.93,42.76 3.41,41.46 C 3.90,40.16 4.43,38.86 5.12,37.56 C 5.81,36.26 6.63,34.96 7.56,33.66 C 8.50,32.36 9.55,30.98 10.73,29.76 C 11.91,28.54 13.33,27.32 14.63,26.34 C 15.93,25.37 17.24,24.63 18.54,23.90 C 19.84,23.17 21.14,22.48 22.44,21.95 C 23.74,21.42 25.04,21.10 26.34,20.73 C 27.64,20.37 29.02,20.00 30.24,19.76 C 31.46,19.51 32.44,19.35 33.66,19.27 Z M 82.68,20.73 C 82.80,20.69 85.28,22.15 86.59,23.17 C 87.89,24.19 89.35,25.57 90.49,26.83 C 91.63,28.09 92.56,29.43 93.41,30.73 C 94.27,32.03 95.00,33.33 95.61,34.63 C 96.22,35.93 96.67,37.24 97.07,38.54 C 97.48,39.84 97.80,41.14 98.05,42.44 C 98.29,43.74 98.50,45.04 98.54,46.34 C 98.58,47.64 98.41,48.94 98.29,50.24 C 98.17,51.54 98.05,52.85 97.80,54.15 C 97.56,55.45 97.24,56.75 96.83,58.05 C 96.42,59.35 95.98,60.65 95.37,61.95 C 94.76,63.25 94.07,64.55 93.17,65.85 C 92.28,67.15 91.18,68.50 90.00,69.76 C 88.82,71.02 87.40,72.40 86.10,73.41 C 84.80,74.43 83.50,75.12 82.20,75.85 C 80.89,76.59 79.59,77.24 78.29,77.80 C 76.99,78.37 75.69,78.86 74.39,79.27 C 73.09,79.67 71.79,80.00 70.49,80.24 C 69.19,80.49 67.89,80.61 66.59,80.73 C 65.28,80.85 63.98,80.98 62.68,80.98 C 61.38,80.98 60.08,80.89 58.78,80.73 C 57.48,80.57 56.18,80.28 54.88,80.00 C 53.58,79.72 52.28,79.43 50.98,79.02 C 49.67,78.62 48.37,78.13 47.07,77.56 C 45.77,76.99 44.47,76.38 43.17,75.61 C 41.87,74.84 40.57,73.94 39.27,72.93 C 37.97,71.91 36.54,70.73 35.37,69.51 C 34.19,68.29 32.24,65.81 32.20,65.61 C 32.15,65.41 33.98,67.44 35.12,68.29 C 36.26,69.15 37.72,70.04 39.02,70.73 C 40.33,71.42 41.63,71.95 42.93,72.44 C 44.23,72.93 45.53,73.37 46.83,73.66 C 48.13,73.94 49.43,74.07 50.73,74.15 C 52.03,74.23 53.33,74.19 54.63,74.15 C 55.93,74.11 57.24,74.07 58.54,73.90 C 59.84,73.74 61.14,73.50 62.44,73.17 C 63.74,72.85 65.04,72.40 66.34,71.95 C 67.64,71.50 68.94,71.06 70.24,70.49 C 71.54,69.92 72.85,69.31 74.15,68.54 C 75.45,67.76 76.75,66.87 78.05,65.85 C 79.35,64.84 80.73,63.66 81.95,62.44 C 83.17,61.22 84.35,59.84 85.37,58.54 C 86.38,57.24 87.28,55.93 88.05,54.63 C 88.82,53.33 89.47,52.03 90.00,50.73 C 90.53,49.43 90.85,48.13 91.22,46.83 C 91.59,45.53 91.99,44.23 92.20,42.93 C 92.40,41.63 92.48,40.33 92.44,39.02 C 92.40,37.72 92.20,36.42 91.95,35.12 C 91.71,33.82 91.46,32.52 90.98,31.22 C 90.49,29.92 89.88,28.62 89.02,27.32 C 88.17,26.02 86.91,24.51 85.85,23.41 C 84.80,22.32 82.56,20.77 82.68,20.73 Z M 36.34,30.73 C 35.77,31.34 33.54,33.29 32.44,34.63 C 31.34,35.98 30.53,37.40 29.76,38.78 C 28.98,40.16 28.29,41.54 27.80,42.93 C 27.32,44.31 27.07,45.69 26.83,47.07 C 26.59,48.46 26.42,49.84 26.34,51.22 C 26.26,52.60 26.26,53.98 26.34,55.37 C 26.42,56.75 26.59,58.13 26.83,59.51 C 27.07,60.89 27.40,62.28 27.80,63.66 C 28.21,65.04 28.74,66.42 29.27,67.80 C 29.80,69.19 30.28,70.57 30.98,71.95 C 31.67,73.33 32.52,74.72 33.41,76.10 C 34.31,77.48 35.20,78.86 36.34,80.24 C 37.48,81.63 38.90,83.13 40.24,84.39 C 41.59,85.65 43.01,86.83 44.39,87.80 C 45.77,88.78 47.15,89.55 48.54,90.24 C 49.92,90.93 51.30,91.46 52.68,91.95 C 54.07,92.44 55.45,92.93 56.83,93.17 C 58.21,93.41 59.59,93.41 60.98,93.41 C 62.36,93.41 63.74,93.37 65.12,93.17 C 66.50,92.97 67.89,92.68 69.27,92.20 C 70.65,91.71 72.03,91.14 73.41,90.24 C 74.80,89.35 76.38,88.01 77.56,86.83 C 78.74,85.65 80.45,83.09 80.49,83.17 C 80.53,83.25 78.86,85.93 77.80,87.32 C 76.75,88.70 75.45,90.24 74.15,91.46 C 72.85,92.68 71.38,93.70 70.00,94.63 C 68.62,95.57 67.24,96.42 65.85,97.07 C 64.47,97.72 63.09,98.13 61.71,98.54 C 60.33,98.94 58.94,99.31 57.56,99.51 C 56.18,99.72 54.80,99.72 53.41,99.76 C 52.03,99.80 50.65,99.88 49.27,99.76 C 47.89,99.63 46.50,99.39 45.12,99.02 C 43.74,98.66 42.36,98.17 40.98,97.56 C 39.59,96.95 38.21,96.26 36.83,95.37 C 35.45,94.47 34.02,93.41 32.68,92.20 C 31.34,90.98 29.92,89.43 28.78,88.05 C 27.64,86.67 26.71,85.28 25.85,83.90 C 25.00,82.52 24.31,81.14 23.66,79.76 C 23.01,78.37 22.40,76.99 21.95,75.61 C 21.50,74.23 21.26,72.85 20.98,71.46 C 20.69,70.08 20.41,68.70 20.24,67.32 C 20.08,65.93 20.00,64.55 20.00,63.17 C 20.00,61.79 20.08,60.41 20.24,59.02 C 20.41,57.64 20.69,56.26 20.98,54.88 C 21.26,53.50 21.54,52.11 21.95,50.73 C 22.36,49.35 22.85,47.97 23.41,46.59 C 23.98,45.20 24.59,43.82 25.37,42.44 C 26.14,41.06 26.99,39.67 28.05,38.29 C 29.11,36.91 30.41,35.37 31.71,34.15 C 33.01,32.93 35.08,31.54 35.85,30.98 C 36.63,30.41 36.91,30.12 36.34,30.73 Z" />
+              </svg>
             </button>
+
 
             <button type="submit" id="chatSendBtn" class="cg-send-btn" title="Send Message">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -444,6 +838,226 @@
 
       </div> <!-- End cg-main-viewport -->
     </div> <!-- End cg-app-container -->
+
+    <!-- 🎭 MODERN AI PERSONA SELECTOR MODAL -->
+    <!-- 🎭 MODERN AI PERSONA SELECTOR MODAL (Apple iOS 18 / Frosted Acrylic Style) -->
+    <div id="geminiPersonaPickerPanel" class="cg-persona-modal-overlay" style="display: none;" onclick="if(event.target === this) closePersonaPicker();">
+      <div class="cg-persona-modal-card" onclick="event.stopPropagation();">
+        <div class="cg-persona-header">
+          <div class="cg-persona-title-group">
+            <div class="cg-persona-header-badge">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>
+                <path d="M20 3v4"/>
+                <path d="M22 5h-4"/>
+              </svg>
+            </div>
+            <div>
+              <div class="cg-persona-title">AI Persona &amp; Voice</div>
+              <div class="cg-persona-subtitle">Adaptive personality, tone &amp; TTS voice pairing</div>
+            </div>
+          </div>
+          <button type="button" class="cg-persona-close" onclick="closePersonaPicker()" title="Close">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+
+        <div class="cg-persona-list">
+          <!-- ⚡ Default Assistant -->
+          <div class="cg-persona-item active" data-persona="default" onclick="selectPersona('default')">
+            <div class="cg-persona-left">
+              <div class="cg-pbadge cg-pbadge-amber">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              </div>
+              <div class="cg-persona-meta">
+                <div class="cg-persona-title-row">
+                  <span class="cg-persona-name">Default Assistant</span>
+                  <span class="cg-persona-voice-badge">⚡ Puck</span>
+                </div>
+                <div class="cg-persona-tag">Smart, balanced &amp; efficient co-pilot</div>
+              </div>
+            </div>
+            <span class="cg-persona-check">✓</span>
+          </div>
+
+          <!-- 💖 Girlfriend -->
+          <div class="cg-persona-item" data-persona="girlfriend" onclick="selectPersona('girlfriend')">
+            <div class="cg-persona-left">
+              <div class="cg-pbadge cg-pbadge-pink">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+              </div>
+              <div class="cg-persona-meta">
+                <div class="cg-persona-title-row">
+                  <span class="cg-persona-name">Girlfriend</span>
+                  <span class="cg-persona-voice-badge">💖 Kore</span>
+                </div>
+                <div class="cg-persona-tag">Sweet, affectionate, caring &amp; romantic (Bangla/Eng)</div>
+              </div>
+            </div>
+            <span class="cg-persona-check"></span>
+          </div>
+
+          <!-- 🤖 J.A.R.V.I.S. -->
+          <div class="cg-persona-item" data-persona="jarvis" onclick="selectPersona('jarvis')">
+            <div class="cg-persona-left">
+              <div class="cg-pbadge cg-pbadge-cyan">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
+              </div>
+              <div class="cg-persona-meta">
+                <div class="cg-persona-title-row">
+                  <span class="cg-persona-name">J.A.R.V.I.S.</span>
+                  <span class="cg-persona-voice-badge">🤖 Fenrir</span>
+                </div>
+                <div class="cg-persona-tag">Stark Industries AI, formal British etiquette, 'Sir'</div>
+              </div>
+            </div>
+            <span class="cg-persona-check"></span>
+          </div>
+
+          <!-- 💻 Code Master -->
+          <div class="cg-persona-item" data-persona="coder" onclick="selectPersona('coder')">
+            <div class="cg-persona-left">
+              <div class="cg-pbadge cg-pbadge-emerald">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+              </div>
+              <div class="cg-persona-meta">
+                <div class="cg-persona-title-row">
+                  <span class="cg-persona-name">Code Master</span>
+                  <span class="cg-persona-voice-badge">💻 Aoede</span>
+                </div>
+                <div class="cg-persona-tag">10x software architect &amp; kernel specialist</div>
+              </div>
+            </div>
+            <span class="cg-persona-check"></span>
+          </div>
+
+          <!-- 🦉 Wise Mentor -->
+          <div class="cg-persona-item" data-persona="mentor" onclick="selectPersona('mentor')">
+            <div class="cg-persona-left">
+              <div class="cg-pbadge cg-pbadge-purple">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10"/><path d="M6 10h10"/></svg>
+              </div>
+              <div class="cg-persona-meta">
+                <div class="cg-persona-title-row">
+                  <span class="cg-persona-name">Wise Mentor</span>
+                  <span class="cg-persona-voice-badge">🦉 Charon</span>
+                </div>
+                <div class="cg-persona-tag">Calm, thoughtful guide &amp; life philosopher</div>
+              </div>
+            </div>
+            <span class="cg-persona-check"></span>
+          </div>
+
+          <!-- 😎 Sarcastic Buddy -->
+          <div class="cg-persona-item" data-persona="buddy" onclick="selectPersona('buddy')">
+            <div class="cg-persona-left">
+              <div class="cg-pbadge cg-pbadge-orange">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" x2="9.01" y1="9" y2="9"/><line x1="15" x2="15.01" y1="9" y2="9"/></svg>
+              </div>
+              <div class="cg-persona-meta">
+                <div class="cg-persona-title-row">
+                  <span class="cg-persona-name">Sarcastic Buddy</span>
+                  <span class="cg-persona-voice-badge">😎 Puck</span>
+                </div>
+                <div class="cg-persona-tag">Witty, humorous banter &amp; best bro</div>
+              </div>
+            </div>
+            <span class="cg-persona-check"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 🔑 GEMINI API KEY CONFIGURATION MODAL (Apple iOS 18 / Frosted Acrylic Style) -->
+    <div id="geminiKeyModal" class="cg-modal-overlay" style="display: none;" onclick="if(event.target === this) closeGeminiKeyModal();">
+      <div class="cg-modal-card">
+        <!-- Header -->
+        <div class="cg-modal-header">
+          <div class="cg-modal-title-group">
+            <div class="cg-modal-icon-badge">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="8" cy="15" r="5"/>
+                <path d="m11.5 11.5 8.5-8.5"/>
+                <path d="m15.5 7.5 2 2"/>
+                <path d="m18.5 4.5 2 2"/>
+              </svg>
+            </div>
+            <div>
+              <h3 class="cg-modal-title">Gemini API Key</h3>
+              <p class="cg-modal-subtitle">Google AI Studio • Realtime Voice &amp; Tools</p>
+            </div>
+          </div>
+          <button type="button" class="cg-modal-close-btn" onclick="closeGeminiKeyModal()" title="Close">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+
+        <!-- Body -->
+        <div class="cg-modal-body">
+          <div class="cg-modal-field-header">
+            <label class="cg-modal-label" for="geminiApiKeyInput">API Key</label>
+            <span class="cg-modal-secure-badge">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              Encrypted Local Storage
+            </span>
+          </div>
+
+          <form class="cg-modal-input-wrapper" onsubmit="event.preventDefault(); saveGeminiApiKey(); return false;" autocomplete="off">
+            <div class="cg-input-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 9.9-1"/>
+              </svg>
+            </div>
+            <input type="password" id="geminiApiKeyInput" class="cg-modal-input" placeholder="AIzaSy..." autocomplete="off" spellcheck="false">
+            <button type="button" id="pwdToggleBtn" class="cg-modal-pwd-toggle" onclick="toggleApiKeyVisibility()" title="Toggle visibility">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            </button>
+          </form>
+
+          <div id="geminiKeyValidationStatus" class="cg-modal-status-box" style="display: none;"></div>
+
+          <div class="cg-modal-info-box">
+            <div class="cg-info-box-header">
+              <div class="cg-info-sparkle-badge">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/>
+                </svg>
+              </div>
+              <span class="cg-info-box-title">Free high-speed access</span>
+            </div>
+            <p class="cg-info-box-desc">
+              Get an official Gemini API key from Google AI Studio. Free tiers include generous quotas for Live multimodal voice and tool execution.
+            </p>
+            <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" class="cg-modal-link">
+              <span>Get Free Key at Google AI Studio</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            </a>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="cg-modal-footer">
+          <button type="button" class="cg-modal-btn-danger" onclick="removeGeminiApiKey()" title="Remove Key">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+            <span>Clear</span>
+          </button>
+          <div style="display: flex; gap: 8px;">
+            <button type="button" id="btnTestGeminiKey" class="cg-modal-btn-secondary" onclick="testGeminiApiKey()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              <span>Test &amp; Validate</span>
+            </button>
+            <button type="button" class="cg-modal-btn-primary" onclick="saveGeminiApiKey()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+              <span>Save &amp; Connect</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div> <!-- End tab-gemini -->
 
   <!-- ==================== TAB 3: ⚡ CONTROLS (2-COLUMN GRID, NO ICONS) ==================== -->
@@ -533,78 +1147,140 @@
   </button>
 </nav>
 
-<!-- ⚡ CYBER LINK PAIRING ONBOARDING MODAL -->
-<div id="cyberPairingModal" class="modal-overlay" style="display:none; z-index:99999; background:rgba(2,4,8,0.96); backdrop-filter:blur(15px);">
-  <div class="modal-card" style="position:relative; max-width:400px; text-align:center; border:1px solid rgba(0,240,255,0.5); box-shadow:0 0 35px rgba(0,240,255,0.25); border-radius:16px; padding:24px;">
-    
-    <!-- Top-Right Close Button -->
-    <button onclick="closePairingModal()" style="position:absolute; top:12px; right:12px; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.25); color:#fff; width:34px; height:34px; border-radius:50%; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; z-index:10;">
-      ✕
-    </button>
-
-    <div style="position:relative; width:72px; height:72px; margin:0 auto 12px auto;">
-      <div style="position:absolute; inset:0; border-radius:50%; border:2px dashed #00f0ff; animation:spinRadar 6s linear infinite;"></div>
-      <div style="position:absolute; inset:8px; border-radius:50%; background:radial-gradient(circle, rgba(0,240,255,0.3) 0%, transparent 70%); animation:pulseRadar 2s infinite;"></div>
-      <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:28px;">📱</div>
-    </div>
-
-    <h2 style="font-family:'Orbitron',sans-serif; font-size:17px; font-weight:900; color:#fff; letter-spacing:2px; margin-bottom:6px; text-shadow:0 0 15px rgba(0,240,255,0.8);">
-      CYBER LINK PAIRING
-    </h2>
-    <p style="font-family:'Share Tech Mono',monospace; font-size:11px; color:#8892b0; margin-bottom:18px; line-height:1.5;">
-      PAIR WITH HOST PC IN 1-SECOND.<br><span style="color:#00ff41;">SAVES PERMANENTLY IN THIS APP.</span>
-    </p>
-
-    <!-- 1. Live Camera Scanner -->
-    <button onclick="triggerNativeQrScan()" style="width:100%; padding:13px; background:linear-gradient(135deg, #00f0ff 0%, #0077ff 100%); color:#000; border:none; border-radius:10px; font-family:'Orbitron',sans-serif; font-size:12px; font-weight:900; letter-spacing:1.5px; cursor:pointer; box-shadow:0 0 25px rgba(0,240,255,0.4); margin-bottom:10px; display:flex; align-items:center; justify-content:center; gap:8px;">
-      <span>📷</span> SCAN PC QR CODE (LIVE)
-    </button>
-
-    <!-- 2. Native Camera Snapshot / Gallery (100% Reliable Fallback) -->
-    <input type="file" id="qrCameraInput" accept="image/*" capture="environment" style="display:none;" onchange="processQrImageFile(event)">
-    <input type="file" id="qrGalleryInput" accept="image/*" style="display:none;" onchange="processQrImageFile(event)">
-
-    <div style="display:flex; gap:8px; margin-bottom:10px;">
-      <button onclick="document.getElementById('qrCameraInput').click()" style="flex:1; padding:11px 6px; background:rgba(0,240,255,0.1); color:var(--neon-cyan); border:1px solid rgba(0,240,255,0.4); border-radius:10px; font-family:'Share Tech Mono',monospace; font-size:11px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px;">
-        <span>📸</span> TAKE PHOTO
-      </button>
-      <button onclick="document.getElementById('qrGalleryInput').click()" style="flex:1; padding:11px 6px; background:rgba(255,255,255,0.06); color:#e2e8f0; border:1px solid rgba(255,255,255,0.2); border-radius:10px; font-family:'Share Tech Mono',monospace; font-size:11px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px;">
-        <span>🖼️</span> GALLERY
+<!-- 📱 MOBILE DEVICE PAIRING MODAL (Apple iOS 18 / Frosted Acrylic Style) -->
+<div id="cyberPairingModal" class="cg-modal-overlay" style="display:none;" onclick="if(event.target === this) closePairingModal();">
+  <div class="cg-modal-card cg-pairing-card" onclick="event.stopPropagation();">
+    <!-- Header -->
+    <div class="cg-modal-header">
+      <div class="cg-modal-title-group">
+        <div class="cg-modal-icon-badge cg-icon-badge-cyan">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="13" height="19" x="5.5" y="2.5" rx="3"/>
+            <path d="M12 17.5h.01"/>
+            <path d="M9 6h6"/>
+          </svg>
+        </div>
+        <div>
+          <h3 class="cg-modal-title">Device Pairing</h3>
+          <p class="cg-modal-subtitle">Instant wireless link between phone and PC</p>
+        </div>
+      </div>
+      <button type="button" class="cg-modal-close-btn" onclick="closePairingModal()" title="Close">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
 
-    <!-- 3. Auto Detect Button -->
-    <button onclick="triggerAutoDetectPc()" id="autoDetectBtn" style="width:100%; padding:11px; background:rgba(0,255,65,0.1); color:#00ff41; border:1px solid rgba(0,255,65,0.4); border-radius:10px; font-family:'Share Tech Mono',monospace; font-size:12px; font-weight:bold; letter-spacing:1px; cursor:pointer; margin-bottom:10px; display:flex; align-items:center; justify-content:center; gap:8px;">
-      <span>📡</span> AUTO-DETECT WI-FI PC
-    </button>
+    <!-- Body -->
+    <div class="cg-modal-body cg-pairing-body">
+      <!-- 1. Hero QR Scanner Button -->
+      <button type="button" onclick="triggerNativeQrScan()" class="cg-pairing-hero-btn">
+        <div class="cg-hero-btn-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 7V5a2 2 0 0 1 2-2h2"/>
+            <path d="M17 3h2a2 2 0 0 1 2 2v2"/>
+            <path d="M21 17v2a2 2 0 0 1-2 2h-2"/>
+            <path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
+            <rect width="10" height="10" x="7" y="7" rx="1.5"/>
+          </svg>
+        </div>
+        <div class="cg-hero-btn-text">
+          <span class="cg-hero-btn-title">Scan PC QR Code (Live)</span>
+          <span class="cg-hero-btn-desc">Camera viewfinder • Instant pairing in 1s</span>
+        </div>
+        <svg class="cg-hero-btn-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+      </button>
 
-    <!-- 4. 1-Tap Direct Quick Connect (Tailscale Worldwide + Local LAN + HTTPS) -->
-    <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:14px;">
-      <button id="btnQuickHttps" onclick="quickConnectHttps()" style="display:none; width:100%; padding:10px 12px; background:rgba(0,255,136,0.12); color:#00ff88; border:1px solid rgba(0,255,136,0.4); border-radius:8px; font-family:'Orbitron',sans-serif; font-size:11px; font-weight:800; letter-spacing:1px; cursor:pointer; align-items:center; justify-content:space-between;">
-        <span>🔒 1-TAP HTTPS (BROWSER)</span>
-        <span id="quickHttpsHost" style="font-family:'Share Tech Mono',monospace; font-size:10px; color:#fff;">SECURE 🔒</span>
-      </button>
-      <button id="btnQuickTailscale" onclick="quickConnectTailscale()" style="width:100%; padding:10px 12px; background:rgba(0,240,255,0.12); color:#00f0ff; border:1px solid rgba(0,240,255,0.4); border-radius:8px; font-family:'Orbitron',sans-serif; font-size:11px; font-weight:800; letter-spacing:1px; cursor:pointer; display:flex; align-items:center; justify-content:space-between;">
-        <span>🌐 1-TAP TAILSCALE</span>
-        <span id="quickTailscaleHost" style="font-family:'Share Tech Mono',monospace; font-size:10px; color:#fff;">CONNECT</span>
-      </button>
-      <button id="btnQuickLan" onclick="quickConnectLan()" style="width:100%; padding:10px 12px; background:rgba(0,255,65,0.12); color:#00ff41; border:1px solid rgba(0,255,65,0.4); border-radius:8px; font-family:'Orbitron',sans-serif; font-size:11px; font-weight:800; letter-spacing:1px; cursor:pointer; display:flex; align-items:center; justify-content:space-between;">
-        <span>📡 1-TAP LOCAL WI-FI</span>
-        <span id="quickLanHost" style="font-family:'Share Tech Mono',monospace; font-size:10px; color:#fff;">CONNECT</span>
-      </button>
-    </div>
+      <!-- 2. Dual Camera Photo / Gallery Fallbacks -->
+      <input type="file" id="qrCameraInput" accept="image/*" capture="environment" style="display:none;" onchange="processQrImageFile(event)">
+      <input type="file" id="qrGalleryInput" accept="image/*" style="display:none;" onchange="processQrImageFile(event)">
 
-    <!-- Manual IP Collapsible -->
-    <div style="border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
-      <a href="javascript:void(0)" onclick="toggleManualSetup()" style="font-family:'Share Tech Mono',monospace; font-size:11px; color:#64748b; text-decoration:none;">
-        ⚙️ Manual IP / Advanced Setup ▾
-      </a>
-      <div id="manualSetupBox" style="display:none; margin-top:10px;">
-        <input type="text" id="manualIpInput" placeholder="e.g. 192.168.0.104:8080" style="width:100%; padding:10px; background:#000; border:1px solid rgba(0,240,255,0.3); border-radius:6px; color:#fff; font-family:'Share Tech Mono',monospace; font-size:12px; margin-bottom:8px; outline:none; box-sizing:border-box;">
-        <input type="text" id="manualKeyInput" placeholder="Session Key (e.g. imran2024)" style="width:100%; padding:10px; background:#000; border:1px solid rgba(0,240,255,0.3); border-radius:6px; color:#fff; font-family:'Share Tech Mono',monospace; font-size:12px; margin-bottom:8px; outline:none; box-sizing:border-box;">
-        <button onclick="saveManualPairing()" style="width:100%; padding:10px; background:rgba(255,255,255,0.1); color:#fff; border:1px solid rgba(255,255,255,0.3); border-radius:6px; font-family:'Orbitron',sans-serif; font-size:11px; font-weight:bold; cursor:pointer;">
-          CONNECT MANUALLY
+      <div class="cg-pairing-dual-row">
+        <button type="button" onclick="document.getElementById('qrCameraInput').click()" class="cg-pairing-sub-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+          <span>Take Photo</span>
         </button>
+        <button type="button" onclick="document.getElementById('qrGalleryInput').click()" class="cg-pairing-sub-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+          <span>Pick Image</span>
+        </button>
+      </div>
+
+      <!-- 3. Auto-Detect Wi-Fi PC -->
+      <button type="button" onclick="triggerAutoDetectPc()" id="autoDetectBtn" class="cg-pairing-detect-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 20h.01"/>
+          <path d="M2 8.82a15 15 0 0 1 20 0"/>
+          <path d="M5 12.859a10 10 0 0 1 14 0"/>
+          <path d="M8.5 16.429a5 5 0 0 1 7 0"/>
+        </svg>
+        <span>Auto-Detect Wi-Fi PC</span>
+      </button>
+
+      <!-- 4. Quick Connect Options List -->
+      <div class="cg-quick-connect-list">
+        <div class="cg-quick-connect-header">SAVED CONNECTIONS</div>
+        
+        <!-- HTTPS (Browser) -->
+        <button type="button" id="btnQuickHttps" onclick="quickConnectHttps()" class="cg-quick-conn-row" style="display:none;">
+          <div class="cg-quick-conn-left">
+            <div class="cg-conn-icon-box cg-cbox-emerald">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </div>
+            <div class="cg-conn-info">
+              <span class="cg-conn-title">1-Tap HTTPS Direct</span>
+              <span id="quickHttpsHost" class="cg-conn-meta">Secure Tunnel</span>
+            </div>
+          </div>
+          <span class="cg-conn-badge cg-badge-emerald">SECURE</span>
+        </button>
+
+        <!-- Tailscale (Worldwide) -->
+        <button type="button" id="btnQuickTailscale" onclick="quickConnectTailscale()" class="cg-quick-conn-row">
+          <div class="cg-quick-conn-left">
+            <div class="cg-conn-icon-box cg-cbox-cyan">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+            </div>
+            <div class="cg-conn-info">
+              <span class="cg-conn-title">Tailscale Worldwide</span>
+              <span id="quickTailscaleHost" class="cg-conn-meta">WireGuard Mesh</span>
+            </div>
+          </div>
+          <span class="cg-conn-badge cg-badge-cyan">CONNECT</span>
+        </button>
+
+        <!-- Local Wi-Fi (LAN) -->
+        <button type="button" id="btnQuickLan" onclick="quickConnectLan()" class="cg-quick-conn-row">
+          <div class="cg-quick-conn-left">
+            <div class="cg-conn-icon-box cg-cbox-blue">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h.01"/>
+                <path d="M2 8.82a15 15 0 0 1 20 0"/>
+                <path d="M5 12.859a10 10 0 0 1 14 0"/>
+                <path d="M8.5 16.429a5 5 0 0 1 7 0"/>
+              </svg>
+            </div>
+            <div class="cg-conn-info">
+              <span class="cg-conn-title">Local Wi-Fi LAN</span>
+              <span id="quickLanHost" class="cg-conn-meta">Direct Peer</span>
+            </div>
+          </div>
+          <span class="cg-conn-badge cg-badge-blue">CONNECT</span>
+        </button>
+      </div>
+
+      <!-- 5. Manual IP Accordion -->
+      <div class="cg-manual-setup-wrap">
+        <button type="button" onclick="toggleManualSetup()" class="cg-manual-toggle-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <span>Manual IP &amp; Advanced Setup</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div id="manualSetupBox" class="cg-manual-box" style="display:none;">
+          <input type="text" id="manualIpInput" class="cg-modal-input" placeholder="e.g. 192.168.0.104:8085" style="margin-bottom:8px; padding-left:14px;">
+          <input type="text" id="manualKeyInput" class="cg-modal-input" placeholder="Session Key (e.g. imran2024)" style="margin-bottom:8px; padding-left:14px;">
+          <button type="button" onclick="saveManualPairing()" class="cg-modal-btn-primary" style="width:100%; justify-content:center;">
+            Connect Manually
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -658,6 +1334,91 @@
   </div>
 </div>
 
+<!-- 🪟 FLOATING OPTION HOVER PREVIEW / DEMO FLYOUT -->
+<div id="cgOptionHoverFlyout" class="cg-option-flyout-panel" aria-hidden="true"></div>
+
+<!-- 👤 MINI-RAIL DOCKED FLOATING QUICK SETTINGS POPOVER (Positioned on <body> to avoid drawer overflow-x clipping) -->
+<div id="cgMiniRailUserPopover" class="cg-mini-rail-popover" aria-hidden="true">
+  <div class="cg-popover-header">
+    <div class="cg-popover-title-wrap">
+      <div class="cg-popover-dot"></div>
+      <span class="cg-popover-user-name">Quick Settings & Tools</span>
+    </div>
+    <span class="cg-popover-user-badge">PanicCTRL</span>
+  </div>
+
+  <div class="cg-menu-items-group">
+    <!-- 🔑 Gemini API Key -->
+    <div class="cg-menu-item" onclick="toggleGeminiKeyModal(); closeMiniRailUserPopover();">
+      <div class="cg-menu-icon-box cg-icon-amber">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="8" cy="15" r="5"/>
+          <path d="m11.5 11.5 8.5-8.5"/>
+          <path d="m15.5 7.5 2 2"/>
+          <path d="m18.5 4.5 2 2"/>
+        </svg>
+      </div>
+      <div class="cg-menu-item-content">
+        <div class="cg-menu-item-name">Gemini API Key</div>
+        <div class="cg-menu-item-desc">API Key & connection settings</div>
+      </div>
+      <svg class="cg-menu-item-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+    </div>
+
+    <!-- 🎭 AI Persona -->
+    <div class="cg-menu-item" onclick="togglePersonaPicker(event); closeMiniRailUserPopover();">
+      <div class="cg-menu-icon-box cg-icon-purple">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>
+          <path d="M20 3v4"/>
+          <path d="M22 5h-4"/>
+        </svg>
+      </div>
+      <div class="cg-menu-item-content">
+        <div class="cg-menu-item-name">AI Persona</div>
+        <div id="cgActivePersonaSubtitleMiniRail" class="cg-menu-item-desc">Default • Smart Assistant</div>
+      </div>
+      <svg class="cg-menu-item-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+    </div>
+
+    <!-- 📱 Mobile QR Pairing -->
+    <div class="cg-menu-item" onclick="openPairingModal(); closeMiniRailUserPopover();">
+      <div class="cg-menu-icon-box cg-icon-cyan">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect width="13" height="19" x="5.5" y="2.5" rx="3"/>
+          <path d="M12 17.5h.01"/>
+          <path d="M9 6h6"/>
+        </svg>
+      </div>
+      <div class="cg-menu-item-content">
+        <div class="cg-menu-item-name">Mobile QR Pairing</div>
+        <div class="cg-menu-item-desc">Connect phone to PC</div>
+      </div>
+      <svg class="cg-menu-item-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+    </div>
+
+    <div class="cg-menu-divider"></div>
+
+    <!-- 🗑️ Clear Chat -->
+    <div class="cg-menu-item cg-danger-item" onclick="clearGeminiTerminal(); closeMiniRailUserPopover();">
+      <div class="cg-menu-icon-box cg-icon-rose">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 6h18"/>
+          <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+          <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+          <line x1="10" x2="10" y1="11" y2="17"/>
+          <line x1="14" x2="14" y1="11" y2="17"/>
+        </svg>
+      </div>
+      <div class="cg-menu-item-content">
+        <div class="cg-menu-item-name">Clear Chat</div>
+        <div class="cg-menu-item-desc">Reset active message history</div>
+      </div>
+      <svg class="cg-menu-item-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+    </div>
+  </div>
+</div>
+
   <!-- 🧠 4. GEMINI AI PROMPTS & PC TOOLS DEFINITION -->
   <script src="js/gemini_prompt.js"></script>
 
@@ -667,11 +1428,12 @@
   <!-- 🖥️ 6. ULTRA-LOW LATENCY STREAMER & TRACKPAD -->
   <script src="js/streamer.js"></script>
 
-  <!-- 🎙️ 7. GEMINI MULTIMODAL LIVE AI ENGINE -->
-  <script src="js/gemini_live.js"></script>
+  <!-- 🎭 6.5 AI PERSONA ENGINE & PROMPTS -->
+  <script src="js/personas.js"></script>
 
-  <!-- 📱 8. QR SCANNER DECODER ENGINE -->
-  <script src="js/jsqr.min.js"></script>
+  <!-- 🎙️ 7. GEMINI MULTIMODAL LIVE AI ENGINE -->
+  <script src="js/gemini_live.js?v=2.7.0"></script>
+
 
   <!-- 📱 9. ONBOARDING, QR SCANNER, PWA & NAVIGATION -->
   <script src="js/app.js"></script>

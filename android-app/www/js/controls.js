@@ -1105,10 +1105,14 @@ function vibratePhone(ms) {
 
 var deferredPWAInstallPrompt = null;
 window.addEventListener('beforeinstallprompt', function(e) {
-  e.preventDefault();
-  deferredPWAInstallPrompt = e;
   var banner = document.getElementById("pwaInstallBanner");
-  if (banner) banner.style.display = "block";
+  var btn = document.getElementById("pwaInstallBtn");
+  if (banner || btn) {
+    e.preventDefault();
+    deferredPWAInstallPrompt = e;
+    if (banner) banner.style.display = "block";
+    if (btn) btn.style.display = "inline-flex";
+  }
 });
 
 function installPWAApp() {

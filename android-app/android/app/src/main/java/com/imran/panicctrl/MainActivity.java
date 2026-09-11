@@ -498,6 +498,41 @@ public class MainActivity extends BridgeActivity {
         public void setSystemTheme(final String colorHex, final boolean isLightIcons) {
             applySystemTheme(colorHex, isLightIcons);
         }
+
+        @JavascriptInterface
+        public boolean sendWakeOnLan(String macStr) {
+            if (macStr == null || macStr.isEmpty()) return false;
+            new Thread(() -> {
+                try {
+                    String cleanMac = macStr.replaceAll("[^0-9A-Fa-f]", "");
+                    if (cleanMac.length() != 12) return;
+                    byte[] macBytes = new byte[6];
+                    for (int i = 0; i < 6; i++) {
+                        macBytes[i] = (byte) Integer.parseInt(cleanMac.substring(i * 2, i * 2 + 2), 16);
+                    }
+                    byte[] bytes = new byte[6 + 16 * macBytes.length];
+                    for (int i = 0; i < 6; i++) {
+                        bytes[i] = (byte) 0xff;
+                    }
+                    for (int i = 6; i < bytes.length; i += macBytes.length) {
+                        System.arraycopy(macBytes, 0, bytes, i, macBytes.length);
+                    }
+                    DatagramSocket socket = new DatagramSocket();
+                    socket.setBroadcast(true);
+
+                    // Broadcast to 255.255.255.255 on port 9 and port 7
+                    DatagramPacket packet9 = new DatagramPacket(bytes, bytes.length, InetAddress.getByName("255.255.255.255"), 9);
+                    socket.send(packet9);
+                    DatagramPacket packet7 = new DatagramPacket(bytes, bytes.length, InetAddress.getByName("255.255.255.255"), 7);
+                    socket.send(packet7);
+
+                    socket.close();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }).start();
+            return true;
+        }
     }
 
     private String mCurrentThemeColor = "#ffffff";

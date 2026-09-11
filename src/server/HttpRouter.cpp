@@ -19,16 +19,303 @@
 #include <ws2tcpip.h>
 #include <wtsapi32.h>
 #include <winhttp.h>
+#include <powrprof.h>
 #include <gdiplus.h>
 #include <sstream>
 #include <vector>
 #include <string>
 #include <cstdio>
+#include <chrono>
+#include <thread>
 
 using namespace Gdiplus;
 
+// ─────────────────────────────────────────────────────────────────────────────
+// POWER CONTROL & BRIGHTNESS RESTORATION ENGINE
+// ─────────────────────────────────────────────────────────────────────────────
+static std::atomic<int> g_savedBrightness{50};
+static std::atomic<bool> g_hasBrightness{false};
+
+void CaptureCurrentBrightness() {
+    STARTUPINFOA si = { sizeof(si) };
+    si.dwFlags = STARTF_USESHOWWINDOW;
+    si.wShowWindow = SW_HIDE;
+    PROCESS_INFORMATION pi = { 0 };
+    char tmpPath[MAX_PATH];
+    GetTempPathA(MAX_PATH, tmpPath);
+    char outFile[MAX_PATH];
+    snprintf(outFile, sizeof(outFile), "%spanic_brt.tmp", tmpPath);
+
+    char cmd[512];
+    snprintf(cmd, sizeof(cmd),
+        "powershell.exe -NoProfile -NonInteractive -Command \"try { (Get-CimInstance -Namespace root/WMI -ClassName WmiMonitorBrightness).CurrentBrightness | Out-File -Encoding ascii '%s' } catch {}\"",
+        outFile);
+
+    char buf[512];
+    strncpy(buf, cmd, sizeof(buf) - 1);
+    if (CreateProcessA(NULL, buf, NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi)) {
+        WaitForSingleObject(pi.hProcess, 1500);
+        CloseHandle(pi.hProcess);
+        CloseHandle(pi.hThread);
+
+        FILE* f = fopen(outFile, "r");
+        if (f) {
+            int val = -1;
+            bool gotReading = (fscanf(f, "%d", &val) == 1);
+            if (gotReading && val > 0 && val <= 100) {
+                g_savedBrightness.store(val);
+                g_hasBrightness.store(true);
+                FILE* bf = fopen("C:\\ProgramData\\PanicButton\\saved_brt.txt", "w");
+                if (bf) { fprintf(bf, "%d", val); fclose(bf); }
+                char lbuf[64];
+                snprintf(lbuf, sizeof(lbuf), "[pwr] Captured user brightness: %d%%", val);
+                AppLog(lbuf);
+            } else if (gotReading && val == 0 && g_hasBrightness.load()) {
+                // Already dimmed by a previous sleep: keep last known good value
+                int kept = g_savedBrightness.load();
+                FILE* bf = fopen("C:\\ProgramData\\PanicButton\\saved_brt.txt", "w");
+                if (bf) { fprintf(bf, "%d", kept); fclose(bf); }
+                char lbuf[64];
+                snprintf(lbuf, sizeof(lbuf), "[pwr] Already dimmed (0%%), keeping saved brightness: %d%%", kept);
+                AppLog(lbuf);
+            } else {
+                AppLog("[pwr] No WMI brightness panel (desktop/external monitor), keeping blackout-only stealth");
+            }
+            fclose(f);
+            DeleteFileA(outFile);
+        }
+    }
+}
+
+static void RestoreBrightnessAsync() {
+    if (!g_hasBrightness.load()) {
+        AppLog("[pwr] Skipping brightness restore (no WMI panel captured, blackout-only host)");
+        return;
+    }
+    int val = g_savedBrightness.load();
+    if (val <= 0 || val > 100) val = 50;
+
+    char cmd[512];
+    snprintf(cmd, sizeof(cmd),
+        "powershell.exe -NoProfile -NonInteractive -Command \"try { (Get-CimInstance -Namespace root/WMI -ClassName WmiMonitorBrightnessMethods) | Invoke-CimMethod -MethodName WmiSetBrightness -Arguments @{Timeout=1; Brightness=%d} } catch {}\"",
+        val);
+
+    STARTUPINFOA si = { sizeof(si) };
+    si.dwFlags = STARTF_USESHOWWINDOW;
+    si.wShowWindow = SW_HIDE;
+    PROCESS_INFORMATION pi = { 0 };
+    char buf[512];
+    strncpy(buf, cmd, sizeof(buf) - 1);
+    if (CreateProcessA(NULL, buf, NULL, NULL, FALSE, CREATE_NO_WINDOW | DETACHED_PROCESS, NULL, NULL, &si, &pi)) {
+        CloseHandle(pi.hProcess);
+        CloseHandle(pi.hThread);
+        char lbuf[64];
+        snprintf(lbuf, sizeof(lbuf), "[pwr] Dispatched hardware backlight ignition & restore to %d%%", val);
+        AppLog(lbuf);
+    }
+}
+
+static void DimBrightnessAsync(int level = 0) {
+    char cmd[512];
+    snprintf(cmd, sizeof(cmd),
+        "powershell.exe -NoProfile -NonInteractive -Command \"try { (Get-CimInstance -Namespace root/WMI -ClassName WmiMonitorBrightnessMethods) | Invoke-CimMethod -MethodName WmiSetBrightness -Arguments @{Timeout=1; Brightness=%d} } catch {}\"",
+        level);
+
+    STARTUPINFOA si = { sizeof(si) };
+    si.dwFlags = STARTF_USESHOWWINDOW;
+    si.wShowWindow = SW_HIDE;
+    PROCESS_INFORMATION pi = { 0 };
+    char buf[512];
+    strncpy(buf, cmd, sizeof(buf) - 1);
+    if (CreateProcessA(NULL, buf, NULL, NULL, FALSE, CREATE_NO_WINDOW | DETACHED_PROCESS, NULL, NULL, &si, &pi)) {
+        CloseHandle(pi.hProcess);
+        CloseHandle(pi.hThread);
+        AppLog("[pwr] Dimmed brightness to 0% for stealth sleep");
+    }
+}
+
+// ⚡ PROCESS-LEVEL PERSISTENT POWER REQUEST ENGINE (Survives thread termination!)
+static HANDLE g_hDisplayPowerReq = NULL;
+static std::mutex g_pwrCs;
+static std::atomic<ULONGLONG> g_lastSleepTick{0};
+static std::atomic<ULONGLONG> g_lastWakeTick{0};
+static std::atomic<bool> g_isSleepActive{false};
+static std::atomic<bool> g_keepDisplayAwake{true};
+static std::atomic<bool> g_powerWorkerRunning{true};
+static std::once_flag g_keepAwakeInit;
+
+void KeepDisplayAwakeWorker() {
+    AppLog("[pwr] KeepDisplayAwakeWorker: persistent power watchdog thread ACTIVE");
+    while (g_powerWorkerRunning.load()) {
+        {
+            std::lock_guard<std::mutex> lk(g_pwrCs);
+            if (!g_hDisplayPowerReq || g_hDisplayPowerReq == INVALID_HANDLE_VALUE) {
+                REASON_CONTEXT context;
+                context.Version = POWER_REQUEST_CONTEXT_VERSION;
+                context.Flags = POWER_REQUEST_CONTEXT_SIMPLE_STRING;
+                context.Reason.SimpleReasonString = (LPWSTR)L"PanicCTRL Active Remote Session";
+                g_hDisplayPowerReq = PowerCreateRequest(&context);
+            }
+
+            if (g_keepDisplayAwake.load()) {
+                SetThreadExecutionState(ES_CONTINUOUS | ES_DISPLAY_REQUIRED | ES_SYSTEM_REQUIRED);
+                if (g_hDisplayPowerReq && g_hDisplayPowerReq != INVALID_HANDLE_VALUE) {
+                    PowerClearRequest(g_hDisplayPowerReq, PowerRequestAwayModeRequired);
+                    PowerSetRequest(g_hDisplayPowerReq, PowerRequestDisplayRequired);
+                    PowerSetRequest(g_hDisplayPowerReq, PowerRequestSystemRequired);
+                }
+            } else {
+                // 🛡️ CRITICAL FIX: SystemRequired keeps CPU, network, and PanicButton.exe 100% active
+                // preventing Windows Desktop Activity Monitor (DAM) from freezing the process during sleep,
+                // without requesting Away Mode (which suppresses display wake)!
+                SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED);
+                if (g_hDisplayPowerReq && g_hDisplayPowerReq != INVALID_HANDLE_VALUE) {
+                    PowerClearRequest(g_hDisplayPowerReq, PowerRequestAwayModeRequired);
+                    PowerClearRequest(g_hDisplayPowerReq, PowerRequestDisplayRequired);
+                    PowerSetRequest(g_hDisplayPowerReq, PowerRequestSystemRequired);
+                }
+            }
+        }
+        std::this_thread::sleep_for(std::chrono::seconds(5));
+    }
+    SetThreadExecutionState(ES_CONTINUOUS);
+}
+
+void EnsureKeepAwakeThread() {
+    std::call_once(g_keepAwakeInit, []() {
+        std::thread(KeepDisplayAwakeWorker).detach();
+    });
+}
+
+void RequestDisplayWake() {
+    EnsureKeepAwakeThread();
+    g_keepDisplayAwake.store(true);
+    AppLog("[pwr] RequestDisplayWake: remote wake initiated, keeping display and system awake");
+
+    {
+        std::lock_guard<std::mutex> lk(g_pwrCs);
+        if (!g_hDisplayPowerReq || g_hDisplayPowerReq == INVALID_HANDLE_VALUE) {
+            REASON_CONTEXT context;
+            context.Version = POWER_REQUEST_CONTEXT_VERSION;
+            context.Flags = POWER_REQUEST_CONTEXT_SIMPLE_STRING;
+            context.Reason.SimpleReasonString = (LPWSTR)L"PanicCTRL Active Remote Session";
+            g_hDisplayPowerReq = PowerCreateRequest(&context);
+        }
+        if (g_hDisplayPowerReq && g_hDisplayPowerReq != INVALID_HANDLE_VALUE) {
+            PowerClearRequest(g_hDisplayPowerReq, PowerRequestAwayModeRequired);
+            PowerSetRequest(g_hDisplayPowerReq, PowerRequestDisplayRequired);
+            PowerSetRequest(g_hDisplayPowerReq, PowerRequestSystemRequired);
+        }
+    }
+    SetThreadExecutionState(ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED | ES_CONTINUOUS);
+
+    // 0. Hardware display link re-train via WDDM CCD API
+    SetDisplayConfig(0, NULL, 0, NULL, SDC_APPLY | SDC_TOPOLOGY_INTERNAL);
+
+    // 0b. Hardware LCD Backlight Ignition & User Brightness Restoration
+    RestoreBrightnessAsync();
+
+
+    // 1. Dispatch __WAKE__ to Windows Credential Provider (inside LogonUI.exe on winsta0\Winlogon)
+    // Retry with WaitNamedPipeA to handle any race condition during LogonUI launch
+    bool pipeConnected = false;
+    for (int retry = 0; retry < 5; ++retry) {
+        HANDLE hPipe = CreateFileA("\\\\.\\pipe\\PanicUnlockPipe", GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
+        if (hPipe != INVALID_HANDLE_VALUE) {
+            const char* wakeCmd = "__WAKE__";
+            DWORD dwWritten = 0;
+            WriteFile(hPipe, wakeCmd, (DWORD)strlen(wakeCmd), &dwWritten, NULL);
+            CloseHandle(hPipe);
+            AppLog("[pwr] Dispatched __WAKE__ to LogonUI PanicProvider pipe successfully");
+            pipeConnected = true;
+            break;
+        }
+        if (WaitNamedPipeA("\\\\.\\pipe\\PanicUnlockPipe", 150)) {
+            continue;
+        }
+        Sleep(80);
+    }
+    if (!pipeConnected) {
+        AppLog("[pwr] PanicUnlockPipe not connected (desktop may already be unlocked or LogonUI inactive)");
+    }
+
+    // 2. Hardware GPU Reset Signal: Win + Ctrl + Shift + B (Official WDDM Graphics Driver Reset)
+    // Forces DWM and the display driver to re-enumerate and re-ignite the physical panel!
+    keybd_event(VK_LWIN, (BYTE)MapVirtualKey(VK_LWIN, MAPVK_VK_TO_VSC), 0, 0);
+    keybd_event(VK_CONTROL, (BYTE)MapVirtualKey(VK_CONTROL, MAPVK_VK_TO_VSC), 0, 0);
+    keybd_event(VK_SHIFT, (BYTE)MapVirtualKey(VK_SHIFT, MAPVK_VK_TO_VSC), 0, 0);
+    keybd_event('B', (BYTE)MapVirtualKey('B', MAPVK_VK_TO_VSC), 0, 0);
+    Sleep(25);
+    keybd_event('B', (BYTE)MapVirtualKey('B', MAPVK_VK_TO_VSC), KEYEVENTF_KEYUP, 0);
+    keybd_event(VK_SHIFT, (BYTE)MapVirtualKey(VK_SHIFT, MAPVK_VK_TO_VSC), KEYEVENTF_KEYUP, 0);
+    keybd_event(VK_CONTROL, (BYTE)MapVirtualKey(VK_CONTROL, MAPVK_VK_TO_VSC), KEYEVENTF_KEYUP, 0);
+    keybd_event(VK_LWIN, (BYTE)MapVirtualKey(VK_LWIN, MAPVK_VK_TO_VSC), KEYEVENTF_KEYUP, 0);
+
+    // 3. Force graphics adapter to re-train monitor signal
+    ChangeDisplaySettings(NULL, 0);
+
+    // 4. Asynchronously notify PanicMasterService without blocking HTTP response
+    std::thread([]() {
+        ExecSilentCommand("curl.exe -s --max-time 1 http://127.0.0.1:8086/wake");
+    }).detach();
+
+    // 7. Attach thread to active input desktop (winsta0\Winlogon when locked)
+    HDESK hInputDesk = OpenInputDesktop(0, FALSE, MAXIMUM_ALLOWED);
+    HDESK hPrevDesk = GetThreadDesktop(GetCurrentThreadId());
+    if (hInputDesk) {
+        SetThreadDesktop(hInputDesk);
+    }
+
+    // 8. Significant mouse movement to notify DWM & display driver
+    mouse_event(MOUSEEVENTF_MOVE, 40, 40, 0, 0);
+    Sleep(25);
+    mouse_event(MOUSEEVENTF_MOVE, -40, -40, 0, 0);
+    Sleep(25);
+
+    // 9. Atomic SendInput SHIFT pulse (dismisses LockApp curtain and wakes kernel power manager)
+    INPUT shiftInputs[2] = {};
+    shiftInputs[0].type = INPUT_KEYBOARD;
+    shiftInputs[0].ki.wVk = VK_SHIFT;
+    shiftInputs[0].ki.wScan = (WORD)MapVirtualKey(VK_SHIFT, MAPVK_VK_TO_VSC);
+    shiftInputs[0].ki.dwFlags = 0;
+
+    shiftInputs[1].type = INPUT_KEYBOARD;
+    shiftInputs[1].ki.wVk = VK_SHIFT;
+    shiftInputs[1].ki.wScan = (WORD)MapVirtualKey(VK_SHIFT, MAPVK_VK_TO_VSC);
+    shiftInputs[1].ki.dwFlags = KEYEVENTF_KEYUP;
+
+    SendInput(2, shiftInputs, sizeof(INPUT));
+    Sleep(25);
+
+    // 10. If workstation is locked, click to ensure PIN/password prompt is focused
+    if (IsWorkstationLocked()) {
+        mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
+        Sleep(20);
+        mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
+    }
+
+    // 11. Restore original desktop
+    if (hInputDesk) {
+        if (hPrevDesk) SetThreadDesktop(hPrevDesk);
+        CloseDesktop(hInputDesk);
+    }
+}
+
+void ReleaseDisplayWake() {
+    g_keepDisplayAwake.store(false);
+    AppLog("[pwr] ReleaseDisplayWake: display sleeping in Stealth Dark Mode, keeping system & network alive for remote wake");
+    std::lock_guard<std::mutex> lk(g_pwrCs);
+    if (g_hDisplayPowerReq && g_hDisplayPowerReq != INVALID_HANDLE_VALUE) {
+        PowerClearRequest(g_hDisplayPowerReq, PowerRequestAwayModeRequired);
+        PowerClearRequest(g_hDisplayPowerReq, PowerRequestDisplayRequired);
+        PowerSetRequest(g_hDisplayPowerReq, PowerRequestSystemRequired);
+    }
+    SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED);
+}
+
 void ProcessClient(SOCKET clientSocket) {
     try {
+        EnsureKeepAwakeThread();
         char buffer[16384] = {0};
         int bytesReceived = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
         if (bytesReceived <= 0) {
@@ -73,6 +360,11 @@ void ProcessClient(SOCKET clientSocket) {
                       (request.find("GET /app.apk") != std::string::npos) ||
                       (request.find("GET /manifest.json") != std::string::npos) ||
                       (request.find("GET /sw.js") != std::string::npos) ||
+                      (request.find("GET /favicon.ico") != std::string::npos) ||
+                      (request.find("GET /css/") != std::string::npos) ||
+                      (request.find("GET /js/") != std::string::npos) ||
+                      (request.find("GET /assets/") != std::string::npos) ||
+                      (request.find("GET /jsqr.min.js") != std::string::npos) ||
                       (request.find("GET /qr") != std::string::npos) ||
                       (request.find("GET /setup") != std::string::npos) ||
                       (request.find("GET /HTTP") != std::string::npos);
@@ -642,20 +934,7 @@ function triggerInstall() {
 }
 
 function playSuccessChime() {
-    try {
-        var ctx = new (window.AudioContext || window.webkitAudioContext)();
-        var osc = ctx.createOscillator();
-        var gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(587.33, ctx.currentTime);
-        osc.frequency.setValueAtTime(880, ctx.currentTime + 0.1);
-        gain.gain.setValueAtTime(0.2, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.4);
-    } catch(e){}
+    // 🔇 Completely silent to prevent unwanted chimes/rings during live sessions
 }
 
 // Live Real-Time Tailscale Lifecycle and Mobile Peer Poller
@@ -744,9 +1023,49 @@ showMode(currentMode);
                 return;
 
             } else if (request.find("GET /sw.js") != std::string::npos) {
-                responseBody = "self.addEventListener('install', (e)=>{e.waitUntil(self.skipWaiting());});\nself.addEventListener('activate', (e)=>{e.waitUntil(self.clients.claim());});\nself.addEventListener('fetch', (e)=>{e.respondWith(fetch(e.request));});";
-                std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/javascript\r\nAccess-Control-Allow-Origin: *\r\n\r\n" + responseBody;
+                responseBody = 
+                    "self.addEventListener('install', (e) => { self.skipWaiting(); });\n"
+                    "self.addEventListener('activate', (e) => { e.waitUntil(self.clients.claim()); });\n"
+                    "self.addEventListener('fetch', (e) => {\n"
+                    "  if (!e.request.url.startsWith('http') || e.request.url.includes('/ws') || e.request.mode === 'navigate') return;\n"
+                    "  e.respondWith(fetch(e.request).catch(() => caches.match(e.request).then(r => r || new Response('', {status: 200, statusText: 'OK'}))));\n"
+                    "});\n";
+                std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/javascript; charset=utf-8\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: " + std::to_string(responseBody.size()) + "\r\nConnection: close\r\n\r\n" + responseBody;
                 send(clientSocket, res.c_str(), (int)res.size(), 0);
+                shutdown(clientSocket, SD_SEND);
+                closesocket(clientSocket);
+                return;
+
+            } else if (request.find("GET /favicon.ico") != std::string::npos) {
+                std::string res = "HTTP/1.1 204 No Content\r\nAccess-Control-Allow-Origin: *\r\nConnection: close\r\n\r\n";
+                send(clientSocket, res.c_str(), (int)res.size(), 0);
+                shutdown(clientSocket, SD_SEND);
+                closesocket(clientSocket);
+                return;
+
+            } else if (request.find("GET /jsqr.min.js") != std::string::npos || request.find("GET /js/jsqr.min.js") != std::string::npos) {
+                std::string jsqrPath = "android-app/www/jsqr.min.js";
+                FILE* f = fopen(jsqrPath.c_str(), "rb");
+                if (!f) {
+                    std::string pPath = GetProgramDataFolder() + "\\jsqr.min.js";
+                    f = fopen(pPath.c_str(), "rb");
+                }
+                std::string res;
+                if (f) {
+                    fseek(f, 0, SEEK_END);
+                    long fsize = ftell(f);
+                    fseek(f, 0, SEEK_SET);
+                    std::vector<char> fbuf(fsize);
+                    fread(fbuf.data(), 1, fsize, f);
+                    fclose(f);
+                    responseBody = std::string(fbuf.data(), fsize);
+                    res = "HTTP/1.1 200 OK\r\nContent-Type: application/javascript; charset=utf-8\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: " + std::to_string(responseBody.size()) + "\r\nConnection: close\r\n\r\n" + responseBody;
+                } else {
+                    responseBody = "/* inlined in dashboard */";
+                    res = "HTTP/1.1 200 OK\r\nContent-Type: application/javascript; charset=utf-8\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: " + std::to_string(responseBody.size()) + "\r\nConnection: close\r\n\r\n" + responseBody;
+                }
+                send(clientSocket, res.c_str(), (int)res.size(), 0);
+                shutdown(clientSocket, SD_SEND);
                 closesocket(clientSocket);
                 return;
 
@@ -791,13 +1110,40 @@ showMode(currentMode);
             closesocket(clientSocket);
             return;
 
+        } else if (request.find("GET /api/wake") != std::string::npos || request.find("GET /wake") != std::string::npos) {
+            // ⚡ HACKER-LEVEL PROCESS-PERSISTENT DISPLAY REMOTE WAKE ENGINE
+            ULONGLONG now = GetTickCount64();
+            if (now - g_lastWakeTick.load() < 1500) {
+                responseBody = "{\"status\":\"woken\",\"cooldown\":true}";
+                std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n\r\n" + responseBody;
+                send(clientSocket, res.c_str(), (int)res.size(), 0);
+                closesocket(clientSocket);
+                return;
+            }
+            g_lastWakeTick.store(now);
+
+            // Standby Transition Guard: If system entered sleep <2.5s ago, allow driver quiescence
+            ULONGLONG sleepDiff = now - g_lastSleepTick.load();
+            if (sleepDiff < 2500) {
+                Sleep((DWORD)(2500 - sleepDiff));
+            }
+
+            AppLog("[pwr] HTTP /api/wake received from remote client");
+            RequestDisplayWake();
+
+            responseBody = "{\"status\":\"woken\",\"message\":\"Display and system awakened successfully\"}";
+            std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n\r\n" + responseBody;
+            send(clientSocket, res.c_str(), (int)res.size(), 0);
+            closesocket(clientSocket);
+            return;
+
         } else if (request.find("GET /unlock") != std::string::npos) {
             // 🔓 Unlock Workstation Engine
-            // 1. ⚡ Auto-wake Lock Screen display & dismiss clock splash screen!
-            keybd_event(VK_SPACE, 0, 0, 0);
-            Sleep(30);
-            keybd_event(VK_SPACE, 0, KEYEVENTF_KEYUP, 0);
-            Sleep(80);
+            // 1. ⚡ Ensure power state is active
+            EnsureKeepAwakeThread();
+            g_keepDisplayAwake.store(true);
+            SetThreadExecutionState(ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED | ES_CONTINUOUS);
+            RestoreBrightnessAsync();
 
             std::string pin = "";
             size_t pinPos = request.find("pin=");
@@ -823,35 +1169,96 @@ showMode(currentMode);
                 }
             }
 
-            // Step 2: Send Password to the Custom Credential Provider via Named Pipe
-            HANDLE hPipe = CreateFileA("\\\\.\\pipe\\PanicUnlockPipe", GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
-            if (hPipe != INVALID_HANDLE_VALUE) {
-                DWORD dwWritten;
-                WriteFile(hPipe, pin.c_str(), (DWORD)pin.length(), &dwWritten, NULL);
-                CloseHandle(hPipe);
+            // 2. Dismiss lock curtain and wake LogonUI
+            keybd_event(VK_SPACE, 0, 0, 0);
+            Sleep(25);
+            keybd_event(VK_SPACE, 0, KEYEVENTF_KEYUP, 0);
+            Sleep(50);
+
+            // 2b. If the previous attempt failed, LogonUI shows an error dialog
+            // ("password incorrect") that blocks auto-logon until dismissed.
+            // A manual click used to do this; now ENTER does it automatically.
+            bool prevFailed = false;
+            FILE* pf = fopen("C:\\ProgramData\\PanicButton\\last_logon.txt", "r");
+            if (pf) {
+                char pline[128] = {0};
+                size_t pn = fread(pline, 1, sizeof(pline) - 1, pf);
+                fclose(pf);
+                if (pn >= 4 && strncmp(pline, "FAIL", 4) == 0) prevFailed = true;
+            }
+            if (prevFailed) {
+                keybd_event(VK_RETURN, 0, 0, 0);
+                Sleep(25);
+                keybd_event(VK_RETURN, 0, KEYEVENTF_KEYUP, 0);
+                Sleep(600);
+                AppLog("[unlock] Dismissed previous failure dialog with ENTER");
             }
 
-            responseBody = "{\"status\":\"unlocked\"}";
-            std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n\r\n" + responseBody;
-            send(clientSocket, res.c_str(), (int)res.size(), 0);
-            closesocket(clientSocket);
-            return;
-
-        } else if (request.find("GET /api/gemini_key") != std::string::npos) {
-            std::string keyVal = "";
-            FILE* kf = fopen("C:\\ProgramData\\PanicButton\\gemini_key.txt", "r");
-            if (kf) {
-                char kbuf[512] = {0};
-                if (fgets(kbuf, sizeof(kbuf) - 1, kf)) {
-                    keyVal = kbuf;
-                    while (!keyVal.empty() && (keyVal.back() == '\r' || keyVal.back() == '\n' || keyVal.back() == ' ')) keyVal.pop_back();
+            // 3. Send Password to Custom Credential Provider via Named Pipe with robust retry loop
+            // Clear previous logon result so we can detect THIS attempt's outcome
+            DeleteFileA("C:\\ProgramData\\PanicButton\\last_logon.txt");
+            bool pinSent = false;
+            for (int retry = 0; retry < 8; ++retry) {
+                HANDLE hPipe = CreateFileA("\\\\.\\pipe\\PanicUnlockPipe", GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
+                if (hPipe != INVALID_HANDLE_VALUE) {
+                    DWORD dwWritten = 0;
+                    WriteFile(hPipe, pin.c_str(), (DWORD)pin.length(), &dwWritten, NULL);
+                    CloseHandle(hPipe);
+                    AppLog("[unlock] Password dispatched to LogonUI pipe successfully");
+                    pinSent = true;
+                    break;
                 }
-                fclose(kf);
+                if (WaitNamedPipeA("\\\\.\\pipe\\PanicUnlockPipe", 200)) {
+                    continue;
+                }
+                Sleep(80);
             }
-            responseBody = "{\"key\":\"" + keyVal + "\"}";
+            if (!pinSent) {
+                AppLog("[unlock] FAILED: PanicUnlockPipe not ready after retries");
+            }
+
+            // 4. Wait for LogonUI result (ReportResult bridge): wrong password?
+            // NOTE: PIN is sent over the pipe exactly once above. Mid-wait keys
+            // below never resubmit (account lockout safety).
+            std::string unlockStatus = "unknown";
+            if (pinSent) {
+                int midDismissCount = 0;
+                for (int waitMs = 0; waitMs < 12000; waitMs += 200) {
+                    Sleep(200);
+                    FILE* rf = fopen("C:\\ProgramData\\PanicButton\\last_logon.txt", "r");
+                    if (rf) {
+                        char rline[128] = {0};
+                        size_t rn = fread(rline, 1, sizeof(rline) - 1, rf);
+                        fclose(rf);
+                        if (rn >= 2 && strncmp(rline, "OK", 2) == 0) {
+                            unlockStatus = "unlocked";
+                            break;
+                        } else if (rn >= 4 && strncmp(rline, "FAIL", 4) == 0) {
+                            unlockStatus = "wrong_password";
+                            AppLog("[unlock] Logon FAILED: saved password no longer valid");
+                            break;
+                        }
+                        // Partial/garbage read: keep waiting, do not break
+                    } else if (prevFailed && midDismissCount < 2 && waitMs >= 2000 + midDismissCount * 4000) {
+                        // Stale error dialog may have rendered AFTER the pre-dispatch
+                        // ENTER and now blocks the new attempt. Benign ENTER only
+                        // (no resubmission) to dismiss it, then keep waiting.
+                        midDismissCount++;
+                        keybd_event(VK_RETURN, 0, 0, 0);
+                        Sleep(25);
+                        keybd_event(VK_RETURN, 0, KEYEVENTF_KEYUP, 0);
+                        Sleep(400);
+                        AppLog("[unlock] Mid-wait ENTER sent for late error dialog");
+                    }
+                }
+                // Timeout with no result file: "unknown", phone shows neutral verify prompt
+            } else {
+                unlockStatus = "unlocked";
+            }
+
+            responseBody = "{\"status\":\"" + unlockStatus + "\"}";
             std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n\r\n" + responseBody;
             send(clientSocket, res.c_str(), (int)res.size(), 0);
-            shutdown(clientSocket, SD_SEND);
             closesocket(clientSocket);
             return;
 
@@ -874,15 +1281,70 @@ showMode(currentMode);
             return;
 
         } else if (request.find("GET /sleep") != std::string::npos) {
-            // 🌙 Sleep PC remotely!
+            // 🌙 Sleep PC remotely with Bulletproof Server Debounce & Race-Condition Lock
+            ULONGLONG now = GetTickCount64();
+            if (g_isSleepActive.load() || (now - g_lastSleepTick.load() < 3000)) {
+                // Prevent duplicate sleep storms
+                responseBody = "{\"status\":\"sleeping\",\"cooldown\":true}";
+                std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n\r\n" + responseBody;
+                send(clientSocket, res.c_str(), (int)res.size(), 0);
+                shutdown(clientSocket, SD_SEND);
+                closesocket(clientSocket);
+                return;
+            }
+            g_isSleepActive.store(true);
+            g_lastSleepTick.store(now);
+
             responseBody = "{\"status\":\"sleeping\"}";
             std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n\r\n" + responseBody;
             send(clientSocket, res.c_str(), (int)res.size(), 0);
             shutdown(clientSocket, SD_SEND);
             closesocket(clientSocket);
-            // ⚡ Safe Windows System Power API: Notifies GPU & USB drivers cleanly (ZERO crash/reboot loops!)
-            SetSystemPowerState(TRUE, FALSE);
+
+            // Allow 200ms for the network stack to cleanly flush the HTTP response packet to the phone
+            Sleep(200);
+
+            AppLog("[pwr] HTTP /sleep received from remote client");
+
+            // 0. Capture user's active brightness so it can be restored exactly on wake
+            CaptureCurrentBrightness();
+
+            // 1. Release active display power request so system is allowed to sleep
+            ReleaseDisplayWake();
+
+            // 2. Lock WorkStation so security is preserved upon sleep
+            LockWorkStation();
+            Sleep(500); // Give LogonUI ample time to spawn and initialize its named pipe server
+
+            // 3. Dispatch __SLEEP__ to LogonUI PanicProvider pipe (covers lock screen with pure black window)
+            bool sleepPipeOk = false;
+            for (int retry = 0; retry < 6; ++retry) {
+                HANDLE hPipe = CreateFileA("\\\\.\\pipe\\PanicUnlockPipe", GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
+                if (hPipe != INVALID_HANDLE_VALUE) {
+                    const char* sleepCmd = "__SLEEP__";
+                    DWORD dwWritten = 0;
+                    WriteFile(hPipe, sleepCmd, (DWORD)strlen(sleepCmd), &dwWritten, NULL);
+                    CloseHandle(hPipe);
+                    AppLog("[pwr] Dispatched __SLEEP__ to LogonUI blackout window successfully");
+                    sleepPipeOk = true;
+                    break;
+                }
+                if (WaitNamedPipeA("\\\\.\\pipe\\PanicUnlockPipe", 150)) {
+                    continue;
+                }
+                Sleep(80);
+            }
+            if (!sleepPipeOk) {
+                AppLog("[pwr] Warning: PanicUnlockPipe not connected for __SLEEP__");
+            }
+
+            // 4. Dim backlight to 0% (together with blackout window = pitch black, zero light bleed)
+            DimBrightnessAsync(0);
+
+            Sleep(100);
+            g_isSleepActive.store(false);
             return;
+
 
         } else if (request.find("GET /restart") != std::string::npos) {
             // 🔄 Restart PC remotely!
@@ -929,11 +1391,13 @@ showMode(currentMode);
             std::string tsIp = GetTailscaleIP();
             std::string tsDns = GetTailscaleDNS();
             std::string lanIp = GetLocalIP();
+            std::string mac = GetPrimaryMacAddress();
             std::string httpsUrl = tsDns.empty() ? "" : ("https://" + tsDns + "/?key=" + g_dynamicKey);
             responseBody = "{\"panic\":" + std::string(isPanicMode ? "true" : "false") + 
                            ",\"locked\":" + std::string(isLocked ? "true" : "false") + 
                            ",\"state\":" + std::to_string(panicState) + 
                            ",\"lan_ip\":\"" + lanIp + "\"" + 
+                           ",\"mac\":\"" + mac + "\"" + 
                            ",\"tailscale_ip\":\"" + tsIp + "\"" + 
                            ",\"tailscale_dns\":\"" + tsDns + "\"" + 
                            ",\"https_url\":\"" + httpsUrl + "\"" + 
@@ -979,7 +1443,10 @@ showMode(currentMode);
                 if (!CaptureDXGIFrame(hDC, targetW, targetH)) {
                     SetStretchBltMode(hDC, HALFTONE);
                     SetBrushOrgEx(hDC, 0, 0, NULL);
-                    StretchBlt(hDC, 0, 0, targetW, targetH, hScreen, 0, 0, screenW, screenH, SRCCOPY);
+                    if (!StretchBlt(hDC, 0, 0, targetW, targetH, hScreen, 0, 0, screenW, screenH, SRCCOPY)) {
+                        RECT rc = { 0, 0, targetW, targetH };
+                        FillRect(hDC, &rc, (HBRUSH)GetStockObject(BLACK_BRUSH));
+                    }
                 }
 
                 // Draw Hardware Mouse Cursor scaled to target resolution
@@ -1169,7 +1636,10 @@ showMode(currentMode);
                     if (!CaptureDXGIFrame(hDC, targetW, targetH)) {
                         SetStretchBltMode(hDC, HALFTONE);
                         SetBrushOrgEx(hDC, 0, 0, NULL);
-                        StretchBlt(hDC, 0, 0, targetW, targetH, hScreen, 0, 0, screenW, screenH, SRCCOPY);
+                        if (!StretchBlt(hDC, 0, 0, targetW, targetH, hScreen, 0, 0, screenW, screenH, SRCCOPY)) {
+                            RECT rc = { 0, 0, targetW, targetH };
+                            FillRect(hDC, &rc, (HBRUSH)GetStockObject(BLACK_BRUSH));
+                        }
                     }
 
                     // Draw Hardware Mouse Cursor scaled to target resolution
@@ -1551,11 +2021,66 @@ showMode(currentMode);
             closesocket(clientSocket);
             return;
 
-        } else if (request.find("GET /sw.js") != std::string::npos) {
-            std::string sw = "self.addEventListener('install', e => { self.skipWaiting(); });\n"
-                "self.addEventListener('activate', e => { clients.claim(); });\n"
-                "self.addEventListener('fetch', e => { e.respondWith(fetch(e.request).catch(() => caches.match(e.request))); });\n";
-            std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/javascript\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: " + std::to_string(sw.size()) + "\r\nConnection: close\r\n\r\n" + sw;
+        } else if (request.find("GET /api/gemini_key") != std::string::npos) {
+            std::string keyPath = GetProgramDataFolder() + "\\gemini_key.txt";
+            std::string savedKey = "";
+            FILE* f = fopen(keyPath.c_str(), "r");
+            if (f) {
+                char kbuf[256] = {0};
+                if (fgets(kbuf, sizeof(kbuf) - 1, f)) {
+                    savedKey = kbuf;
+                    while (!savedKey.empty() && (savedKey.back() == '\r' || savedKey.back() == '\n' || savedKey.back() == ' ')) {
+                        savedKey.pop_back();
+                    }
+                }
+                fclose(f);
+            }
+            std::string jsonResponse = "{\"key\":\"" + savedKey + "\"}";
+            std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: " + std::to_string(jsonResponse.size()) + "\r\nConnection: close\r\n\r\n" + jsonResponse;
+            send(clientSocket, res.c_str(), (int)res.size(), 0);
+            shutdown(clientSocket, SD_SEND);
+            closesocket(clientSocket);
+            return;
+
+        } else if (request.find("POST /api/gemini_key") != std::string::npos || request.find("GET /api/save_gemini_key") != std::string::npos) {
+            std::string newKey = "";
+            size_t kp = request.find("key_val=");
+            if (kp != std::string::npos) {
+                size_t sp = request.find_first_of(" &\r\n", kp);
+                newKey = request.substr(kp + 8, sp - (kp + 8));
+            } else {
+                size_t bodyPos = request.find("\r\n\r\n");
+                if (bodyPos != std::string::npos) {
+                    std::string body = request.substr(bodyPos + 4);
+                    size_t kjson = body.find("\"key\":");
+                    if (kjson != std::string::npos) {
+                        size_t q1 = body.find("\"", kjson + 6);
+                        if (q1 != std::string::npos) {
+                            size_t q2 = body.find("\"", q1 + 1);
+                            if (q2 != std::string::npos) {
+                                newKey = body.substr(q1 + 1, q2 - (q1 + 1));
+                            }
+                        }
+                    } else {
+                        newKey = body;
+                    }
+                }
+            }
+            while (!newKey.empty() && (newKey.back() == '\r' || newKey.back() == '\n' || newKey.back() == ' ')) newKey.pop_back();
+            while (!newKey.empty() && (newKey.front() == '\r' || newKey.front() == '\n' || newKey.front() == ' ')) newKey.erase(newKey.begin());
+
+            std::string keyPath = GetProgramDataFolder() + "\\gemini_key.txt";
+            if (newKey.empty()) {
+                DeleteFileA(keyPath.c_str());
+            } else {
+                FILE* f = fopen(keyPath.c_str(), "w");
+                if (f) {
+                    fprintf(f, "%s\n", newKey.c_str());
+                    fclose(f);
+                }
+            }
+            std::string jsonResponse = "{\"status\":\"ok\",\"saved\":true}";
+            std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: " + std::to_string(jsonResponse.size()) + "\r\nConnection: close\r\n\r\n" + jsonResponse;
             send(clientSocket, res.c_str(), (int)res.size(), 0);
             shutdown(clientSocket, SD_SEND);
             closesocket(clientSocket);
@@ -1603,7 +2128,7 @@ showMode(currentMode);
                     si.hStdInput = NULL;
 
                     PROCESS_INFORMATION pi = { 0 };
-                    std::string fullCmd = "powershell.exe -NoProfile -NonInteractive -WindowStyle Hidden -Command \"" + decodedCmd + "\"";
+                    std::string fullCmd = "powershell.exe -NoProfile -NonInteractive -WindowStyle Hidden -Command \"$ProgressPreference='SilentlyContinue';$WarningPreference='SilentlyContinue';" + decodedCmd + "\"";
                     std::vector<char> cmdBuf(fullCmd.begin(), fullCmd.end());
                     cmdBuf.push_back('\0');
 
@@ -1704,9 +2229,16 @@ showMode(currentMode);
             else if (reqPath.find(".wav") != std::string::npos) contentType = "audio/wav";
 
             std::string targetFile = (reqPath == "/" || reqPath.empty()) ? "/index.html" : reqPath;
-            std::string fullLocalPath = "android-app/www" + targetFile;
 
-            FILE* f = fopen(fullLocalPath.c_str(), "rb");
+            // 🚀 LIVE HOT-RELOAD DEV ENGINE:
+            // Checks the developer workspace directory first!
+            // When editing files in android-app/www/, browser refresh (F5) INSTANTLY reflects changes without building!
+            std::string devPath = "c:\\Users\\Imran\\panic-button\\android-app\\www" + targetFile;
+            FILE* f = fopen(devPath.c_str(), "rb");
+            if (!f) {
+                std::string fullLocalPath = "android-app/www" + targetFile;
+                f = fopen(fullLocalPath.c_str(), "rb");
+            }
             if (!f) {
                 std::string altPath = "public" + targetFile;
                 f = fopen(altPath.c_str(), "rb");

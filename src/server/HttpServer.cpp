@@ -74,7 +74,8 @@ DWORD WINAPI RemoteServerThread(LPVOID lpParam) {
         logF = fopen(LOG_PATH, "a");
         if (logF) { fprintf(logF, "Client #%lu connected!\n", clientCount); fflush(logF); fclose(logF); }
 
-        CreateThread(NULL, 0, ProcessClientThread, (LPVOID)(uintptr_t)clientSocket, 0, NULL);
+        HANDLE hThread = CreateThread(NULL, 0, ProcessClientThread, (LPVOID)(uintptr_t)clientSocket, 0, NULL);
+        if (hThread) CloseHandle(hThread);
     }
 
     WSACleanup();

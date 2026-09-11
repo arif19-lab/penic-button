@@ -1,3 +1,4 @@
+// 📱 app.js - Onboarding, pairing & UI navigation
 /**
  * 📱 ONBOARDING, QR SCANNER, PWA & TAB NAVIGATION
  */

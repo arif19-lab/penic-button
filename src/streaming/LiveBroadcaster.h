@@ -132,7 +132,10 @@ private:
             if (!CaptureDXGIFrame(hDC, w, h)) {
                 SetStretchBltMode(hDC, HALFTONE);
                 SetBrushOrgEx(hDC, 0, 0, NULL);
-                StretchBlt(hDC, 0, 0, w, h, hScreen, 0, 0, screenW, screenH, SRCCOPY);
+                if (!StretchBlt(hDC, 0, 0, w, h, hScreen, 0, 0, screenW, screenH, SRCCOPY)) {
+                    RECT rc = {0, 0, w, h};
+                    FillRect(hDC, &rc, (HBRUSH)GetStockObject(BLACK_BRUSH));
+                }
             }
             GetDIBits(hDC, hBitmap, 0, h, bgra.data(), &bmi, DIB_RGB_COLORS);
             BGRAtoNV12(bgra.data(), w, h, nv12.data());

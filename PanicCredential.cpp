@@ -9,7 +9,7 @@ static void CredLog(const char* msg) {
     if (f) { fprintf(f, "%s\n", msg); fclose(f); }
 }
 
-CPanicCredential::CPanicCredential() : _cRef(1), _pcpce(nullptr), _autoLogon(FALSE), _cpus(CPUS_INVALID), _hasPendingUnlock(FALSE) {}
+CPanicCredential::CPanicCredential() : _cRef(1), _pcpce(nullptr), _cpus(CPUS_INVALID), _autoLogon(FALSE), _hasPendingUnlock(FALSE) {}
 CPanicCredential::~CPanicCredential() { if (_pcpce) _pcpce->Release(); }
 
 IFACEMETHODIMP CPanicCredential::QueryInterface(REFIID riid, void** ppv) {
@@ -61,7 +61,19 @@ IFACEMETHODIMP CPanicCredential::SetStringValue(DWORD, PCWSTR) { return S_OK; }
 IFACEMETHODIMP CPanicCredential::SetCheckboxValue(DWORD, BOOL) { return S_OK; }
 IFACEMETHODIMP CPanicCredential::SetComboBoxSelectedValue(DWORD, DWORD) { return S_OK; }
 IFACEMETHODIMP CPanicCredential::CommandLinkClicked(DWORD) { return S_OK; }
-IFACEMETHODIMP CPanicCredential::ReportResult(NTSTATUS, NTSTATUS, PWSTR*, CREDENTIAL_PROVIDER_STATUS_ICON*) { return S_OK; }
+IFACEMETHODIMP CPanicCredential::ReportResult(NTSTATUS ntsReason, NTSTATUS ntsSubreason, PWSTR*, CREDENTIAL_PROVIDER_STATUS_ICON*) {
+    // Feedback bridge: PanicButton.exe /unlock waits on this file to tell the
+    // phone whether the saved password worked or was changed (wrong_password).
+    char rbuf[128];
+    snprintf(rbuf, sizeof(rbuf), "%s %lu %08lX %08lX",
+        (ntsReason == 0) ? "OK" : "FAIL", GetTickCount(), (ULONG)ntsReason, (ULONG)ntsSubreason);
+    FILE* rf = fopen("C:\\ProgramData\\PanicButton\\last_logon.txt", "w");
+    if (rf) { fprintf(rf, "%s", rbuf); fclose(rf); }
+    char lbuf[160];
+    snprintf(lbuf, sizeof(lbuf), "[REPORTRESULT] %s", rbuf);
+    CredLog(lbuf);
+    return S_OK;
+}
 
 IFACEMETHODIMP CPanicCredential::GetSerialization(
     CREDENTIAL_PROVIDER_GET_SERIALIZATION_RESPONSE* pcpgsr,

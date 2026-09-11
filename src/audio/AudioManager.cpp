@@ -119,7 +119,7 @@ void TriggerAlarm() {
         wavPath = "C:\\ProgramData\\PanicButton" + wavName;
     }
 
-    PlaySoundA(wavPath.c_str(), NULL, SND_FILENAME | SND_ASYNC);
+    PlaySoundA(wavPath.c_str(), NULL, SND_FILENAME | SND_ASYNC | SND_NODEFAULT);
 
     clickCount++;
     if (clickCount > 13) {

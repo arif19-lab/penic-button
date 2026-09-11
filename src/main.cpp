@@ -9,6 +9,7 @@
 #include <mfapi.h>
 #include <cstdio>
 #include <ctime>
+#include <thread>
 
 // Core modules
 #include "core/Config.h"
@@ -21,6 +22,7 @@
 #include "security/HotkeyListener.h"
 #include "service/SystemDeploy.h"
 #include "server/HttpServer.h"
+#include "server/HttpRouter.h"
 #include "server/UdpDiscovery.h"
 #include "ui/TrayIcon.h"
 
@@ -32,8 +34,24 @@ using namespace Gdiplus;
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
     SetUnhandledExceptionFilter(CrashFilter);
 
+    if (lpCmdLine && strstr(lpCmdLine, "--wake") != NULL) {
+        SetThreadExecutionState(ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED);
+        mouse_event(MOUSEEVENTF_MOVE, 2, 2, 0, 0);
+        Sleep(20);
+        mouse_event(MOUSEEVENTF_MOVE, -2, -2, 0, 0);
+        keybd_event(VK_SPACE, 0, 0, 0);
+        Sleep(30);
+        keybd_event(VK_SPACE, 0, KEYEVENTF_KEYUP, 0);
+        return 0;
+    }
+
     CreateDirectoryA("C:\\ProgramData\\PanicButton", NULL);
     AppLog("WinMain: PANIC CTRL starting");
+    // Heartbeat for PanicMasterService handoff: while this process lives, the
+    // service yields port 8085 to this full agent (streaming needs user session).
+    CreateMutexA(NULL, FALSE, "Global\\PanicButtonAgentAlive");
+    EnsureKeepAwakeThread();
+    std::thread(CaptureCurrentBrightness).detach();
 
     WSADATA wsaData;
     WSAStartup(MAKEWORD(2, 2), &wsaData);
@@ -122,6 +140,9 @@ int main(int argc, char* argv[]) {
     SetUnhandledExceptionFilter(CrashFilter);
 
     CreateDirectoryA("C:\\ProgramData\\PanicButton", NULL);
+
+    // Heartbeat for PanicMasterService handoff (see WinMain): service yields 8085 while alive.
+    CreateMutexA(NULL, FALSE, "Global\\PanicButtonAgentAlive");
 
     FILE* startLog = fopen("C:\\ProgramData\\PanicButton\\server_status.log", "w");
     if (startLog) { fprintf(startLog, "main() console entry started\n"); fflush(startLog); fclose(startLog); }

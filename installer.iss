@@ -14,6 +14,7 @@ Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
 PrivilegesRequired=admin
+ArchitecturesInstallIn64BitMode=x64compatible
 CloseApplications=yes
 RestartApplications=no
 
@@ -25,8 +26,11 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 
 [Files]
 Source: "PanicButton.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "PanicService.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "PanicProvider.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "PanicProvider.dll"; DestDir: "{sys}"; Flags: restartreplace uninsrestartdelete
 Source: "libwinpthread-1.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "libwinpthread-1.dll"; DestDir: "{sys}"; Flags: restartreplace uninsrestartdelete
 Source: "alarm*.wav"; DestDir: "{app}"; Flags: ignoreversion
 Source: "PanicCTRL.apk"; DestDir: "{app}"; Flags: ignoreversion
 
@@ -39,6 +43,16 @@ Name: "{autodesktop}\PANIC CTRL"; Filename: "{app}\PanicButton.exe"; Tasks: desk
 
 [Run]
 Filename: "{app}\PanicButton.exe"; Parameters: "--setup"; WorkingDir: "{app}"; Description: "{cm:LaunchProgram,PANIC CTRL}"; Flags: nowait postinstall skipifsilent shellexec
+
+[Registry]
+Root: HKLM64; Subkey: "SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\Credential Providers\{{A735A943-BB41-45A5-A444-2CD08FAFC000}"; ValueType: string; ValueData: "Panic Credential Provider"; Flags: uninsdeletekey
+Root: HKLM64; Subkey: "SOFTWARE\Classes\CLSID\{{A735A943-BB41-45A5-A444-2CD08FAFC000}"; ValueType: string; ValueData: "Panic Credential Provider"; Flags: uninsdeletekey
+Root: HKLM64; Subkey: "SOFTWARE\Classes\CLSID\{{A735A943-BB41-45A5-A444-2CD08FAFC000}\InprocServer32"; ValueType: string; ValueData: "{app}\PanicProvider.dll"; Flags: uninsdeletekey
+Root: HKLM64; Subkey: "SOFTWARE\Classes\CLSID\{{A735A943-BB41-45A5-A444-2CD08FAFC000}\InprocServer32"; ValueName: "ThreadingModel"; ValueType: string; ValueData: "Apartment"; Flags: uninsdeletekey
+Root: HKLM64; Subkey: "SOFTWARE\Policies\Microsoft\Windows\Personalization"; ValueName: "NoLockScreen"; ValueType: dword; ValueData: "1"; Flags: uninsdeletevalue
+
+[UninstallRun]
+Filename: "{app}\PanicService.exe"; Parameters: "-uninstall"; Flags: runhidden
 
 [Code]
 var
@@ -205,12 +219,21 @@ begin
   if CurStep = ssInstall then
   begin
     Exec('curl.exe', '-s http://127.0.0.1:8085/api/exit', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode);
-    Sleep(400);
+    Sleep(300);
+    Exec('sc.exe', 'stop PanicMasterService', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode);
+    Sleep(200);
     Exec('cmd.exe', '/c taskkill /F /IM PanicButton.exe /T', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode);
-    Sleep(400);
+    Exec('cmd.exe', '/c taskkill /F /IM PanicService.exe /T', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode);
+    Exec('cmd.exe', '/c taskkill /F /IM LogonUI.exe /T', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode);
+    Exec('cmd.exe', '/c move /Y C:\Windows\System32\PanicProvider.dll C:\Windows\System32\PanicProvider.old.dll', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode);
+    Sleep(300);
   end
   else if CurStep = ssPostInstall then
   begin
+    Exec('cmd.exe', '/c taskkill /F /IM LogonUI.exe /T', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode);
+    Exec(ExpandConstant('{app}\PanicButton.exe'), '--setup', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode);
+    Exec(ExpandConstant('{app}\PanicService.exe'), '-install', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode);
+    Exec(ExpandConstant('{app}\PanicButton.exe'), '', '', SW_SHOW, ewNoWait, ErrorCode);
     if TailscaleInstallCheck.Checked then
     begin
       WizardForm.StatusLabel.Caption := 'Updating / Installing Tailscale WireGuard engine...';

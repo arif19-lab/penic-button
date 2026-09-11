@@ -34,11 +34,11 @@
 
 // =============================================
 // 🌐 REMOTE HTTP SERVER
-// Browser থেকে Panic Mode কন্ট্রোল করার জন্য!
-// PC 1 থেকে PC 2 কন্ট্রোল করা যাবে!
+// For controlling Panic Mode via browser or remote device.
+// Allows remote management across PCs.
 // =============================================
 #define REMOTE_PORT 8085
-#define SECRET_KEY  "imran2024" // এটা তোর Secret Password!
+#define SECRET_KEY  "imran2024" // Secret Access Key
 
 // 🛡️ WINDOWS SERVICE CONTROL ENGINE (24/7 Background System Execution)
 #define SERVICE_NAME "PanicButtonService"

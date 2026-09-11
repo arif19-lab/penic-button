@@ -23,6 +23,7 @@ std::string GetLocalIP();
 std::string GetTailscaleIP();
 std::string GetTailscaleCliPath();
 std::string GetTailscaleDNS();
+std::string GetPrimaryMacAddress();
 void GenerateDynamicKey();
 bool IsWorkstationLocked();
 std::string GetProgramDataFolder();

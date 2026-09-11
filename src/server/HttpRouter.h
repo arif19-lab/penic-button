@@ -3,3 +3,6 @@
 #include <windows.h>
 
 void ProcessClient(SOCKET clientSocket);
+void EnsureKeepAwakeThread();
+void CaptureCurrentBrightness();
+void RequestDisplayWake();

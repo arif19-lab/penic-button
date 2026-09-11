@@ -8,7 +8,7 @@ class CPanicProvider : public ICredentialProvider
 {
 public:
     CPanicProvider();
-    ~CPanicProvider();
+    virtual ~CPanicProvider();
 
     // IUnknown
     IFACEMETHODIMP QueryInterface(REFIID riid, void** ppv);
@@ -26,6 +26,8 @@ public:
     IFACEMETHODIMP GetCredentialAt(DWORD dwIndex, ICredentialProviderCredential** ppcpc);
 
     static DWORD WINAPI PipeThreadProc(LPVOID lpParam);
+    static DWORD WINAPI SecretWatchProc(LPVOID lpParam);
+    void PerformWake(const char* tag);
 
 private:
     LONG _cRef;
@@ -33,5 +35,7 @@ private:
     ICredentialProviderEvents* _pcpe;
     UINT_PTR _upAdviseContext;
     HANDLE _hThread;
+    HANDLE _hSecretThread;
     HANDLE _hStopEvent;
+    volatile HWND _hBlackoutWnd;
 };

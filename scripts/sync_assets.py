@@ -21,18 +21,28 @@ if os.path.exists(css_path):
         css_content = f.read()
 
 js_bundle = ''
-for jf in ['network.js', 'gemini_prompt.js', 'controls.js', 'streamer.js', 'gemini_live.js', 'app.js']:
+for jf in ['logger.js', 'network.js', 'gemini_prompt.js', 'controls.js', 'streamer.js', 'personas.js', 'gemini_live.js', 'app.js']:
     jp = os.path.join('android-app/www/js', jf)
     if os.path.exists(jp):
         with open(jp, 'r', encoding='utf-8') as f:
             js_bundle += f"\n// --- {jf} ---\n" + f.read() + "\n"
 
+jsqr_path = 'android-app/www/jsqr.min.js'
+jsqr_content = ''
+if os.path.exists(jsqr_path):
+    with open(jsqr_path, 'r', encoding='utf-8') as f:
+        jsqr_content = f.read()
+
 # Inlined fallback HTML for C++ single binary
 inlined_html = html.replace('<link rel="stylesheet" href="css/style.css">', f'<style>\n{css_content}\n</style>')
+inlined_html = inlined_html.replace('<script src="jsqr.min.js"></script>', f'<script>\n{jsqr_content}\n</script>')
+inlined_html = inlined_html.replace('<script src="js/jsqr.min.js"></script>', '')
+inlined_html = inlined_html.replace('<script src="js/logger.js"></script>', '')
 inlined_html = inlined_html.replace('<script src="js/network.js"></script>', '')
 inlined_html = inlined_html.replace('<script src="js/gemini_prompt.js"></script>', '')
 inlined_html = inlined_html.replace('<script src="js/controls.js"></script>', '')
 inlined_html = inlined_html.replace('<script src="js/streamer.js"></script>', '')
+inlined_html = inlined_html.replace('<script src="js/personas.js"></script>', '')
 inlined_html = inlined_html.replace('<script src="js/gemini_live.js"></script>', '')
 inlined_html = inlined_html.replace('<script src="js/app.js"></script>', f'<script>\n{js_bundle}\n</script>')
 

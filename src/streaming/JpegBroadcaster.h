@@ -2,6 +2,7 @@
 
 #include <winsock2.h>
 #include <windows.h>
+#include <mmsystem.h>
 #include <gdiplus.h>
 #include <vector>
 #include <mutex>
@@ -184,11 +185,11 @@ public:
                 continue;
             }
 
-            // 🛑 ZERO-LAG FLOW CONTROL: Cap in-flight frames to max 1 in the tunnel pipe!
+            // 🛑 ZERO-LAG FLOW CONTROL: Cap in-flight frames to max 2 in the tunnel pipe for pipelined streaming!
             DWORD nowTick = GetTickCount();
-            if (inFlight >= 1) {
-                if ((nowTick - lastSentTick) < 150) {
-                    Sleep(2);
+            if (inFlight >= 2) {
+                if ((nowTick - lastSentTick) < 50) {
+                    Sleep(1);
                     continue;
                 }
                 inFlight = 0; // ⚡ Auto-recover: ACK timed out, clear inFlight to avoid stalls!
@@ -198,7 +199,7 @@ public:
             uint64_t currentSeq = 0;
             {
                 std::unique_lock<std::mutex> lk(mtx);
-                cv.wait_for(lk, std::chrono::milliseconds(33), [&]() {
+                cv.wait_for(lk, std::chrono::milliseconds(16), [&]() {
                     return frameSeq > lastSent || stopReq;
                 });
                 if (stopReq) break;
@@ -220,6 +221,8 @@ public:
 
 private:
     void CaptureLoop() {
+        timeBeginPeriod(1); // ⚡ High-Resolution 1ms Windows timer precision for silky-smooth 60 FPS!
+
         // Pre-allocate GDI objects ONCE — no per-frame alloc overhead!
         CLSID jpgClsid;
         GetEncoderClsid(L"image/jpeg", &jpgClsid);
@@ -228,7 +231,7 @@ private:
         ep.Parameter[0].Guid = EncoderQuality;
         ep.Parameter[0].Type = EncoderParameterValueTypeLong;
         ep.Parameter[0].NumberOfValues = 1;
-        ULONG quality = 50; // Balanced quality for low-bandwidth fallback streaming.
+        ULONG quality = 42; // ⚡ Lean 20KB frames (optimized for WireGuard 60 FPS without packet drop)
         ep.Parameter[0].Value = &quality;
 
         HDC hScreen = GetDC(NULL);
@@ -249,7 +252,7 @@ private:
         HDC hDC = CreateCompatibleDC(hScreen);
         HBITMAP hBitmap = CreateCompatibleBitmap(hScreen, targetW, targetH);
         SelectObject(hDC, hBitmap);
-        SetStretchBltMode(hDC, HALFTONE);
+        SetStretchBltMode(hDC, COLORONCOLOR);
         SetBrushOrgEx(hDC, 0, 0, NULL);
 
         IStream* pStream = NULL;
@@ -271,27 +274,42 @@ private:
 
             auto tStart = std::chrono::steady_clock::now();
 
-            // Capture frame: Pure DirectX 11 GPU Duplication
-            if (!CaptureDXGIFrame(hDC, targetW, targetH)) {
-                if (!g_dxgiDuplication) {
-                    SetStretchBltMode(hDC, HALFTONE);
-                    SetBrushOrgEx(hDC, 0, 0, NULL);
-                    StretchBlt(hDC, 0, 0, targetW, targetH, hScreen, 0, 0, screenW, screenH, SRCCOPY);
+            SwitchToActiveDesktop();
+            int curScreenW = GetSystemMetrics(SM_CXSCREEN);
+            int curScreenH = GetSystemMetrics(SM_CYSCREEN);
+            if (curScreenW > 0) screenW = curScreenW;
+            if (curScreenH > 0) screenH = curScreenH;
+
+            // Capture frame: Pure DirectX 11 GPU Duplication with GDI fallback
+            bool captured = CaptureDXGIFrame(hDC, targetW, targetH);
+            bool hasValidFrame = captured;
+            if (!captured) {
+                SetStretchBltMode(hDC, COLORONCOLOR);
+                SetBrushOrgEx(hDC, 0, 0, NULL);
+                if (StretchBlt(hDC, 0, 0, targetW, targetH, hScreen, 0, 0, screenW, screenH, SRCCOPY)) {
+                    hasValidFrame = true;
+                } else {
+                    // Desktop cannot be captured (e.g. locked, sleep, or display off).
+                    // Wipe hDC to clean solid black so we NEVER accumulate trailing cursors!
+                    RECT rc = {0, 0, targetW, targetH};
+                    FillRect(hDC, &rc, (HBRUSH)GetStockObject(BLACK_BRUSH));
                 }
             }
 
-            // Draw cursor
-            POINT pt; GetCursorPos(&pt);
-            int mx = (pt.x * targetW) / screenW;
-            int my = (pt.y * targetH) / screenH;
-            CURSORINFO ci = {sizeof(CURSORINFO)};
-            if (GetCursorInfo(&ci) && (ci.flags & CURSOR_SHOWING) && ci.hCursor) {
-                ICONINFO ii = {0};
-                if (GetIconInfo(ci.hCursor, &ii)) {
-                    DrawIconEx(hDC, mx - (int)ii.xHotspot, my - (int)ii.yHotspot,
-                               ci.hCursor, 0, 0, 0, NULL, DI_NORMAL);
-                    if (ii.hbmMask) DeleteObject(ii.hbmMask);
-                    if (ii.hbmColor) DeleteObject(ii.hbmColor);
+            // Draw cursor only when we have a valid active desktop frame
+            if (hasValidFrame) {
+                POINT pt; GetCursorPos(&pt);
+                int mx = (pt.x * targetW) / screenW;
+                int my = (pt.y * targetH) / screenH;
+                CURSORINFO ci = {sizeof(CURSORINFO)};
+                if (GetCursorInfo(&ci) && (ci.flags & CURSOR_SHOWING) && ci.hCursor) {
+                    ICONINFO ii = {0};
+                    if (GetIconInfo(ci.hCursor, &ii)) {
+                        DrawIconEx(hDC, mx - (int)ii.xHotspot, my - (int)ii.yHotspot,
+                                   ci.hCursor, 0, 0, 0, NULL, DI_NORMAL);
+                        if (ii.hbmMask) DeleteObject(ii.hbmMask);
+                        if (ii.hbmColor) DeleteObject(ii.hbmColor);
+                    }
                 }
             }
 
@@ -325,10 +343,12 @@ private:
 
             auto tEnd = std::chrono::steady_clock::now();
             int elapsedMs = (int)std::chrono::duration_cast<std::chrono::milliseconds>(tEnd - tStart).count();
-            int sleepMs = 33 - elapsedMs; // ⚡ 30 FPS Rock-Solid Smooth Streaming (33.3ms step, zero network overload!)
+            int sleepMs = 16 - elapsedMs; // ⚡ 60 FPS Rock-Solid Smooth Streaming (16.6ms step, true real-time!)
             if (sleepMs > 0) Sleep((DWORD)sleepMs);
+            else Sleep(1);
         }
 
+        timeEndPeriod(1);
         if (pStream) { pStream->Release(); pStream = NULL; }
         DeleteObject(hBitmap);
         DeleteDC(hDC);

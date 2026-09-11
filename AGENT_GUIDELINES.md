@@ -1,4 +1,4 @@
-﻿# 🛡️ PANIC CTRL — Agent Guidelines & Codebase Architecture
+# 🛡️ PANIC CTRL — Agent Guidelines & Codebase Architecture
 
 > **Notice for all AI Agents & Contributors:**  
 > This document defines the strict architectural rules, component relationships, build pipelines, and invariants for the **PANIC CTRL** repository. Any agent modifying this codebase **MUST** follow these guidelines to prevent regressions, file corruption, or security leaks.
@@ -49,9 +49,9 @@ The project consists of 5 tightly coupled subsystems:
 
 ---
 
-## ⚠️ 2. The 10 Inviolable Invariants (NEVER Break These!)
+## ⚠️ 2. The 13 Inviolable Invariants (NEVER Break These!)
 
-When making changes, any agent **MUST NOT** violate these 10 rules:
+When making changes, any agent **MUST NOT** violate these 13 rules:
 
 | # | Invariant | Reason |
 |---|-----------|--------|
@@ -65,6 +65,10 @@ When making changes, any agent **MUST NOT** violate these 10 rules:
 | **8** | **Always Sync Web Assets** | Any edit in `android-app/www/` MUST be synced via `python scripts/sync_assets.py`. The C++ daemon embeds `WebAssets.h` as its compile-time fallback. |
 | **9** | **Tailscale IP Bitmask** | Never match Tailscale adapters by English adapter names. Always check the IANA CGNAT subnet `100.64.0.0/10` via bitmask `(hostOrder & 0xFFC00000UL) == 0x64400000UL`. |
 | **10**| **APK Download Candidate Fallbacks** | When serving `/download/app.apk`, always check `GetProgramDataFolder() + "\\PanicCTRL.apk"`, then `"PanicCTRL.apk"`, then the debug output folder. Never assume a single relative path. |
+| **11**| **NEVER use `SC_MONITORPOWER 2` in `/sleep`** | `SC_MONITORPOWER 2` cuts the DPMS hardware link (D3cold) in Modern Standby. Windows kernel `win32kbase.sys` then strictly ignores all synthetic user-mode input (`LLKHF_INJECTED`), making remote wake impossible! Use the Winlogon blackout window + 0% dimming instead. |
+| **12**| **ALWAYS build & deploy `PanicProvider.dll` with `PanicButton.exe`** | The Credential Provider lives in `C:\ProgramData\PanicButton\PanicProvider.dll`. If you modify `PanicProvider.cpp`, you MUST compile and copy the new DLL to ProgramData while the session is unlocked (`build_release.bat` handles this automatically in step 5). |
+| **13**| **Never hardcode brightness values on wake** | Never force 80% or 100% on wake. Always capture active user brightness before sleep (`CaptureCurrentBrightness`) and restore that exact level on wake (`RestoreBrightnessAsync`). |
+| **14**| **Port 8085 hybrid ownership (service vs agent)** | `PanicMasterService` owns 8085 ONLY while `PanicButton.exe` is absent (pre-logon lock screen). Agent announces itself via `Global\PanicButtonAgentAlive` mutex; service yields within seconds. Never bind 8085 from both at once; agent retries bind forever. Session 0 service serves ONLY: dashboard page, status, wake, unlock, sleep, lock, APK. Streaming/input/tray/audio stay in the user-session agent. |
 
 ---
 
@@ -119,3 +123,16 @@ Before marking any task complete, every agent must verify:
 - [ ] **APK is bundled:** `PanicCTRL.apk` exists in the repo root and is included in `[Files]` of `installer.iss`.
 - [ ] **Working directory clean:** No dangling `.tmp` or test lockfiles left behind.
 - [ ] **Git status verified:** Changes are properly staged and committed with clean conventional commit messages.
+
+---
+
+## 💤 6. Modern Standby Sleep/Wake & Deployment Protocol
+
+1. **Never use `SC_MONITORPOWER 2`**: Modern Standby traps the display in D3cold and drops all synthetic wake inputs (`LLKHF_INJECTED`). Remote sleep must always use the Winlogon blackout window (`__SLEEP__` / `_hBlackoutWnd`) + 0% backlight dimming.
+2. **Preserve User Brightness**: Before sleep, call `CaptureCurrentBrightness()`. On wake, call `RestoreBrightnessAsync()` to restore the exact active user brightness.
+3. **The "File Not Updated" Trap**: If sleep/wake/unlock fails, **do NOT rewrite code**. Check whether `PanicProvider.dll` was actually updated:
+   ```powershell
+   Get-Item "C:\ProgramData\PanicButton\PanicProvider.dll" | Select-Object LastWriteTime
+   ```
+   `build_release.bat` (Step 5) compiles `PanicProvider.dll`. When updating it, always copy `PanicProvider.dll` to `C:\ProgramData\PanicButton\` while the machine is unlocked.
+
