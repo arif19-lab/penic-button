@@ -36,30 +36,33 @@ static const char* DASHBOARD_HTML = R"HTML(
 </head>
 <body>
 
-<!-- 🔓 REDESIGNED UNLOCK MODAL -->
-<div id="unlockModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeUnlockModal()">
+<!-- 🔑 DEDICATED CHANGE PASSWORD MODAL -->
+<div id="changePasswordModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeChangePasswordModal()">
   <div class="modal-card">
     <div class="modal-header">
-      <span class="modal-icon">🔓</span>
-      <span class="modal-title">SECURITY AUTHENTICATION</span>
+      <span class="modal-icon">🔑</span>
+      <span class="modal-title">WINDOWS PASSWORD</span>
     </div>
-    <p class="modal-sub">ENTER WINDOWS PIN OR PASSWORD</p>
+    <p class="modal-sub">SET OR UPDATE PC PASSWORD FOR 1-TAP UNLOCK</p>
+    
+    <div id="passStatusIndicator" style="margin-bottom: 12px; padding: 8px 12px; background: rgba(0, 240, 255, 0.08); border: 1px solid rgba(0, 240, 255, 0.25); border-radius: 8px; font-size: 11px; font-family: 'Share Tech Mono', monospace; display: flex; align-items: center; justify-content: space-between;">
+      <span id="passStatusText">🔍 Checking password status...</span>
+      <span id="passStatusBadge" style="background: rgba(0, 255, 65, 0.2); color: #00ff41; padding: 2px 6px; border-radius: 4px; font-weight: bold;">ACTIVE</span>
+    </div>
+
     <div class="input-wrapper">
-      <input type="password" id="pinInput" placeholder="Enter PIN or Password" autocomplete="off" onkeydown="if(event.key==='Enter')submitUnlock()">
-      <button class="toggle-pass" type="button" onclick="togglePassVisibility()">👁️</button>
+      <input type="password" id="newPasswordInput" placeholder="Enter new Windows password" autocomplete="off" onkeydown="if(event.key==='Enter')saveNewPassword()">
+      <button class="toggle-pass" type="button" onclick="toggleNewPassVisibility()">👁️</button>
     </div>
-    <div class="modal-options-row">
-      <label class="remember-pin-label">
-        <input type="checkbox" id="rememberPinCheck" checked>
-        <span>Remember for 1-Tap Unlock</span>
-      </label>
-    </div>
-    <div id="clearPinWrap" style="display:none; margin-bottom: 14px;">
-      <button class="clear-pin-btn" type="button" onclick="clearSavedPin()">🗑️ Forget Saved PIN</button>
-    </div>
-    <div class="modal-actions">
-      <button class="modal-btn btn-cancel" type="button" onclick="closeUnlockModal()">CANCEL</button>
-      <button class="modal-btn btn-confirm" type="button" onclick="submitUnlock()">UNLOCK 🔓</button>
+
+    <p style="font-size: 10px; color: #8a99ad; margin: 8px 0 14px 0; line-height: 1.4;">
+      ℹ️ This password is saved permanently on your PC. Whenever you change your Windows login password, update it here to keep 1-Tap Unlock working directly.
+    </p>
+
+    <div class="modal-actions" style="display: flex; gap: 8px; justify-content: flex-end;">
+      <button class="modal-btn btn-cancel" type="button" onclick="closeChangePasswordModal()">CANCEL</button>
+      <button id="btnForgetPassword" class="modal-btn" style="background: rgba(255, 0, 60, 0.15); color: #ff003c; border: 1px solid rgba(255, 0, 60, 0.4); display: none;" type="button" onclick="clearSavedPassword()">FORGET 🗑️</button>
+      <button class="modal-btn btn-confirm" type="button" onclick="saveNewPassword()">SAVE PASSWORD 💾</button>
     </div>
   </div>
 </div>
@@ -245,9 +248,15 @@ static const char* DASHBOARD_HTML = R"HTML(
                   <span class="bento-clean-title">SYSTEM CONTROLS</span>
                 </div>
 
-                <!-- ⚙️ DEVICE PAIRING 3-DOT MENU TRIGGER & POPUP PANEL -->
-                <div class="bento-header-menu-wrap">
-                  <button id="bentoActionsMenuBtn" class="bento-icon-btn" onclick="toggleActionsMenu(event)" title="Device Pairing &amp; QR">
+                <!-- ⚙️ DEVICE PAIRING & SECURITY CONTROLS -->
+                <div class="bento-header-menu-wrap" style="display:flex; align-items:center; gap:8px;">
+                  <!-- 🔑 DEDICATED CHANGE PASSWORD BUTTON -->
+                  <button id="bentoChangePassBtn" class="bento-pass-action-btn" onclick="openChangePasswordModal()" title="Set or Change Windows PC Password">
+                    <span class="bento-pass-btn-ic">🔑</span>
+                    <span class="bento-pass-btn-txt">CHANGE PASSWORD</span>
+                  </button>
+
+                  <button id="bentoActionsMenuBtn" class="bento-icon-btn" onclick="toggleActionsMenu(event)" title="Device Pairing &amp; Security">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                       <circle cx="12" cy="12" r="1.5"></circle>
                       <circle cx="19" cy="12" r="1.5"></circle>
@@ -255,11 +264,15 @@ static const char* DASHBOARD_HTML = R"HTML(
                     </svg>
                   </button>
 
-                  <!-- 📱 DROPDOWN MENU FOR DEVICE PAIRING -->
+                  <!-- 📱 DROPDOWN MENU FOR SECURITY & PAIRING -->
                   <div id="bentoActionsMenuPanel" class="bento-menu-dropdown" style="display:none;" onclick="event.stopPropagation()">
                     <div class="bento-dropdown-header">
-                      <span>DEVICE PAIRING</span>
+                      <span>SECURITY &amp; PAIRING</span>
                     </div>
+                    <button class="bento-dropdown-item" onclick="openChangePasswordModal(); closeActionsMenu();" title="Set or Change Windows PC Password">
+                      <span class="bento-dd-icon">🔑</span>
+                      <span class="bento-dd-label">CHANGE PC PASSWORD</span>
+                    </button>
                     <button class="bento-dropdown-item" onclick="openPairingModal(); closeActionsMenu();" title="Scan QR Code to Pair Mobile Device">
                       <span class="bento-dd-icon">📱</span>
                       <span class="bento-dd-label">PAIR NEW DEVICE (QR)</span>
@@ -285,13 +298,13 @@ static const char* DASHBOARD_HTML = R"HTML(
                   </button>
 
                   <!-- 2. UNLOCK WORKSTATION -->
-                  <button class="bento-c-tile bento-c-unlock" onclick="unlockPC()" oncontextmenu="event.preventDefault(); openUnlockModal(true)" title="Instant 1-Tap Session Unlock (Hold or click subtitle to edit PIN)">
+                  <button class="bento-c-tile bento-c-unlock" onclick="unlockPC()" title="Instant 1-Tap Session Unlock">
                     <div class="bento-c-icon">
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>
                     </div>
                     <div class="bento-c-info">
                       <div class="bento-c-title">UNLOCK</div>
-                      <div class="bento-c-sub" id="bentoUnlockSub" onclick="event.stopPropagation(); openUnlockModal(true)" title="Configure 1-Tap PIN">1-Tap Armed ⚡</div>
+                      <div class="bento-c-sub" id="bentoUnlockSub">1-Tap Ready ⚡</div>
                     </div>
                     <span class="bento-c-pill"></span>
                   </button>
@@ -1518,6 +1531,18 @@ static const char* DASHBOARD_HTML = R"HTML(
         <div class="ctrl-panic-hero-badge">ARMED ⚡</div>
       </button>
 
+      <!-- 🔑 CHANGE WINDOWS PASSWORD HERO BAR -->
+      <button class="ctrl-change-pass-hero" onclick="openChangePasswordModal()" title="Set or Change Windows PC Password">
+        <div class="ctrl-pass-hero-left">
+          <span class="ctrl-pass-ic">🔑</span>
+          <div class="ctrl-pass-text-col">
+            <span class="ctrl-pass-title">CHANGE WINDOWS PASSWORD</span>
+            <span class="ctrl-pass-sub">PERMANENT HOST STORAGE FOR 1-TAP UNLOCK</span>
+          </div>
+        </div>
+        <span class="ctrl-pass-badge" id="ctrlPassBadge">READY ⚡</span>
+      </button>
+
       <!-- 2. 6-TILE CYBER TACTICAL GRID (2 COLUMNS) -->
       <div class="ctrl-grid-2col">
         <!-- 1. LOCK WORKSTATION -->
@@ -1533,13 +1558,13 @@ static const char* DASHBOARD_HTML = R"HTML(
         </button>
 
         <!-- 2. UNLOCK WORKSTATION -->
-        <button class="ctrl-tile ctrl-tile-unlock" onclick="unlockPC()" oncontextmenu="event.preventDefault(); openUnlockModal(true)" title="Instant 1-Tap Session Unlock (Hold or click subtitle to edit PIN)">
+        <button class="ctrl-tile ctrl-tile-unlock" onclick="unlockPC()" title="Instant 1-Tap Session Unlock">
           <div class="ctrl-tile-icon">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>
           </div>
           <div class="ctrl-tile-info">
             <div class="ctrl-tile-title">UNLOCK</div>
-            <div class="ctrl-tile-sub" id="ctrlUnlockSub" onclick="event.stopPropagation(); openUnlockModal(true)" title="Configure 1-Tap PIN">1-Tap Armed ⚡</div>
+            <div class="ctrl-tile-sub" id="ctrlUnlockSub">1-Tap Ready ⚡</div>
           </div>
           <span class="ctrl-tile-pill"></span>
         </button>
@@ -3840,6 +3865,12 @@ function updateTelemetryUI(d) {
   if (d && d.locked !== undefined) {
     updateWorkstationLockState(d.locked, d.sleeping);
   }
+
+  // 🔑 Permanent Password Host State Sync
+  if (d && d.has_saved_pin !== undefined) {
+    _serverHasSavedPin = !!d.has_saved_pin;
+    updateUnlockTileBadge();
+  }
 }
 
 function pollBentoTelemetry() {
@@ -4381,17 +4412,139 @@ function wakePC() {
     });
 }
 
-// 🔓 Modern Cyberpunk 1-Tap Unlock Engine & PIN Manager
+// 🔑 Dedicated Windows Password Manager & 1-Tap Direct Unlock Engine
+var _serverHasSavedPin = false;
+
 function updateUnlockTileBadge() {
-  var sub = document.getElementById("bentoUnlockSub");
-  if (sub) {
-    var hasPin = !!localStorage.getItem("panic_win_pin");
-    if (!_lastKnownLocked) {
-      sub.textContent = hasPin ? "1-Tap Armed ⚡" : "Set PIN ⚙️";
-      sub.style.color = hasPin ? "#00ff88" : "#f59e0b";
+  var hasPin = !!localStorage.getItem("panic_win_pin") || _serverHasSavedPin;
+  
+  var bentoSub = document.getElementById("bentoUnlockSub");
+  if (bentoSub && !_lastKnownLocked) {
+    bentoSub.textContent = hasPin ? "1-Tap Ready ⚡" : "UNLOCKED 🔓";
+    bentoSub.style.color = hasPin ? "#00ff88" : "#8a99ad";
+  }
+
+  var ctrlSub = document.getElementById("ctrlUnlockSub");
+  if (ctrlSub && !_lastKnownLocked) {
+    ctrlSub.textContent = hasPin ? "1-Tap Ready ⚡" : "UNLOCKED 🔓";
+    ctrlSub.style.color = hasPin ? "#00ff88" : "#8a99ad";
+  }
+
+  var ctrlPassBadge = document.getElementById("ctrlPassBadge");
+  if (ctrlPassBadge) {
+    ctrlPassBadge.textContent = hasPin ? "SAVED ⚡" : "SET PASS 🔑";
+    ctrlPassBadge.style.color = hasPin ? "#00ff41" : "#f59e0b";
+    ctrlPassBadge.style.borderColor = hasPin ? "rgba(0, 255, 65, 0.4)" : "rgba(245, 158, 11, 0.4)";
+  }
+
+  var passStatusText = document.getElementById("passStatusText");
+  var passStatusBadge = document.getElementById("passStatusBadge");
+  var btnForget = document.getElementById("btnForgetPassword");
+  if (passStatusText && passStatusBadge) {
+    if (hasPin) {
+      passStatusText.textContent = "🟢 Password permanently saved on PC";
+      passStatusBadge.textContent = "SAVED";
+      passStatusBadge.style.background = "rgba(0, 255, 65, 0.2)";
+      passStatusBadge.style.color = "#00ff41";
+      if (btnForget) btnForget.style.display = "inline-block";
+    } else {
+      passStatusText.textContent = "⚪ No password saved yet";
+      passStatusBadge.textContent = "NOT SET";
+      passStatusBadge.style.background = "rgba(255, 165, 0, 0.2)";
+      passStatusBadge.style.color = "#ffaa00";
+      if (btnForget) btnForget.style.display = "none";
     }
   }
 }
+
+function openChangePasswordModal() {
+  vibratePhone(40);
+  var modal = document.getElementById("changePasswordModal");
+  var input = document.getElementById("newPasswordInput");
+  var savedPin = localStorage.getItem("panic_win_pin") || "";
+
+  updateUnlockTileBadge();
+
+  if (modal) {
+    modal.style.display = "flex";
+  }
+  if (input) {
+    input.value = savedPin;
+    setTimeout(function() { 
+      input.focus(); 
+      if (savedPin) input.select();
+    }, 100);
+  }
+}
+
+function closeChangePasswordModal() {
+  var modal = document.getElementById("changePasswordModal");
+  if (modal) modal.style.display = "none";
+}
+
+function toggleNewPassVisibility() {
+  var input = document.getElementById("newPasswordInput");
+  if (input) {
+    input.type = (input.type === "password") ? "text" : "password";
+  }
+}
+
+function saveNewPassword() {
+  var input = document.getElementById("newPasswordInput");
+  var pin = input ? input.value : "";
+  if (!pin || pin.trim() === "") {
+    showCyberToast("⚠️ PLEASE ENTER A VALID PASSWORD", "warning");
+    if (input) input.focus();
+    return;
+  }
+  pin = pin.trim();
+
+  // Save to client localStorage
+  localStorage.setItem("panic_win_pin", pin);
+  _serverHasSavedPin = true;
+
+  // Save permanently to host PC storage (C:\ProgramData\PanicButton\saved_pin.dat)
+  var k = getActiveSessionKey();
+  fetch("/api/save_pin?key=" + encodeURIComponent(k) + "&pin=" + encodeURIComponent(pin))
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d && d.saved) {
+        showCyberToast("💾 PASSWORD SAVED PERMANENTLY ON PC!", "success");
+      }
+    })
+    .catch(function() {
+      // Offline fallback: saved locally
+    });
+
+  vibratePhone(50);
+  showCyberToast("💾 PASSWORD SAVED FOR 1-TAP UNLOCK!", "success");
+  updateUnlockTileBadge();
+  closeChangePasswordModal();
+}
+
+function clearSavedPassword() {
+  localStorage.removeItem("panic_win_pin");
+  _serverHasSavedPin = false;
+
+  var k = getActiveSessionKey();
+  fetch("/api/save_pin?key=" + encodeURIComponent(k) + "&action=clear")
+    .catch(function(){});
+
+  var input = document.getElementById("newPasswordInput");
+  if (input) input.value = "";
+
+  vibratePhone(40);
+  showCyberToast("🗑️ SAVED PASSWORD CLEARED FROM PC", "info");
+  updateUnlockTileBadge();
+  closeChangePasswordModal();
+}
+
+// Aliases for backward compatibility
+var openUnlockModal = openChangePasswordModal;
+var closeUnlockModal = closeChangePasswordModal;
+var togglePassVisibility = toggleNewPassVisibility;
+var clearSavedPin = clearSavedPassword;
+var submitUnlock = saveNewPassword;
 
 function unlockPC() {
   if (_isActionPending) {
@@ -4403,31 +4556,42 @@ function unlockPC() {
     return;
   }
   vibratePhone(50);
+
   var savedPin = localStorage.getItem("panic_win_pin");
-  if (savedPin && savedPin.trim() !== "") {
-    _performUnlock(savedPin.trim(), 1);
-  } else {
-    // First time: prompt user to set PIN
-    openUnlockModal(false);
+  if ((!savedPin || savedPin.trim() === "") && !_serverHasSavedPin) {
+    // No password ever configured: guide user to set password first
+    showCyberToast("⚠️ PLEASE SET YOUR PC PASSWORD FIRST", "warning");
+    openChangePasswordModal();
+    return;
   }
+
+  // 1-Tap Direct Unlock: instantly dispatch using saved credentials
+  _performUnlock(savedPin ? savedPin.trim() : "", 1);
 }
 
 function _performUnlock(pin, attempt) {
   var k = getActiveSessionKey();
   _setActionPending(true, ".bento-c-unlock, .ctrl-tile-unlock", "UNLOCKING...");
   if (attempt === 1) {
-    showCyberToast("🔓 1-TAP UNLOCKING PC...", "info");
+    showCyberToast("🔓 1-TAP DIRECT UNLOCKING PC...", "info");
   } else {
     showCyberToast("🔄 CONNECTING TO LOGIN SCREEN (RETRY " + attempt + "/3)...", "warning");
   }
 
-  fetch("/unlock?key=" + encodeURIComponent(k) + "&pin=" + encodeURIComponent(pin), { keepalive: true })
+  var url = "/unlock?key=" + encodeURIComponent(k);
+  if (pin && pin.length > 0) {
+    url += "&pin=" + encodeURIComponent(pin);
+  }
+
+  fetch(url, { keepalive: true })
     .then(function(r) { return r.json(); })
     .then(function(d) {
       _setActionPending(false);
       if (d && d.status === "wrong_password") {
-        showCyberToast("❌ SAVED PIN REJECTED! TAP 'PIN ⚙️' TO UPDATE", "danger");
-        openUnlockModal(true);
+        showCyberToast("❌ WRONG PASSWORD! TAP 'CHANGE PASSWORD' TO UPDATE", "danger");
+      } else if (d && d.status === "no_password_set") {
+        showCyberToast("⚠️ NO PASSWORD CONFIGURED! PLEASE SET PASSWORD", "warning");
+        openChangePasswordModal();
       } else if (d && d.status === "already_unlocked") {
         showCyberToast("ℹ️ PC IS ALREADY UNLOCKED!", "info");
         getStatus(true);
@@ -4454,95 +4618,6 @@ function _performUnlock(pin, attempt) {
         setTimeout(function() { getStatus(true); }, 2000);
       }
     });
-}
-
-function openUnlockModal(force) {
-  vibratePhone(40);
-  var modal = document.getElementById("unlockModal");
-  var input = document.getElementById("pinInput");
-  var clearWrap = document.getElementById("clearPinWrap");
-  var rememberCheck = document.getElementById("rememberPinCheck");
-  var savedPin = localStorage.getItem("panic_win_pin");
-
-  if (clearWrap) {
-    clearWrap.style.display = savedPin ? "block" : "none";
-  }
-  if (rememberCheck) {
-    rememberCheck.checked = true;
-  }
-  if (modal) {
-    modal.style.display = "flex";
-  }
-  if (input) {
-    input.value = savedPin || "";
-    setTimeout(function() { 
-      input.focus(); 
-      if (savedPin) input.select();
-    }, 100);
-  }
-}
-
-function closeUnlockModal() {
-  var modal = document.getElementById("unlockModal");
-  if (modal) modal.style.display = "none";
-}
-
-function togglePassVisibility() {
-  var input = document.getElementById("pinInput");
-  if (input) {
-    input.type = (input.type === "password") ? "text" : "password";
-  }
-}
-
-function clearSavedPin() {
-  localStorage.removeItem("panic_win_pin");
-  var input = document.getElementById("pinInput");
-  if (input) input.value = "";
-  var clearWrap = document.getElementById("clearPinWrap");
-  if (clearWrap) clearWrap.style.display = "none";
-  showCyberToast("🗑️ SAVED PIN CLEARED (1-Tap Disabled)", "info");
-  updateUnlockTileBadge();
-}
-
-function submitUnlock() {
-  var input = document.getElementById("pinInput");
-  var pin = input ? input.value : "";
-  if (!pin || pin.trim() === "") {
-    showCyberToast("⚠️ PLEASE ENTER A PIN OR PASSWORD", "warning");
-    return;
-  }
-  pin = pin.trim();
-
-  var remember = document.getElementById("rememberPinCheck");
-  if (remember && remember.checked) {
-    localStorage.setItem("panic_win_pin", pin);
-    showCyberToast("💾 PIN SAVED FOR 1-TAP UNLOCK!", "info");
-  } else {
-    localStorage.removeItem("panic_win_pin");
-  }
-  updateUnlockTileBadge();
-
-  vibratePhone(50);
-  showCyberToast("🔓 VERIFYING CREDENTIALS...", "info");
-  var k = getActiveSessionKey();
-  fetch("/unlock?key=" + encodeURIComponent(k) + "&pin=" + encodeURIComponent(pin), { keepalive: true })
-    .then(function(r) { return r.json(); })
-    .then(function(d) {
-      if (d && d.status === "wrong_password") {
-        showCyberToast("❌ WRONG PIN OR PASSWORD!", "danger");
-      } else if (d && d.status === "already_unlocked") {
-        showCyberToast("ℹ️ PC IS ALREADY UNLOCKED!", "info");
-        getStatus(true);
-      } else {
-        showCyberToast("🔓 UNLOCK SIGNAL DISPATCHED!", "success");
-        getStatus(true);
-      }
-    })
-    .catch(function() {
-      showCyberToast("🔓 UNLOCK SENT", "success");
-      getStatus(true);
-    });
-  closeUnlockModal();
 }
 
 // Initialize 1-Tap status badge on start

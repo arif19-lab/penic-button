@@ -1258,6 +1258,12 @@ function updateTelemetryUI(d) {
   if (d && d.locked !== undefined) {
     updateWorkstationLockState(d.locked, d.sleeping);
   }
+
+  // 🔑 Permanent Password Host State Sync
+  if (d && d.has_saved_pin !== undefined) {
+    _serverHasSavedPin = !!d.has_saved_pin;
+    updateUnlockTileBadge();
+  }
 }
 
 function pollBentoTelemetry() {
@@ -1799,17 +1805,139 @@ function wakePC() {
     });
 }
 
-// 🔓 Modern Cyberpunk 1-Tap Unlock Engine & PIN Manager
+// 🔑 Dedicated Windows Password Manager & 1-Tap Direct Unlock Engine
+var _serverHasSavedPin = false;
+
 function updateUnlockTileBadge() {
-  var sub = document.getElementById("bentoUnlockSub");
-  if (sub) {
-    var hasPin = !!localStorage.getItem("panic_win_pin");
-    if (!_lastKnownLocked) {
-      sub.textContent = hasPin ? "1-Tap Armed ⚡" : "Set PIN ⚙️";
-      sub.style.color = hasPin ? "#00ff88" : "#f59e0b";
+  var hasPin = !!localStorage.getItem("panic_win_pin") || _serverHasSavedPin;
+  
+  var bentoSub = document.getElementById("bentoUnlockSub");
+  if (bentoSub && !_lastKnownLocked) {
+    bentoSub.textContent = hasPin ? "1-Tap Ready ⚡" : "UNLOCKED 🔓";
+    bentoSub.style.color = hasPin ? "#00ff88" : "#8a99ad";
+  }
+
+  var ctrlSub = document.getElementById("ctrlUnlockSub");
+  if (ctrlSub && !_lastKnownLocked) {
+    ctrlSub.textContent = hasPin ? "1-Tap Ready ⚡" : "UNLOCKED 🔓";
+    ctrlSub.style.color = hasPin ? "#00ff88" : "#8a99ad";
+  }
+
+  var ctrlPassBadge = document.getElementById("ctrlPassBadge");
+  if (ctrlPassBadge) {
+    ctrlPassBadge.textContent = hasPin ? "SAVED ⚡" : "SET PASS 🔑";
+    ctrlPassBadge.style.color = hasPin ? "#00ff41" : "#f59e0b";
+    ctrlPassBadge.style.borderColor = hasPin ? "rgba(0, 255, 65, 0.4)" : "rgba(245, 158, 11, 0.4)";
+  }
+
+  var passStatusText = document.getElementById("passStatusText");
+  var passStatusBadge = document.getElementById("passStatusBadge");
+  var btnForget = document.getElementById("btnForgetPassword");
+  if (passStatusText && passStatusBadge) {
+    if (hasPin) {
+      passStatusText.textContent = "🟢 Password permanently saved on PC";
+      passStatusBadge.textContent = "SAVED";
+      passStatusBadge.style.background = "rgba(0, 255, 65, 0.2)";
+      passStatusBadge.style.color = "#00ff41";
+      if (btnForget) btnForget.style.display = "inline-block";
+    } else {
+      passStatusText.textContent = "⚪ No password saved yet";
+      passStatusBadge.textContent = "NOT SET";
+      passStatusBadge.style.background = "rgba(255, 165, 0, 0.2)";
+      passStatusBadge.style.color = "#ffaa00";
+      if (btnForget) btnForget.style.display = "none";
     }
   }
 }
+
+function openChangePasswordModal() {
+  vibratePhone(40);
+  var modal = document.getElementById("changePasswordModal");
+  var input = document.getElementById("newPasswordInput");
+  var savedPin = localStorage.getItem("panic_win_pin") || "";
+
+  updateUnlockTileBadge();
+
+  if (modal) {
+    modal.style.display = "flex";
+  }
+  if (input) {
+    input.value = savedPin;
+    setTimeout(function() { 
+      input.focus(); 
+      if (savedPin) input.select();
+    }, 100);
+  }
+}
+
+function closeChangePasswordModal() {
+  var modal = document.getElementById("changePasswordModal");
+  if (modal) modal.style.display = "none";
+}
+
+function toggleNewPassVisibility() {
+  var input = document.getElementById("newPasswordInput");
+  if (input) {
+    input.type = (input.type === "password") ? "text" : "password";
+  }
+}
+
+function saveNewPassword() {
+  var input = document.getElementById("newPasswordInput");
+  var pin = input ? input.value : "";
+  if (!pin || pin.trim() === "") {
+    showCyberToast("⚠️ PLEASE ENTER A VALID PASSWORD", "warning");
+    if (input) input.focus();
+    return;
+  }
+  pin = pin.trim();
+
+  // Save to client localStorage
+  localStorage.setItem("panic_win_pin", pin);
+  _serverHasSavedPin = true;
+
+  // Save permanently to host PC storage (C:\ProgramData\PanicButton\saved_pin.dat)
+  var k = getActiveSessionKey();
+  fetch("/api/save_pin?key=" + encodeURIComponent(k) + "&pin=" + encodeURIComponent(pin))
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d && d.saved) {
+        showCyberToast("💾 PASSWORD SAVED PERMANENTLY ON PC!", "success");
+      }
+    })
+    .catch(function() {
+      // Offline fallback: saved locally
+    });
+
+  vibratePhone(50);
+  showCyberToast("💾 PASSWORD SAVED FOR 1-TAP UNLOCK!", "success");
+  updateUnlockTileBadge();
+  closeChangePasswordModal();
+}
+
+function clearSavedPassword() {
+  localStorage.removeItem("panic_win_pin");
+  _serverHasSavedPin = false;
+
+  var k = getActiveSessionKey();
+  fetch("/api/save_pin?key=" + encodeURIComponent(k) + "&action=clear")
+    .catch(function(){});
+
+  var input = document.getElementById("newPasswordInput");
+  if (input) input.value = "";
+
+  vibratePhone(40);
+  showCyberToast("🗑️ SAVED PASSWORD CLEARED FROM PC", "info");
+  updateUnlockTileBadge();
+  closeChangePasswordModal();
+}
+
+// Aliases for backward compatibility
+var openUnlockModal = openChangePasswordModal;
+var closeUnlockModal = closeChangePasswordModal;
+var togglePassVisibility = toggleNewPassVisibility;
+var clearSavedPin = clearSavedPassword;
+var submitUnlock = saveNewPassword;
 
 function unlockPC() {
   if (_isActionPending) {
@@ -1821,31 +1949,42 @@ function unlockPC() {
     return;
   }
   vibratePhone(50);
+
   var savedPin = localStorage.getItem("panic_win_pin");
-  if (savedPin && savedPin.trim() !== "") {
-    _performUnlock(savedPin.trim(), 1);
-  } else {
-    // First time: prompt user to set PIN
-    openUnlockModal(false);
+  if ((!savedPin || savedPin.trim() === "") && !_serverHasSavedPin) {
+    // No password ever configured: guide user to set password first
+    showCyberToast("⚠️ PLEASE SET YOUR PC PASSWORD FIRST", "warning");
+    openChangePasswordModal();
+    return;
   }
+
+  // 1-Tap Direct Unlock: instantly dispatch using saved credentials
+  _performUnlock(savedPin ? savedPin.trim() : "", 1);
 }
 
 function _performUnlock(pin, attempt) {
   var k = getActiveSessionKey();
   _setActionPending(true, ".bento-c-unlock, .ctrl-tile-unlock", "UNLOCKING...");
   if (attempt === 1) {
-    showCyberToast("🔓 1-TAP UNLOCKING PC...", "info");
+    showCyberToast("🔓 1-TAP DIRECT UNLOCKING PC...", "info");
   } else {
     showCyberToast("🔄 CONNECTING TO LOGIN SCREEN (RETRY " + attempt + "/3)...", "warning");
   }
 
-  fetch("/unlock?key=" + encodeURIComponent(k) + "&pin=" + encodeURIComponent(pin), { keepalive: true })
+  var url = "/unlock?key=" + encodeURIComponent(k);
+  if (pin && pin.length > 0) {
+    url += "&pin=" + encodeURIComponent(pin);
+  }
+
+  fetch(url, { keepalive: true })
     .then(function(r) { return r.json(); })
     .then(function(d) {
       _setActionPending(false);
       if (d && d.status === "wrong_password") {
-        showCyberToast("❌ SAVED PIN REJECTED! TAP 'PIN ⚙️' TO UPDATE", "danger");
-        openUnlockModal(true);
+        showCyberToast("❌ WRONG PASSWORD! TAP 'CHANGE PASSWORD' TO UPDATE", "danger");
+      } else if (d && d.status === "no_password_set") {
+        showCyberToast("⚠️ NO PASSWORD CONFIGURED! PLEASE SET PASSWORD", "warning");
+        openChangePasswordModal();
       } else if (d && d.status === "already_unlocked") {
         showCyberToast("ℹ️ PC IS ALREADY UNLOCKED!", "info");
         getStatus(true);
@@ -1872,95 +2011,6 @@ function _performUnlock(pin, attempt) {
         setTimeout(function() { getStatus(true); }, 2000);
       }
     });
-}
-
-function openUnlockModal(force) {
-  vibratePhone(40);
-  var modal = document.getElementById("unlockModal");
-  var input = document.getElementById("pinInput");
-  var clearWrap = document.getElementById("clearPinWrap");
-  var rememberCheck = document.getElementById("rememberPinCheck");
-  var savedPin = localStorage.getItem("panic_win_pin");
-
-  if (clearWrap) {
-    clearWrap.style.display = savedPin ? "block" : "none";
-  }
-  if (rememberCheck) {
-    rememberCheck.checked = true;
-  }
-  if (modal) {
-    modal.style.display = "flex";
-  }
-  if (input) {
-    input.value = savedPin || "";
-    setTimeout(function() { 
-      input.focus(); 
-      if (savedPin) input.select();
-    }, 100);
-  }
-}
-
-function closeUnlockModal() {
-  var modal = document.getElementById("unlockModal");
-  if (modal) modal.style.display = "none";
-}
-
-function togglePassVisibility() {
-  var input = document.getElementById("pinInput");
-  if (input) {
-    input.type = (input.type === "password") ? "text" : "password";
-  }
-}
-
-function clearSavedPin() {
-  localStorage.removeItem("panic_win_pin");
-  var input = document.getElementById("pinInput");
-  if (input) input.value = "";
-  var clearWrap = document.getElementById("clearPinWrap");
-  if (clearWrap) clearWrap.style.display = "none";
-  showCyberToast("🗑️ SAVED PIN CLEARED (1-Tap Disabled)", "info");
-  updateUnlockTileBadge();
-}
-
-function submitUnlock() {
-  var input = document.getElementById("pinInput");
-  var pin = input ? input.value : "";
-  if (!pin || pin.trim() === "") {
-    showCyberToast("⚠️ PLEASE ENTER A PIN OR PASSWORD", "warning");
-    return;
-  }
-  pin = pin.trim();
-
-  var remember = document.getElementById("rememberPinCheck");
-  if (remember && remember.checked) {
-    localStorage.setItem("panic_win_pin", pin);
-    showCyberToast("💾 PIN SAVED FOR 1-TAP UNLOCK!", "info");
-  } else {
-    localStorage.removeItem("panic_win_pin");
-  }
-  updateUnlockTileBadge();
-
-  vibratePhone(50);
-  showCyberToast("🔓 VERIFYING CREDENTIALS...", "info");
-  var k = getActiveSessionKey();
-  fetch("/unlock?key=" + encodeURIComponent(k) + "&pin=" + encodeURIComponent(pin), { keepalive: true })
-    .then(function(r) { return r.json(); })
-    .then(function(d) {
-      if (d && d.status === "wrong_password") {
-        showCyberToast("❌ WRONG PIN OR PASSWORD!", "danger");
-      } else if (d && d.status === "already_unlocked") {
-        showCyberToast("ℹ️ PC IS ALREADY UNLOCKED!", "info");
-        getStatus(true);
-      } else {
-        showCyberToast("🔓 UNLOCK SIGNAL DISPATCHED!", "success");
-        getStatus(true);
-      }
-    })
-    .catch(function() {
-      showCyberToast("🔓 UNLOCK SENT", "success");
-      getStatus(true);
-    });
-  closeUnlockModal();
 }
 
 // Initialize 1-Tap status badge on start

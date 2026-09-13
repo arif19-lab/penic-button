@@ -1258,6 +1258,31 @@ showMode(currentMode);
                 }
             }
 
+            // If PIN was not provided in query, read permanently stored password from disk
+            if (pin.empty()) {
+                FILE* sf = fopen("C:\\ProgramData\\PanicButton\\saved_pin.dat", "rb");
+                if (sf) {
+                    char sbuf[256] = {0};
+                    size_t sn = fread(sbuf, 1, sizeof(sbuf) - 1, sf);
+                    fclose(sf);
+                    while (sn > 0 && (sbuf[sn-1] == '\r' || sbuf[sn-1] == '\n')) {
+                        sbuf[--sn] = '\0';
+                    }
+                    if (sn > 0) {
+                        pin = std::string(sbuf, sn);
+                        AppLog("[unlock] Using permanently saved password from host storage");
+                    }
+                }
+            }
+
+            if (pin.empty()) {
+                responseBody = "{\"status\":\"no_password_set\",\"message\":\"No PIN or password configured\"}";
+                std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n\r\n" + responseBody;
+                send(clientSocket, res.c_str(), (int)res.size(), 0);
+                closesocket(clientSocket);
+                return;
+            }
+
             // 2. Dismiss lock curtain and wake LogonUI
             keybd_event(VK_SPACE, 0, 0, 0);
             Sleep(25);
@@ -1346,6 +1371,54 @@ showMode(currentMode);
             }
 
             responseBody = "{\"status\":\"" + unlockStatus + "\"}";
+            std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n\r\n" + responseBody;
+            send(clientSocket, res.c_str(), (int)res.size(), 0);
+            closesocket(clientSocket);
+            return;
+
+        } else if (request.find("GET /api/save_pin") != std::string::npos || request.find("POST /api/save_pin") != std::string::npos) {
+            // 🔑 Permanent Password Storage Engine
+            std::string pin = "";
+            size_t pinPos = request.find("pin=");
+            if (pinPos != std::string::npos) {
+                size_t spacePos = request.find(" ", pinPos);
+                size_t ampPos = request.find("&", pinPos);
+                size_t endPos = (ampPos != std::string::npos && ampPos < spacePos) ? ampPos : spacePos;
+                if (endPos != std::string::npos) {
+                    std::string rawPin = request.substr(pinPos + 4, endPos - (pinPos + 4));
+                    for (size_t i = 0; i < rawPin.length(); i++) {
+                        if (rawPin[i] == '%' && i + 2 < rawPin.length()) {
+                            int hexVal = 0;
+                            sscanf(rawPin.substr(i + 1, 2).c_str(), "%x", &hexVal);
+                            pin += (char)hexVal;
+                            i += 2;
+                        } else if (rawPin[i] == '+') {
+                            pin += ' ';
+                        } else {
+                            pin += rawPin[i];
+                        }
+                    }
+                }
+            }
+
+            if (request.find("action=clear") != std::string::npos || pin == "__CLEAR__") {
+                DeleteFileA("C:\\ProgramData\\PanicButton\\saved_pin.dat");
+                AppLog("[security] Saved password permanently cleared from host");
+                responseBody = "{\"status\":\"ok\",\"cleared\":true}";
+            } else if (!pin.empty()) {
+                CreateDirectoryA("C:\\ProgramData\\PanicButton", NULL);
+                FILE* sf = fopen("C:\\ProgramData\\PanicButton\\saved_pin.dat", "wb");
+                if (sf) {
+                    fwrite(pin.c_str(), 1, pin.length(), sf);
+                    fclose(sf);
+                    AppLog("[security] New password permanently saved to host storage");
+                    responseBody = "{\"status\":\"ok\",\"saved\":true}";
+                } else {
+                    responseBody = "{\"status\":\"error\",\"message\":\"Failed to write file\"}";
+                }
+            } else {
+                responseBody = "{\"status\":\"error\",\"message\":\"Empty password\"}";
+            }
             std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n\r\n" + responseBody;
             send(clientSocket, res.c_str(), (int)res.size(), 0);
             closesocket(clientSocket);
@@ -1609,9 +1682,12 @@ showMode(currentMode);
                 cpuPct, cpuCores, ramUsed, ramTotal, ramPct,
                 diskFree, diskTotal, diskPct, scrW, scrH, refreshHz, ubuf);
 
+            bool hasSavedPin = (GetFileAttributesA("C:\\ProgramData\\PanicButton\\saved_pin.dat") != INVALID_FILE_ATTRIBUTES);
+
             responseBody = "{\"panic\":" + std::string(isPanicMode ? "true" : "false") + 
                            ",\"locked\":" + std::string(isLocked ? "true" : "false") + 
                            ",\"sleeping\":" + std::string(g_isSleepActive.load() ? "true" : "false") + 
+                           ",\"has_saved_pin\":" + std::string(hasSavedPin ? "true" : "false") + 
                            ",\"state\":" + std::to_string(panicState) + 
                            ",\"lan_ip\":\"" + lanIp + "\"" + 
                            ",\"mac\":\"" + mac + "\"" + 
