@@ -11,6 +11,8 @@ resource.res
 *.crt
 *.key
 *.pem
+*fix*time*.bat
+Fix_PC_Time.bat
 android-app/www/download/
 android-app/www/index.html.bak
 
