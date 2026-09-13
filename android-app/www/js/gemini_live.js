@@ -950,6 +950,77 @@ var currentAiStreamText = "";
 var currentUserStreamRow = null;
 var currentUserStreamText = "";
 
+function scrollGeminiToBottom(smooth) {
+  var scrollArea = document.getElementById("chatgptScrollContainer");
+  var logs = document.getElementById("geminiTerminalLogs");
+  if (!scrollArea && !logs) return;
+  var target = scrollArea || logs;
+  
+  if (smooth) {
+    try {
+      target.scrollTo({ top: target.scrollHeight + 1000, behavior: 'smooth' });
+    } catch(e) {
+      target.scrollTop = target.scrollHeight + 1000;
+    }
+  } else {
+    target.scrollTop = target.scrollHeight + 1000;
+  }
+  
+  if (logs && logs.lastElementChild) {
+    try {
+      logs.lastElementChild.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'end' });
+    } catch(e) {}
+  }
+}
+
+// 📱 Mobile Virtual Keyboard & Viewport Fix (Native ChatGPT / Gemini parity)
+(function initMobileKeyboardHandler() {
+  function adjustGeminiViewport() {
+    if (!document.body || !document.body.classList.contains('gemini-mode')) return;
+    if (window.visualViewport) {
+      var vv = window.visualViewport;
+      var appContainer = document.querySelector('#tab-gemini .cg-app-container');
+      if (appContainer) {
+        appContainer.style.height = vv.height + 'px';
+        appContainer.style.maxHeight = vv.height + 'px';
+      }
+    }
+    // Prevent the outer browser window / document from scrolling up
+    window.scrollTo(0, 0);
+    document.body.scrollTop = 0;
+    if (document.documentElement) document.documentElement.scrollTop = 0;
+    
+    // Smoothly ensure the chat stream shows the latest message
+    scrollGeminiToBottom(false);
+  }
+
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', adjustGeminiViewport);
+    window.visualViewport.addEventListener('scroll', function() {
+      if (document.body && document.body.classList.contains('gemini-mode')) {
+        window.scrollTo(0, 0);
+        document.body.scrollTop = 0;
+      }
+    });
+  }
+
+  window.addEventListener('DOMContentLoaded', function() {
+    var manualInput = document.getElementById('manualTerminalInput');
+    if (manualInput) {
+      manualInput.addEventListener('focus', function() {
+        setTimeout(function() {
+          adjustGeminiViewport();
+          scrollGeminiToBottom(true);
+        }, 80);
+        setTimeout(function() {
+          window.scrollTo(0, 0);
+          document.body.scrollTop = 0;
+        }, 260);
+      });
+    }
+  });
+})();
+
 function updateUserSpeechBubble(text) {
   var l = document.getElementById("geminiTerminalLogs");
   if (!l) return;
@@ -973,12 +1044,7 @@ function updateUserSpeechBubble(text) {
   }
   currentAiStreamRow = null;
   currentAiStreamText = "";
-  var _scrollArea = document.getElementById("chatgptScrollContainer");
-  if (_scrollArea) {
-    _scrollArea.scrollTop = _scrollArea.scrollHeight;
-  } else if (l) {
-    l.scrollTop = l.scrollHeight;
-  }
+  scrollGeminiToBottom(true);
 }
 
 function appendGeminiLog(type, text, isStreamChunk) {
@@ -1070,12 +1136,7 @@ function appendGeminiLog(type, text, isStreamChunk) {
   }
   
   // Auto scroll smooth to bottom
-  var scrollArea = document.getElementById("chatgptScrollContainer");
-  if (scrollArea) {
-    scrollArea.scrollTop = scrollArea.scrollHeight;
-  } else {
-    l.scrollTop = l.scrollHeight;
-  }
+  scrollGeminiToBottom(true);
 }
 
 function formatToolOutput(raw) {
@@ -1255,8 +1316,7 @@ function showAiTypingIndicator() {
       '<div class="cg-typing-dots"><span></span><span></span><span></span></div>' +
     '</div>';
   l.appendChild(row);
-  var scrollArea = document.getElementById("chatgptScrollContainer");
-  if (scrollArea) scrollArea.scrollTop = scrollArea.scrollHeight;
+  scrollGeminiToBottom(true);
 }
 
 function removeAiTypingIndicator() {
@@ -3593,7 +3653,7 @@ function renderOptionFlyoutHTML(type) {
       '</div>' +
       '<div class="cg-flyout-row">' +
         '<span class="cg-flyout-row-label">🔒 Key Vault</span>' +
-        '<span class="cg-flyout-row-val" style="color:#0f172a">' + masked + '</span>' +
+        '<span class="cg-flyout-row-val">' + masked + '</span>' +
       '</div>' +
       '<div class="cg-flyout-pills" style="margin-top:2px;">' +
         '<span class="cg-flyout-pill">🎙️ Realtime Voice</span>' +
@@ -3657,7 +3717,7 @@ function renderOptionFlyoutHTML(type) {
       '</div>' +
       '<div class="cg-flyout-row">' +
         '<span class="cg-flyout-row-label">🌐 Host Node</span>' +
-        '<span class="cg-flyout-row-val" style="color:#0f172a">' + hostName + '</span>' +
+        '<span class="cg-flyout-row-val">' + hostName + '</span>' +
       '</div>' +
       '<div class="cg-flyout-pills" style="margin-top:2px;">' +
         '<span class="cg-flyout-pill">📷 1-Sec QR Scan</span>' +
@@ -3697,12 +3757,12 @@ function renderOptionFlyoutHTML(type) {
   } else if (type === "monitor") {
     return '<div class="cg-flyout-header">' +
       '<div class="cg-flyout-title-wrap">' +
-        '<div class="cg-flyout-icon-box" style="background:#f1f5f9; color:#0f172a; border:1px solid #cbd5e1;">' +
+        '<div class="cg-flyout-icon-box cg-icon-cyan">' +
           '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>' +
         '</div>' +
         '<span class="cg-flyout-title">PC Monitor</span>' +
       '</div>' +
-      '<span class="cg-flyout-badge" style="background:rgba(15,23,42,0.08); color:#0f172a; border:1px solid rgba(15,23,42,0.15);">Live Mirror</span>' +
+      '<span class="cg-flyout-badge" style="background:rgba(14,165,233,0.12); color:#0284c7; border:1px solid rgba(14,165,233,0.25);">Live Mirror</span>' +
     '</div>' +
     '<div class="cg-flyout-demo-card">' +
       '<div class="cg-flyout-row">' +

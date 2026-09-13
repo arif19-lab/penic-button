@@ -870,12 +870,21 @@ function startCanvasStream() {
   clearInterval(_fpsTimer);
   _fpsTimer = setInterval(function() {
     if (!isStreaming) { clearInterval(_fpsTimer); return; }
+    var currentFps = _frameCount;
     var q = document.querySelector('.stream-quality');
     if (q) {
-      q.textContent = "1080P • " + (_frameCount * 2) + " FPS";
+      q.textContent = "1080P • " + currentFps + " FPS";
+    }
+    var bStats = document.getElementById('bentoStatsText');
+    if (bStats) {
+      if (currentFps > 0) {
+        bStats.innerHTML = '<span class="fps-target">60 FPS</span> <span class="fps-arrow">›</span> <span class="fps-current">' + currentFps + ' FPS</span>';
+      } else {
+        bStats.innerHTML = '<span class="fps-target">60 FPS</span> <span class="fps-arrow">›</span> <span class="fps-current zero">0 FPS</span>';
+      }
     }
     if (window.Telemetry) {
-      Telemetry.log("STREAM_HEARTBEAT", { fps: _frameCount, fallback: _fallbackActive, zoom: fsZoom });
+      Telemetry.log("STREAM_HEARTBEAT", { fps: currentFps, fallback: _fallbackActive, zoom: fsZoom });
     }
     _frameCount = 0;
   }, 1000);
@@ -988,12 +997,18 @@ function toggleStream() {
   var canvas = document.getElementById("gpuCanvas");
   var btn = document.getElementById("toggleBtn");
   var q = document.querySelector('.stream-quality');
+  var bentoBtn = document.getElementById("bentoToggleBtn");
+  var bentoText = document.getElementById("bentoToggleText");
+  var bentoIcon = document.getElementById("bentoToggleIcon");
 
   if (isStreaming) {
     if (btn) btn.textContent = "⏸ PAUSE MONITOR";
     if (holder) holder.style.display = "none";
     if (canvas) canvas.style.display = "block";
     if (q) q.textContent = "1080P • CONNECTING...";
+    if (bentoBtn) bentoBtn.classList.add("active");
+    if (bentoText) bentoText.textContent = "PAUSE STREAM";
+    if (bentoIcon) bentoIcon.textContent = "⏸";
 
     if (window.AndroidNativeStream && typeof window.AndroidNativeStream.start === 'function') {
       try {
@@ -1016,8 +1031,285 @@ function toggleStream() {
     if (holder) holder.style.display = "block";
     if (btn) btn.textContent = "▶ PLAY LIVE STREAM";
     if (q) q.textContent = "1080P • 60 FPS";
+    if (bentoBtn) bentoBtn.classList.remove("active");
+    if (bentoText) bentoText.textContent = "LIVE STREAM";
+    if (bentoIcon) bentoIcon.textContent = "▶";
+    var bStats = document.getElementById('bentoStatsText');
+    if (bStats) {
+      bStats.innerHTML = '<span class="fps-target">60 FPS</span> <span class="fps-arrow">›</span> <span class="fps-current zero">0 FPS</span>';
+    }
   }
 }
+
+// ──────────────────────────────────────────────────────────────────
+// 🍱 BENTO GRID MONITOR CONTROLLER HELPERS (media_1789121500907.png)
+// ──────────────────────────────────────────────────────────────────
+
+// ⚡ Codec Switcher Toggle (H.264 / JPEG)
+var _currentBentoCodec = "h264";
+function toggleStreamCodec() {
+  _currentBentoCodec = (_currentBentoCodec === "h264") ? "jpeg" : "h264";
+  var btn = document.getElementById("bentoCodecText");
+  if (btn) btn.textContent = (_currentBentoCodec === "h264") ? "H.264 HD" : "TURBO JPEG";
+  showCyberToast("Streaming Codec: " + (_currentBentoCodec === "h264" ? "H.264 Hardware Acceleration" : "Turbo JPEG Fallback"), "info");
+  if (isStreaming) {
+    toggleStream();
+    setTimeout(toggleStream, 160);
+  }
+}
+
+// 🔊 Master Volume Slider (Thick Capsule Slider & Debounced API)
+var _bentoVolDebounce = null;
+var _currentBentoVol = 75;
+
+function handleBentoVolume(val) {
+  _currentBentoVol = Math.max(0, Math.min(100, parseInt(val, 10) || 0));
+  var display = document.getElementById("bentoVolVal");
+  if (display) display.textContent = _currentBentoVol + "%";
+  
+  var knob = document.getElementById("bentoVolKnob");
+  var capsule = document.getElementById("bentoVolCapsule");
+  if (knob && capsule) {
+    var maxTravel = capsule.clientWidth - knob.clientWidth - 8;
+    if (maxTravel > 0) {
+      var knobX = (_currentBentoVol / 100) * maxTravel;
+      knob.style.transform = "translateX(" + knobX + "px)";
+    }
+  }
+
+  clearTimeout(_bentoVolDebounce);
+  _bentoVolDebounce = setTimeout(function() {
+    fetch("/api/volume?key=" + KEY + "&level=" + _currentBentoVol).catch(function(){});
+  }, 40);
+}
+
+function onCapsuleSliderClick(e) {
+  var capsule = document.getElementById("bentoVolCapsule");
+  if (!capsule) return;
+  var rect = capsule.getBoundingClientRect();
+  var clickX = e.clientX - rect.left;
+  var pct = Math.round((clickX / rect.width) * 100);
+  handleBentoVolume(pct);
+}
+
+function scrollToInputsSuite() {
+  var el = document.getElementById("bentoInputsSuite");
+  if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+function toggleMonitorMenu(e) {
+  if (e) {
+    e.stopPropagation();
+    if (typeof e.preventDefault === 'function') e.preventDefault();
+  }
+  closeActionsMenu();
+  var panel = document.getElementById("bentoMonitorMenuPanel");
+  if (!panel) return;
+  var isVis = (panel.style.display !== "none");
+  panel.style.display = isVis ? "none" : "flex";
+}
+
+function closeMonitorMenu() {
+  var panel = document.getElementById("bentoMonitorMenuPanel");
+  if (panel) panel.style.display = "none";
+}
+
+function toggleActionsMenu(e) {
+  if (e) {
+    e.stopPropagation();
+    if (typeof e.preventDefault === 'function') e.preventDefault();
+  }
+  closeMonitorMenu();
+  var panel = document.getElementById("bentoActionsMenuPanel");
+  if (!panel) return;
+  var isVis = (panel.style.display !== "none");
+  panel.style.display = isVis ? "none" : "flex";
+}
+
+function closeActionsMenu() {
+  var panel = document.getElementById("bentoActionsMenuPanel");
+  if (panel) panel.style.display = "none";
+}
+
+document.addEventListener("click", function(e) {
+  var monitorWrap = document.getElementById("bentoMonitorMenuBtn") ? document.getElementById("bentoMonitorMenuBtn").closest(".bento-header-menu-wrap") : null;
+  var actionsWrap = document.getElementById("bentoActionsMenuBtn") ? document.getElementById("bentoActionsMenuBtn").closest(".bento-header-menu-wrap") : null;
+
+  if (monitorWrap && !monitorWrap.contains(e.target)) {
+    closeMonitorMenu();
+  }
+  if (actionsWrap && !actionsWrap.contains(e.target)) {
+    closeActionsMenu();
+  }
+});
+
+// Support dragging on capsule knob
+(function initCapsuleDrag() {
+  var isDragging = false;
+  window.addEventListener("DOMContentLoaded", function() {
+    var knob = document.getElementById("bentoVolKnob");
+    var capsule = document.getElementById("bentoVolCapsule");
+    if (!capsule || !knob) return;
+    
+    function onMove(clientX) {
+      var rect = capsule.getBoundingClientRect();
+      var x = clientX - rect.left;
+      var pct = Math.round((x / rect.width) * 100);
+      handleBentoVolume(pct);
+    }
+    
+    knob.addEventListener("mousedown", function(e) {
+      isDragging = true;
+      e.stopPropagation();
+    });
+    window.addEventListener("mousemove", function(e) {
+      if (isDragging) onMove(e.clientX);
+    });
+    window.addEventListener("mouseup", function() { isDragging = false; });
+    
+    knob.addEventListener("touchstart", function(e) {
+      isDragging = true;
+      e.stopPropagation();
+    }, { passive: true });
+    window.addEventListener("touchmove", function(e) {
+      if (isDragging && e.touches[0]) onMove(e.touches[0].clientX);
+    }, { passive: true });
+    window.addEventListener("touchend", function() { isDragging = false; });
+  });
+})();
+
+// 🎵 5-Button Media Bar Dispatcher
+function sendMediaCmd(action) {
+  var vkMap = {
+    playpause: 179, // VK_MEDIA_PLAY_PAUSE
+    next: 176,      // VK_MEDIA_NEXT_TRACK
+    prev: 177,      // VK_MEDIA_PREV_TRACK
+    volup: 175,     // VK_VOLUME_UP
+    voldown: 174,   // VK_VOLUME_DOWN
+    mute: 173       // VK_VOLUME_MUTE
+  };
+  var vk = vkMap[action];
+  if (!vk) return;
+  var pCmd = "$ws = New-Object -ComObject WScript.Shell; $ws.SendKeys([char]" + vk + ")";
+  fetch("/api/exec?key=" + KEY + "&cmd=" + encodeURIComponent(pCmd)).catch(function(){});
+  
+  var labels = { playpause: "⏯ PLAY/PAUSE", next: "⏭ NEXT TRACK", prev: "⏮ PREV TRACK", volup: "🔊 VOLUME +", voldown: "🔉 VOLUME -", mute: "🔇 AUDIO MUTE" };
+  showCyberToast(labels[action] || "Media Key", "info");
+}
+
+// 📊 System Telemetry Updater (Card C) - Zero Overhead Native Cyber HUD
+function updateTelemetryUI(d) {
+  if (!d) return;
+
+  // 1. CPU LOAD & RADIAL GAUGE
+  if (d.cpu_pct !== undefined) {
+    var cpu = Math.round(d.cpu_pct);
+    var cpuVal = document.getElementById("bentoCpuVal");
+    var cpuDial = document.getElementById("bentoCpuDial");
+    if (cpuVal) cpuVal.textContent = cpu + "%";
+    if (cpuDial) {
+      var cpuPctClamped = Math.min(100, Math.max(0, cpu));
+      var offset = 188.5 - (188.5 * cpuPctClamped / 100);
+      cpuDial.style.strokeDashoffset = offset;
+    }
+  }
+  if (d.cpu_cores) {
+    var coresBadge = document.getElementById("bentoCoresBadge");
+    if (coresBadge) coresBadge.textContent = d.cpu_cores + " CORES ACTIVE";
+  }
+
+  // 2. RAM USAGE & RADIAL GAUGE
+  if (d.ram_used !== undefined && d.ram_total !== undefined) {
+    var ramUsed = d.ram_used.toFixed(1);
+    var ramTotal = d.ram_total.toFixed(1);
+    var ramPct = d.ram_pct || Math.round((d.ram_used / d.ram_total) * 100);
+    var ramVal = document.getElementById("bentoRamVal");
+    var ramDial = document.getElementById("bentoRamDial");
+    var ramGbVal = document.getElementById("bentoRamGbVal");
+    if (ramVal) ramVal.textContent = ramPct + "%";
+    if (ramGbVal) ramGbVal.textContent = ramUsed + " / " + ramTotal + " GB";
+    if (ramDial) {
+      var ramPctClamped = Math.min(100, Math.max(0, ramPct));
+      var offset = 188.5 - (188.5 * ramPctClamped / 100);
+      ramDial.style.strokeDashoffset = offset;
+    }
+  }
+
+  // 3. STORAGE (C:)
+  if (d.disk_free !== undefined && d.disk_total !== undefined) {
+    var diskFree = Math.round(d.disk_free);
+    var diskVal = document.getElementById("bentoDiskVal");
+    if (diskVal) diskVal.textContent = diskFree + " GB FREE";
+  }
+
+  // 4. DISPLAY & SYS
+  if (d.disp_w !== undefined && d.disp_h !== undefined) {
+    var dispVal = document.getElementById("bentoDispVal");
+    if (dispVal) dispVal.textContent = d.disp_w + "×" + d.disp_h + (d.disp_hz ? " @" + d.disp_hz + "Hz" : "");
+  }
+
+  // Uptime footer pill
+  var uptimeBadge = document.getElementById("bentoTelemetryUptime");
+  if (uptimeBadge && d.uptime) {
+    uptimeBadge.textContent = "UP: " + d.uptime;
+  }
+}
+
+function pollBentoTelemetry() {
+  if (document.hidden) return;
+  var k = getActiveSessionKey();
+  fetch("/api/status?key=" + encodeURIComponent(k), { cache: "no-store", keepalive: true })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      updateTelemetryUI(d);
+    })
+    .catch(function(){});
+}
+
+// ⏱️ Auto-poll Telemetry on active monitor tab (ultra-fast, zero-overhead 2s interval)
+setInterval(pollBentoTelemetry, 2000);
+setTimeout(pollBentoTelemetry, 400);
+
+// 👁️ Display Stealth Toggle
+var _isDisplayStealth = false;
+function toggleDisplayStealth() {
+  _isDisplayStealth = !_isDisplayStealth;
+  var sw = document.getElementById("bentoStealthSwitch");
+  var sub = document.getElementById("bentoStealthSub");
+  var tile = document.getElementById("bentoStealthTile");
+  var badge = document.getElementById("bentoStealthBadge");
+
+  if (_isDisplayStealth) {
+    if (sw) sw.classList.add("active");
+    if (tile) tile.classList.add("active");
+    if (badge) { badge.textContent = "BLANKED"; badge.classList.add("active"); }
+    if (sub) sub.textContent = "Screen Blanked";
+    var cmd = "(Add-Type '[DllImport(\"user32.dll\")]public static extern int SendMessage(int hWnd, int hMsg, int wParam, int lParam);' -Name a -PassThru)::SendMessage(-1,0x0112,0xF170,2)";
+    fetch("/api/exec?key=" + KEY + "&cmd=" + encodeURIComponent(cmd)).catch(function(){});
+    showCyberToast("👁️ DISPLAY STEALTH: BACKLIGHT OFF", "info");
+  } else {
+    if (sw) sw.classList.remove("active");
+    if (tile) tile.classList.remove("active");
+    if (badge) { badge.textContent = "ACTIVE"; badge.classList.remove("active"); }
+    if (sub) sub.textContent = "Screen Blanking";
+    wakePC();
+  }
+}
+
+// 🛡️ Auto-Shield Toggle
+function toggleAutoShield() {
+  var sw = document.getElementById("bentoAutoShieldSwitch");
+  if (sw) {
+    sw.classList.toggle("active");
+    var active = sw.classList.contains("active");
+    localStorage.setItem("auto_shield_enabled", active ? "1" : "0");
+    showCyberToast(active ? "🛡️ AUTO-SHIELD ARMED" : "⚠️ AUTO-SHIELD DISARMED", active ? "success" : "info");
+  }
+}
+
+// Start periodic telemetry poll (2s for true real-time response)
+setInterval(pollBentoTelemetry, 2000);
+setTimeout(pollBentoTelemetry, 500);
 // ──────────────────────────────────────────────────────────────────
 
 function showCyberToast(msg, type) {
@@ -1063,9 +1355,11 @@ function showCyberToast(msg, type) {
 
 function getStatus(force){
   if (isStreaming && !force) return;
-  fetch("/api/status?key=" + KEY, { cache: "no-store", keepalive: true })
+  var k = getActiveSessionKey();
+  fetch("/api/status?key=" + encodeURIComponent(k), { cache: "no-store", keepalive: true })
     .then(function(res){ return res.json(); })
     .then(function(d){
+      updateTelemetryUI(d);
       var box=document.getElementById("statusBox");
       var txt=document.getElementById("statusText");
       var icon=document.getElementById("statusIcon");
@@ -1194,8 +1488,37 @@ function restartPC(){
   showCyberToast("🔄 RESTART INITIATED (5s)", "warning");
   fetch("/restart?key=" + encodeURIComponent(k), { keepalive: true })
     .then(function(){
-      showCyberToast("🔄 PC REBOOTING NOW", "warning");
+      showCyberToast("🔄 PC REBOOTING... WILL AUTO-DETECT LOGIN SCREEN", "warning");
+      _startRebootWatchdog();
     }); 
+}
+
+var _rebootWatchTimer = null;
+function _startRebootWatchdog() {
+  if (_rebootWatchTimer) clearInterval(_rebootWatchTimer);
+  var attempts = 0;
+  // Allow 12s for OS shutdown & reboot before polling
+  setTimeout(function() {
+    _rebootWatchTimer = setInterval(function() {
+      attempts++;
+      if (attempts > 35) {
+        clearInterval(_rebootWatchTimer);
+        _rebootWatchTimer = null;
+        return;
+      }
+      var k = getActiveSessionKey();
+      fetch("/api/status?key=" + encodeURIComponent(k), { cache: 'no-store' })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          clearInterval(_rebootWatchTimer);
+          _rebootWatchTimer = null;
+          vibratePhone([100, 50, 100]);
+          showCyberToast("🟢 PC READY AT LOGIN SCREEN! TAP UNLOCK ⚡", "success");
+          getStatus(true);
+        })
+        .catch(function(){});
+    }, 2000);
+  }, 10000);
 }
 
 function shutdownPC(){ 
@@ -1210,51 +1533,173 @@ function shutdownPC(){
 
 function wakePC() {
   vibratePhone([80, 40, 80]);
-  showCyberToast("📡 MAGIC PACKET BROADCAST SENT!", "success");
-  var savedMac = localStorage.getItem("targetMac") || "Registered";
-  alert("⚡ WAKE-ON-LAN DISPATCHED!\n\nTarget Network Adapter: " + savedMac + "\n\nMagic Packet broadcast dispatched across local Wi-Fi. PC will unsleep/wake up in 1-3 seconds!");
+  var k = getActiveSessionKey();
+  showCyberToast("☀️ WAKING DISPLAY & RESTORING BACKLIGHT...", "success");
+  fetch("/api/wake?key=" + encodeURIComponent(k), { keepalive: true })
+    .then(function() {
+      showCyberToast("☀️ DISPLAY AWAKENED & BACKLIGHT RESTORED", "success");
+      getStatus(true);
+    })
+    .catch(function() {
+      try {
+        var svcUrl = "http://" + window.location.hostname + ":8086/wake";
+        fetch(svcUrl, { mode: 'no-cors' }).catch(function(){});
+      } catch(e){}
+      fetch("/wake?key=" + encodeURIComponent(k), { keepalive: true }).catch(function(){});
+    });
 }
 
-// 🔓 Modern Cyberpunk Unlock Modal Functions
-function unlockPC(){
+// 🔓 Modern Cyberpunk 1-Tap Unlock Engine & PIN Manager
+function updateUnlockTileBadge() {
+  var sub = document.getElementById("bentoUnlockSub");
+  if (sub) {
+    var hasPin = !!localStorage.getItem("panic_win_pin");
+    sub.textContent = hasPin ? "1-Tap Armed ⚡" : "Set PIN ⚙️";
+    sub.style.color = hasPin ? "#00ff88" : "#f59e0b";
+  }
+}
+
+function unlockPC() {
   vibratePhone(50);
+  var savedPin = localStorage.getItem("panic_win_pin");
+  if (savedPin && savedPin.trim() !== "") {
+    _performUnlock(savedPin.trim(), 1);
+  } else {
+    // First time: prompt user to set PIN
+    openUnlockModal(false);
+  }
+}
+
+function _performUnlock(pin, attempt) {
+  var k = getActiveSessionKey();
+  if (attempt === 1) {
+    showCyberToast("🔓 1-TAP UNLOCKING PC...", "info");
+  } else {
+    showCyberToast("🔄 CONNECTING TO LOGIN SCREEN (RETRY " + attempt + "/3)...", "warning");
+  }
+
+  fetch("/unlock?key=" + encodeURIComponent(k) + "&pin=" + encodeURIComponent(pin), { keepalive: true })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d && d.status === "wrong_password") {
+        showCyberToast("❌ SAVED PIN REJECTED! TAP 'PIN ⚙️' TO UPDATE", "danger");
+        openUnlockModal(true);
+      } else if (d && d.status === "already_unlocked") {
+        showCyberToast("ℹ️ PC IS ALREADY UNLOCKED!", "info");
+        getStatus(true);
+      } else if (d && d.status === "unlocked") {
+        vibratePhone([50, 50, 100]);
+        showCyberToast("🎉 PC UNLOCKED SUCCESSFULLY!", "success");
+        getStatus(true);
+      } else {
+        showCyberToast("🔓 UNLOCK SIGNAL DISPATCHED!", "success");
+        getStatus(true);
+      }
+    })
+    .catch(function(err) {
+      // If PC network is still establishing right after reboot, auto-retry up to 3 times
+      if (attempt < 3) {
+        setTimeout(function() {
+          _performUnlock(pin, attempt + 1);
+        }, 1200);
+      } else {
+        showCyberToast("⚠️ PC NOT READY YET. WAITING 3s...", "warning");
+        setTimeout(function() { getStatus(true); }, 2000);
+      }
+    });
+}
+
+function openUnlockModal(force) {
+  vibratePhone(40);
   var modal = document.getElementById("unlockModal");
   var input = document.getElementById("pinInput");
-  if (modal) modal.style.display = "flex";
+  var clearWrap = document.getElementById("clearPinWrap");
+  var rememberCheck = document.getElementById("rememberPinCheck");
+  var savedPin = localStorage.getItem("panic_win_pin");
+
+  if (clearWrap) {
+    clearWrap.style.display = savedPin ? "block" : "none";
+  }
+  if (rememberCheck) {
+    rememberCheck.checked = true;
+  }
+  if (modal) {
+    modal.style.display = "flex";
+  }
   if (input) {
-    input.value = "";
-    setTimeout(function(){ input.focus(); }, 100);
+    input.value = savedPin || "";
+    setTimeout(function() { 
+      input.focus(); 
+      if (savedPin) input.select();
+    }, 100);
   }
 }
-function closeUnlockModal(){
-  document.getElementById("unlockModal").style.display = "none";
+
+function closeUnlockModal() {
+  var modal = document.getElementById("unlockModal");
+  if (modal) modal.style.display = "none";
 }
-function togglePassVisibility(){
+
+function togglePassVisibility() {
   var input = document.getElementById("pinInput");
-  input.type = (input.type === "password") ? "text" : "password";
-}
-function submitUnlock(){
-  var pin = document.getElementById("pinInput").value;
-  if(pin.trim() !== ""){
-    vibratePhone(50);
-    showCyberToast("🔓 VERIFYING CREDENTIALS...", "info");
-    fetch("/unlock?key=" + KEY + "&pin=" + encodeURIComponent(pin), { keepalive: true })
-      .then(function(r) { return r.json(); })
-      .then(function(d) {
-        if (d && d.status === "already_unlocked") {
-          showCyberToast("ℹ️ PC IS ALREADY UNLOCKED!", "info");
-        } else {
-          showCyberToast("🔓 UNLOCK SIGNAL DISPATCHED!", "success");
-        }
-        getStatus(true);
-      })
-      .catch(function(){
-        showCyberToast("🔓 UNLOCK SENT", "success");
-        getStatus(true);
-      });
-    closeUnlockModal();
+  if (input) {
+    input.type = (input.type === "password") ? "text" : "password";
   }
 }
+
+function clearSavedPin() {
+  localStorage.removeItem("panic_win_pin");
+  var input = document.getElementById("pinInput");
+  if (input) input.value = "";
+  var clearWrap = document.getElementById("clearPinWrap");
+  if (clearWrap) clearWrap.style.display = "none";
+  showCyberToast("🗑️ SAVED PIN CLEARED (1-Tap Disabled)", "info");
+  updateUnlockTileBadge();
+}
+
+function submitUnlock() {
+  var input = document.getElementById("pinInput");
+  var pin = input ? input.value : "";
+  if (!pin || pin.trim() === "") {
+    showCyberToast("⚠️ PLEASE ENTER A PIN OR PASSWORD", "warning");
+    return;
+  }
+  pin = pin.trim();
+
+  var remember = document.getElementById("rememberPinCheck");
+  if (remember && remember.checked) {
+    localStorage.setItem("panic_win_pin", pin);
+    showCyberToast("💾 PIN SAVED FOR 1-TAP UNLOCK!", "info");
+  } else {
+    localStorage.removeItem("panic_win_pin");
+  }
+  updateUnlockTileBadge();
+
+  vibratePhone(50);
+  showCyberToast("🔓 VERIFYING CREDENTIALS...", "info");
+  var k = getActiveSessionKey();
+  fetch("/unlock?key=" + encodeURIComponent(k) + "&pin=" + encodeURIComponent(pin), { keepalive: true })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d && d.status === "wrong_password") {
+        showCyberToast("❌ WRONG PIN OR PASSWORD!", "danger");
+      } else if (d && d.status === "already_unlocked") {
+        showCyberToast("ℹ️ PC IS ALREADY UNLOCKED!", "info");
+        getStatus(true);
+      } else {
+        showCyberToast("🔓 UNLOCK SIGNAL DISPATCHED!", "success");
+        getStatus(true);
+      }
+    })
+    .catch(function() {
+      showCyberToast("🔓 UNLOCK SENT", "success");
+      getStatus(true);
+    });
+  closeUnlockModal();
+}
+
+// Initialize 1-Tap status badge on start
+updateUnlockTileBadge();
 
 getStatus();
 setInterval(getStatus, 1500);
@@ -1364,9 +1809,10 @@ function sendTelemetry(event, isClick, overrideClickType) {
 }
 
 // 💻 HARDWARE-GRADE LAPTOP PRECISION TRACKPAD ENGINE (Kinetic Friction Physics)
-(function initTouchpadSensor() {
+function initTouchpadSensor() {
     var pad = document.getElementById("touchpadPad");
-    if (!pad) return;
+    if (!pad || pad._hasTouchpadListeners) return;
+    pad._hasTouchpadListeners = true;
 
     var lastX = 0, lastY = 0;
     var touchStartTime = 0;
@@ -1548,8 +1994,29 @@ function sendTelemetry(event, isClick, overrideClickType) {
             maxTouches = 0;
         }
     });
-})();
+}
+initTouchpadSensor();
+window.addEventListener("DOMContentLoaded", initTouchpadSensor);
 
 // -------------------------------------------------------------
 // 🧠 GEMINI 3.1 FLASH LIVE VOICE AI & CYBER SANDBOX TERMINAL
 // -------------------------------------------------------------
+
+// 🖥️ Snug 16:9 Dynamic Monitor HUD Sizing (Matches screen with subtle gap)
+function updateMonitorHudDimensions() {
+  var vp = document.querySelector('.bento-card-a .bento-viewport');
+  if (!vp) return;
+  var vpHeight = vp.clientHeight;
+  if (vpHeight <= 10) return;
+  
+  // Exact 16:9 stream width + 14px (6px padding each side + 1px border each side)
+  var cardW = Math.round(vpHeight * (16 / 9)) + 14;
+  document.documentElement.style.setProperty('--monitor-card-w', cardW + 'px');
+}
+window.updateMonitorHudDimensions = updateMonitorHudDimensions;
+window.addEventListener('resize', updateMonitorHudDimensions);
+window.addEventListener('DOMContentLoaded', function() {
+  setTimeout(updateMonitorHudDimensions, 50);
+  setTimeout(updateMonitorHudDimensions, 300);
+  setTimeout(updateMonitorHudDimensions, 1000);
+});

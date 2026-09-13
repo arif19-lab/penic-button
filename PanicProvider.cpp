@@ -366,6 +366,11 @@ DWORD WINAPI CPanicProvider::PipeThreadProc(LPVOID lpParam) {
                             delete[] wstr;
                             PanicLog("[PIPE] Password set, calling CredentialsChanged...");
                             
+                            // If LogonUI hasn't finished calling Advise() yet (e.g. fresh reboot race), wait briefly!
+                            for (int w = 0; w < 25 && !pThis->_pcpe; ++w) {
+                                Sleep(100);
+                            }
+
                             if (pThis->_pcpe) {
                                 pThis->_pcpe->CredentialsChanged(pThis->_upAdviseContext);
                                 PanicLog("[PIPE] CredentialsChanged called OK");

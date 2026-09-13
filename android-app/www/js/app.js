@@ -17,7 +17,8 @@ function checkOnboardingPairing() {
   }
   var savedEndpoint = localStorage.getItem('panic_pc_endpoint');
   var savedKey = localStorage.getItem('panic_key');
-  if (!savedEndpoint || savedEndpoint.indexOf('127.0.0.1') > -1 || !savedKey) {
+  var isLocal = (location.hostname === '127.0.0.1' || location.hostname === 'localhost');
+  if (!isLocal && (!savedEndpoint || savedEndpoint.indexOf('127.0.0.1') > -1 || !savedKey)) {
     var modal = document.getElementById('cyberPairingModal');
     if (modal) modal.style.display = 'flex';
   }
@@ -317,11 +318,59 @@ function applySystemBarColor(colorHex, isLightIcons) {
   }
 }
 
+// 🌓 GEMINI THEME CONTROLLER (Light Acrylic / Dark Obsidian Glass)
+function getGeminiTheme() {
+  return localStorage.getItem('gemini_theme') || 'light';
+}
+
+function setGeminiTheme(theme) {
+  var isDark = (theme === 'dark');
+  try {
+    localStorage.setItem('gemini_theme', theme);
+  } catch(e) {}
+
+  var body = document.body;
+  if (body) {
+    body.classList.toggle('gemini-dark', isDark);
+    if (body.classList.contains('gemini-mode')) {
+      body.style.background = isDark ? '#171717' : '#ffffff';
+      applySystemBarColor(isDark ? '#171717' : '#ffffff', isDark);
+    }
+  }
+  updateGeminiThemeUI(isDark);
+}
+
+function toggleGeminiTheme() {
+  var current = getGeminiTheme();
+  var next = (current === 'dark') ? 'light' : 'dark';
+  setGeminiTheme(next);
+}
+
+function updateGeminiThemeUI(isDark) {
+  var iconEl = document.getElementById('cgThemeToggleIcon');
+  var labelEl = document.getElementById('cgThemeToggleLabel');
+  if (labelEl) {
+    labelEl.textContent = isDark ? 'Light Theme' : 'Dark Theme';
+  }
+  if (iconEl) {
+    if (isDark) {
+      // Sun icon to switch back to Light
+      iconEl.innerHTML = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg>';
+    } else {
+      // Moon icon to switch to Dark
+      iconEl.innerHTML = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg>';
+    }
+  }
+}
+
 function switchTab(tabId) {
   document.querySelectorAll('.tab-content').forEach(function(el) {
     el.classList.remove('active');
   });
-  document.querySelectorAll('.cyber-nav-tab, .cyber-nav-btn').forEach(function(el) {
+  document.querySelectorAll('.cyber-nav-tab, .cyber-nav-btn, .bento-rail-tab, .bento-rail-btn').forEach(function(el) {
+    el.classList.remove('active');
+  });
+  document.querySelectorAll('.cg-menu-card-row').forEach(function(el) {
     el.classList.remove('active');
   });
   
@@ -329,27 +378,59 @@ function switchTab(tabId) {
   if (target) target.classList.add('active');
   var navBtn = document.getElementById('nav-' + tabId);
   if (navBtn) navBtn.classList.add('active');
+  var bentoNavBtn = document.getElementById('bento-nav-' + tabId);
+  if (bentoNavBtn) bentoNavBtn.classList.add('active');
+
+  var sideKey = (tabId === 'home') ? 'monitor' : tabId;
+  var activeSideBtn = document.querySelector('.cg-menu-card-row[data-preview="' + sideKey + '"]');
+  if (activeSideBtn) activeSideBtn.classList.add('active');
+  
+  if (tabId === 'home' && window.updateMonitorHudDimensions) {
+    setTimeout(window.updateMonitorHudDimensions, 50);
+  }
   
   var mainHeader = document.getElementById('mainTopHeader');
   var bottomNav = document.getElementById('mainBottomNav') || document.querySelector('.cyber-bottom-nav');
   var body = document.body;
   
   if (tabId === 'gemini') {
-    // 🎨 Gemini AI Tab: Pure White Background, Hide Cyber Header, Hide Bottom Nav
+    // 🎨 Gemini AI Tab: Honor Theme (Frosted Acrylic Light vs Obsidian Dark Glass)
     if (mainHeader) mainHeader.style.setProperty('display', 'none', 'important');
     if (bottomNav) bottomNav.style.setProperty('display', 'none', 'important');
+    var isDark = (getGeminiTheme() === 'dark');
     if (body) {
       body.classList.add('gemini-mode');
-      body.style.background = '#ffffff';
+      body.classList.toggle('gemini-dark', isDark);
+      body.style.background = isDark ? '#171717' : '#ffffff';
     }
-    applySystemBarColor('#ffffff', false); // White bar + dark icons
+    applySystemBarColor(isDark ? '#171717' : '#ffffff', isDark);
+    updateGeminiThemeUI(isDark);
+    window.scrollTo(0, 0);
+    if (document.documentElement) document.documentElement.scrollTop = 0;
+    if (document.body) document.body.scrollTop = 0;
+    if (window.visualViewport) {
+      var appContainer = document.querySelector('#tab-gemini .cg-app-container');
+      if (appContainer) {
+        appContainer.style.height = window.visualViewport.height + 'px';
+      }
+    }
+    setTimeout(function() {
+      if (typeof scrollGeminiToBottom === 'function') {
+        scrollGeminiToBottom(false);
+      }
+    }, 60);
   } else {
-    // 🖥️ Monitor / Other Tabs: Show Cyber Header & Bottom Nav, Restore Dark Background
-    if (mainHeader) mainHeader.style.setProperty('display', 'flex', 'important');
-    if (bottomNav) bottomNav.style.setProperty('display', 'flex', 'important');
+    // 🖥️ Monitor / Other Tabs: Show Cyber Header on Mobile, Restore Dark Background
+    if (window.innerWidth >= 860) {
+      if (mainHeader) mainHeader.style.setProperty('display', 'none', 'important');
+      if (bottomNav) bottomNav.style.setProperty('display', 'none', 'important');
+    } else {
+      if (mainHeader) mainHeader.style.setProperty('display', 'flex', 'important');
+      if (bottomNav) bottomNav.style.setProperty('display', 'flex', 'important');
+    }
     if (body) {
       body.classList.remove('gemini-mode');
-      body.style.background = '';
+      body.style.background = '#080b11';
     }
     applySystemBarColor('#07090e', true); // Dark bar + white icons
   }
@@ -364,6 +445,7 @@ function switchTab(tabId) {
 
 window.addEventListener('DOMContentLoaded', function() {
   try {
+    updateGeminiThemeUI(getGeminiTheme() === 'dark');
     checkOnboardingPairing();
     var savedTab = sessionStorage.getItem('panic_active_tab') || 'home';
     switchTab(savedTab);

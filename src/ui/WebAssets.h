@@ -7,7 +7,7 @@ static const char* DASHBOARD_HTML = R"HTML(
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
   <link rel="manifest" href="/manifest.json">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -37,20 +37,29 @@ static const char* DASHBOARD_HTML = R"HTML(
 <body>
 
 <!-- 🔓 REDESIGNED UNLOCK MODAL -->
-<div id="unlockModal" class="modal-overlay" style="display:none;">
+<div id="unlockModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeUnlockModal()">
   <div class="modal-card">
     <div class="modal-header">
       <span class="modal-icon">🔓</span>
       <span class="modal-title">SECURITY AUTHENTICATION</span>
     </div>
-    <p class="modal-sub">ENTER WINDOWS PASSWORD OR PIN TO UNLOCK</p>
+    <p class="modal-sub">ENTER WINDOWS PIN OR PASSWORD</p>
     <div class="input-wrapper">
-      <input type="password" id="pinInput" placeholder="Enter Password or PIN" autocomplete="off" onkeydown="if(event.key==='Enter')submitUnlock()">
-      <button class="toggle-pass" onclick="togglePassVisibility()">👁️</button>
+      <input type="password" id="pinInput" placeholder="Enter PIN or Password" autocomplete="off" onkeydown="if(event.key==='Enter')submitUnlock()">
+      <button class="toggle-pass" type="button" onclick="togglePassVisibility()">👁️</button>
+    </div>
+    <div class="modal-options-row">
+      <label class="remember-pin-label">
+        <input type="checkbox" id="rememberPinCheck" checked>
+        <span>Remember for 1-Tap Unlock</span>
+      </label>
+    </div>
+    <div id="clearPinWrap" style="display:none; margin-bottom: 14px;">
+      <button class="clear-pin-btn" type="button" onclick="clearSavedPin()">🗑️ Forget Saved PIN</button>
     </div>
     <div class="modal-actions">
-      <button class="modal-btn btn-cancel" onclick="closeUnlockModal()">CANCEL</button>
-      <button class="modal-btn btn-confirm" onclick="submitUnlock()">UNLOCK 🔓</button>
+      <button class="modal-btn btn-cancel" type="button" onclick="closeUnlockModal()">CANCEL</button>
+      <button class="modal-btn btn-confirm" type="button" onclick="submitUnlock()">UNLOCK 🔓</button>
     </div>
   </div>
 </div>
@@ -95,75 +104,359 @@ static const char* DASHBOARD_HTML = R"HTML(
     <a id="pwaInstallBtn" href="/download/app.apk" style="display:none; text-decoration:none; background:linear-gradient(135deg, #00ff41, #00f0ff); color:#000; border:none; border-radius:6px; font-family:'Orbitron',sans-serif; font-size:10px; font-weight:800; padding:6px 12px; cursor:pointer; box-shadow:0 0 15px rgba(0,255,65,0.4); letter-spacing:0.5px;">📥 GET APK</a>
   </div>
 
-  <!-- ==================== TAB 1: 🖥️ MONITOR (1st: Monitor, 2nd: Trackpad, 3rd: Keyboard) ==================== -->
+  <!-- ==================== TAB 1: 🖥️ MONITOR (PIXEL-PERFECT BENTO GRID) ==================== -->
   <div id="tab-home" class="tab-content active">
-    <!-- 1st: FUTURISTIC VIDEO PLAYER MONITOR -->
-    <div class="player-card">
-      <div class="player-hud-top">
-        <div class="rec-badge">
-          <span class="rec-dot"></span> REC LIVE
-        </div>
-        <div class="stream-quality">1080P &bull; 60 FPS</div>
+    <!-- 🖼️ BENTO DASHBOARD MOCKUP CONTAINER (Reference: @bee_ui.ux) -->
+    <div class="bento-mockup-wrapper">
+      <div class="bento-frame">
+        <!-- 🧭 LEFT PRIMARY NAVIGATION RAIL -->
+        <aside class="bento-rail" aria-label="Primary Navigation">
+          <div class="bento-rail-nav">
+            <!-- 1. MONITOR TAB -->
+            <button id="bento-nav-home" class="bento-rail-tab active" onclick="switchTab('home')" title="Live Monitor">
+              <span class="bento-rail-tab-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                  <line x1="8" y1="21" x2="16" y2="21"></line>
+                  <line x1="12" y1="17" x2="12" y2="21"></line>
+                </svg>
+              </span>
+              <span class="bento-rail-tab-label">MONITOR</span>
+            </button>
+
+            <!-- 2. GEMINI AI TAB -->
+            <button id="bento-nav-gemini" class="bento-rail-tab" onclick="switchTab('gemini')" title="Gemini AI Assistant">
+              <span class="bento-rail-tab-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 3c0 4.5-3.5 8-8 8 4.5 0 8 3.5 8 8 0-4.5 3.5-8 8-8-4.5 0-8-3.5-8-8z"></path>
+                </svg>
+              </span>
+              <span class="bento-rail-tab-label">GEMINI AI</span>
+            </button>
+
+            <!-- 3. QR PAIRING MODAL -->
+            <button id="bento-nav-qr" class="bento-rail-tab" onclick="openPairingModal()" title="QR Code &amp; Network Pairing">
+              <span class="bento-rail-tab-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="3" width="7" height="7" rx="1.5"></rect>
+                  <rect x="14" y="3" width="7" height="7" rx="1.5"></rect>
+                  <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
+                  <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
+                  <line x1="7" y1="7" x2="7.01" y2="7"></line>
+                  <line x1="17" y1="7" x2="17.01" y2="7"></line>
+                  <line x1="7" y1="17" x2="7.01" y2="17"></line>
+                  <line x1="17" y1="17" x2="17.01" y2="17"></line>
+                </svg>
+              </span>
+              <span class="bento-rail-tab-label">QR</span>
+            </button>
+
+            <!-- 4. CONTROLS TAB -->
+            <button id="bento-nav-controls" class="bento-rail-tab" onclick="switchTab('controls')" title="System Controls">
+              <span class="bento-rail-tab-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="4" y1="21" x2="4" y2="14"></line>
+                  <line x1="4" y1="10" x2="4" y2="3"></line>
+                  <line x1="12" y1="21" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12" y2="3"></line>
+                  <line x1="20" y1="21" x2="20" y2="16"></line>
+                  <line x1="20" y1="12" x2="20" y2="3"></line>
+                  <line x1="1" y1="14" x2="7" y2="14"></line>
+                  <line x1="9" y1="8" x2="15" y2="8"></line>
+                  <line x1="17" y1="16" x2="23" y2="16"></line>
+                </svg>
+              </span>
+              <span class="bento-rail-tab-label">CONTROLS</span>
+            </button>
+          </div>
+        </aside>
+
+        <!-- 🍱 MAIN BENTO GRID CANVAS -->
+        <main class="bento-main">
+          <!-- TOP ROW: HERO MONITOR (CARD A) & CONTROL HUB (CARD B) -->
+          <div class="bento-row-top">
+            <!-- CARD A: PC MONITOR (HERO) -->
+            <div class="bento-card bento-card-a">
+              <div class="bento-card-header">
+                <!-- 🖥️ PC MONITOR PURE TEXT TITLE -->
+                <div class="bento-clean-title-group">
+                  <span class="bento-clean-dot" id="bentoStatusDot"></span>
+                  <span class="bento-clean-title">PC MONITOR</span>
+                </div>
+
+                <!-- ⚡ REAL-TIME FPS PURE TEXT -->
+                <div class="bento-fps-clean" id="bentoStreamStats" title="Real-time measured frame rate vs 60 FPS target">
+                  <span id="bentoStatsText"><span class="fps-target">60 FPS</span> <span class="fps-arrow">›</span> <span class="fps-current zero">0 FPS</span></span>
+                </div>
+
+                <!-- ⚙️ MONITOR CONTROLS MENU TRIGGER & POPUP PANEL -->
+                <div class="bento-header-menu-wrap">
+                  <button id="bentoMonitorMenuBtn" class="bento-icon-btn" onclick="toggleMonitorMenu(event)" title="Stream &amp; Display Options">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="1.5"></circle>
+                      <circle cx="19" cy="12" r="1.5"></circle>
+                      <circle cx="5" cy="12" r="1.5"></circle>
+                    </svg>
+                  </button>
+
+                  <!-- 📱 SMALL FLOATING MENU PANEL -->
+                  <div id="bentoMonitorMenuPanel" class="bento-menu-dropdown" style="display:none;" onclick="event.stopPropagation()">
+                    <div class="bento-dropdown-header">
+                      <span>STREAM CONTROLS</span>
+                    </div>
+                    
+                    <!-- 1. Play / Pause -->
+                    <button class="bento-dropdown-item" id="bentoToggleBtn" onclick="toggleStream(); closeMonitorMenu();" title="Play / Pause Live Stream">
+                      <span class="bento-dd-icon" id="bentoToggleIcon">▶</span>
+                      <span class="bento-dd-label" id="bentoToggleText">LIVE</span>
+                    </button>
+
+                    <!-- 2. Codec Switch (H.264 / JPEG) -->
+                    <button class="bento-dropdown-item" id="bentoCodecBtn" onclick="toggleStreamCodec(); closeMonitorMenu();" title="Switch Codec (H.264 / JPEG)">
+                      <span class="bento-dd-icon">⚡</span>
+                      <span class="bento-dd-label" id="bentoCodecText">H.264</span>
+                    </button>
+
+                    <!-- 3. Fullscreen -->
+                    <button class="bento-dropdown-item" onclick="openFS(); closeMonitorMenu();" title="Open Fullscreen Display">
+                      <span class="bento-dd-icon">⛶</span>
+                      <span class="bento-dd-label">FULLSCREEN</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- STREAM VIEWPORT -->
+              <div class="bento-viewport" onclick="openFS()">
+                <div id="mirrorPlaceholder" class="bento-viewport-placeholder">
+                  <div class="bento-vp-icon">🛡️</div>
+                  <div class="bento-vp-title">PC MONITOR STANDBY</div>
+                  <div class="bento-vp-sub">Tap 'LIVE' to stream desktop directly</div>
+                </div>
+                <canvas id="gpuCanvas" class="bento-canvas" style="display:none;"></canvas>
+              </div>
+            </div>
+
+            <!-- CARD B: SYSTEM CONTROLS & ACTIONS -->
+            <div class="bento-card bento-card-b">
+              <div class="bento-card-header">
+                <div class="bento-clean-title-group">
+                  <span class="bento-clean-dot"></span>
+                  <span class="bento-clean-title">SYSTEM CONTROLS</span>
+                </div>
+
+                <!-- ⚙️ DEVICE PAIRING 3-DOT MENU TRIGGER & POPUP PANEL -->
+                <div class="bento-header-menu-wrap">
+                  <button id="bentoActionsMenuBtn" class="bento-icon-btn" onclick="toggleActionsMenu(event)" title="Device Pairing &amp; QR">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="1.5"></circle>
+                      <circle cx="19" cy="12" r="1.5"></circle>
+                      <circle cx="5" cy="12" r="1.5"></circle>
+                    </svg>
+                  </button>
+
+                  <!-- 📱 DROPDOWN MENU FOR DEVICE PAIRING -->
+                  <div id="bentoActionsMenuPanel" class="bento-menu-dropdown" style="display:none;" onclick="event.stopPropagation()">
+                    <div class="bento-dropdown-header">
+                      <span>DEVICE PAIRING</span>
+                    </div>
+                    <button class="bento-dropdown-item" onclick="openPairingModal(); closeActionsMenu();" title="Scan QR Code to Pair Mobile Device">
+                      <span class="bento-dd-icon">📱</span>
+                      <span class="bento-dd-label">PAIR NEW DEVICE (QR)</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 🎛️ 7-COMMAND CYBERPUNK SUITE (PURE CORE ACTIONS) -->
+              <div class="bento-suite-wrap">
+                <!-- TOP: 3x2 CORE ACTION TILES -->
+                <div class="bento-grid-3x2">
+                  <!-- 1. LOCK WORKSTATION -->
+                  <button class="bento-c-tile bento-c-lock" onclick="lockPC()" title="Lock Windows Workstation">
+                    <div class="bento-c-icon">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    </div>
+                    <div class="bento-c-info">
+                      <div class="bento-c-title">LOCK</div>
+                      <div class="bento-c-sub">Winlogon Lock</div>
+                    </div>
+                    <span class="bento-c-pill"></span>
+                  </button>
+
+                  <!-- 2. UNLOCK WORKSTATION -->
+                  <button class="bento-c-tile bento-c-unlock" onclick="unlockPC()" oncontextmenu="event.preventDefault(); openUnlockModal(true)" title="Instant 1-Tap Session Unlock (Hold or click subtitle to edit PIN)">
+                    <div class="bento-c-icon">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>
+                    </div>
+                    <div class="bento-c-info">
+                      <div class="bento-c-title">UNLOCK</div>
+                      <div class="bento-c-sub" id="bentoUnlockSub" onclick="event.stopPropagation(); openUnlockModal(true)" title="Configure 1-Tap PIN">1-Tap Armed ⚡</div>
+                    </div>
+                    <span class="bento-c-pill"></span>
+                  </button>
+
+                  <!-- 3. WAKE UP -->
+                  <button class="bento-c-tile bento-c-wake" onclick="wakePC()" title="Wake Monitor Display &amp; Backlight">
+                    <div class="bento-c-icon">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line></svg>
+                    </div>
+                    <div class="bento-c-info">
+                      <div class="bento-c-title">WAKE UP</div>
+                      <div class="bento-c-sub">Display &amp; Screen</div>
+                    </div>
+                    <span class="bento-c-pill"></span>
+                  </button>
+
+                  <!-- 4. SLEEP MODE -->
+                  <button class="bento-c-tile bento-c-sleep" onclick="sleepPC()" title="Put PC into Sleep Mode (Blackout + Low Power)">
+                    <div class="bento-c-icon">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                    </div>
+                    <div class="bento-c-info">
+                      <div class="bento-c-title">SLEEP</div>
+                      <div class="bento-c-sub">Low Power Idle</div>
+                    </div>
+                    <span class="bento-c-pill"></span>
+                  </button>
+
+                  <!-- 5. RESTART PC -->
+                  <button class="bento-c-tile bento-c-restart" onclick="if(confirm('Restart PC?'))restartPC()" title="Restart Windows PC">
+                    <div class="bento-c-icon">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+                    </div>
+                    <div class="bento-c-info">
+                      <div class="bento-c-title">RESTART</div>
+                      <div class="bento-c-sub">Reboot Machine</div>
+                    </div>
+                    <span class="bento-c-pill"></span>
+                  </button>
+
+                  <!-- 6. SHUTDOWN PC -->
+                  <button class="bento-c-tile bento-c-shutdown" onclick="if(confirm('Shutdown PC?'))shutdownPC()" title="Shutdown Windows PC">
+                    <div class="bento-c-icon">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>
+                    </div>
+                    <div class="bento-c-info">
+                      <div class="bento-c-title">SHUTDOWN</div>
+                      <div class="bento-c-sub">Power Off System</div>
+                    </div>
+                    <span class="bento-c-pill"></span>
+                  </button>
+                </div>
+
+                <!-- BOTTOM: TACTICAL EMERGENCY PANIC ACTUATOR -->
+                <button class="bento-panic-hero-bar" onclick="triggerPanic()" title="Activate Instant Emergency Defense Lockdown">
+                  <div class="bento-panic-hero-left">
+                    <div class="bento-panic-hero-icon">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                      </svg>
+                      <span class="panic-beacon-pulse"></span>
+                    </div>
+                    <div class="bento-panic-hero-text">
+                      <div class="bento-panic-hero-title-row">
+                        <span class="bento-panic-hero-title">EMERGENCY PANIC</span>
+                        <span class="bento-panic-dot-live"></span>
+                      </div>
+                      <span class="bento-panic-hero-sub">INSTANT DEFENSE LOCKDOWN &bull; DISENGAGE DESKTOP</span>
+                    </div>
+                  </div>
+                  <div class="bento-panic-hero-badge">
+                    <span class="panic-badge-icon">⚡</span>
+                    <span class="panic-badge-txt">ARMED</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- BOTTOM ROW: 2 INPUT HUDS (CARD C: PRECISION TRACKPAD, CARD E: KEYBOARD CONSOLE) -->
+          <div class="bento-row-bottom">
+            <!-- CARD C: HIGH-PRECISION GLASS TRACKPAD HUD (Directly below PC Monitor) -->
+            <div class="bento-card bento-card-c bento-trackpad-hud">
+              <div class="bento-card-header">
+                <div class="bento-clean-title-group">
+                  <span class="bento-clean-dot" style="background:#ff9500; box-shadow:0 0 8px #ff9500;"></span>
+                  <span class="bento-clean-title">PRECISION TRACKPAD</span>
+                </div>
+                <div class="bento-speed-pill">
+                  <span class="bento-speed-label">SPEED: <b id="sensValDisplay">3.2x</b></span>
+                  <input type="range" id="sensSlider" min="1.0" max="5.0" step="0.2" value="3.2" class="bento-speed-slider" oninput="document.getElementById('sensValDisplay').textContent=this.value+'x'; localStorage.setItem('trackpadSens', this.value);">
+                </div>
+              </div>
+
+              <!-- Gliding Touchpad Glass Surface -->
+              <div id="touchpadPad" class="bento-touchpad-surface">
+                <div class="bento-touchpad-crosshair">
+                  <span>⊹</span>
+                </div>
+                <div class="bento-touchpad-hint">Touch &amp; glide mouse &bull; Two fingers scroll &bull; Tap to click</div>
+              </div>
+
+              <!-- Left / Right Click Controls -->
+              <div class="bento-touchpad-buttons">
+                <button class="bento-mouse-btn bento-mouse-left" onclick="sendMouseClick(1)">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="6" y="3" width="12" height="18" rx="6"></rect><line x1="12" y1="3" x2="12" y2="10"></line><path d="M6 9h6"></path></svg>
+                  <span>LEFT CLICK</span>
+                </button>
+                <button class="bento-mouse-btn bento-mouse-right" onclick="sendMouseClick(2)">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="6" y="3" width="12" height="18" rx="6"></rect><line x1="12" y1="3" x2="12" y2="10"></line><path d="M12 9h6"></path></svg>
+                  <span>RIGHT CLICK</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- CARD E: HIGH-TECH LIVE KEYBOARD HUD (Directly below System Controls) -->
+            <div class="bento-card bento-card-e bento-keyboard-hud">
+              <div class="bento-card-header">
+                <div class="bento-clean-title-group">
+                  <span class="bento-clean-dot" style="background:#10b981; box-shadow:0 0 8px #10b981;"></span>
+                  <span class="bento-clean-title">KEYBOARD CONSOLE</span>
+                </div>
+                <div class="bento-badge bento-badge-muted">
+                  <span class="bento-badge-dot" style="background:#10b981;"></span>
+                  <span>LIVE SYNC</span>
+                </div>
+              </div>
+
+              <!-- Live Text Input Stream -->
+              <div class="bento-keyboard-input-wrap">
+                <div class="bento-kbd-input-icon">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="4" width="20" height="16" rx="3"></rect><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M6 12h.01M10 12h.01M14 12h.01M18 12h.01M7 16h10"></path></svg>
+                </div>
+                <input type="text" id="remoteTextInput" placeholder="Type live text to Windows PC..." class="bento-keyboard-input" autocomplete="off" oninput="handleLiveInput(event)" onkeydown="handleLiveKeydown(event)">
+                <button class="bento-keyboard-clear" onclick="clearLiveInput()" title="Clear typed buffer">CLEAR</button>
+              </div>
+
+              <!-- Tactical Shortcut Matrix (2 Rows of Sleek Cyber Keys) -->
+              <div class="bento-kbd-matrix">
+                <div class="bento-kbd-row">
+                  <button class="bento-key-tile kbd-hero" onclick="sendSpecialKey('{ENTER}')">ENTER ↵</button>
+                  <button class="bento-key-tile" onclick="sendSpecialKey('{BACKSPACE}')">⌫ BACK</button>
+                  <button class="bento-key-tile" onclick="sendSpecialKey('{ESC}')">ESC</button>
+                  <button class="bento-key-tile" onclick="sendSpecialKey('{TAB}')">TAB ⇥</button>
+                  <button class="bento-key-tile kbd-space" onclick="sendSpecialKey(' ')">SPACE ␣</button>
+                </div>
+                <div class="bento-kbd-row">
+                  <button class="bento-key-tile" onclick="sendSpecialKey('{WIN}')">WIN ⊞</button>
+                  <button class="bento-key-tile" onclick="sendSpecialKey('^c')">CTRL+C</button>
+                  <button class="bento-key-tile" onclick="sendSpecialKey('^v')">CTRL+V</button>
+                  <button class="bento-key-tile" onclick="sendSpecialKey('^a')">CTRL+A</button>
+                  <button class="bento-key-tile kbd-altf4" onclick="sendSpecialKey('%{F4}')">ALT+F4</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
       </div>
 
-      <div class="screen-display">
-        <div id="mirrorPlaceholder" class="offline-matrix">
-          <div class="matrix-icon">🛡️</div>
-          <div class="matrix-title">PC MONITOR OFFLINE</div>
-          <div class="matrix-sub">Tap '▶ PLAY LIVE STREAM' to start real-time desktop view.</div>
-        </div>
-        <!-- 🚀 SINGLE UNIFIED GPU CANVAS -->
-        <canvas id="gpuCanvas" class="screen-img" onclick="openFS()" style="display:none; width:100%; height:100%; border-radius:6px; object-fit:contain; cursor:pointer; touch-action:none;"></canvas>
-      </div>
-
-      <div class="player-controls">
-        <button id="toggleBtn" class="play-btn" onclick="toggleStream()">▶ PLAY LIVE STREAM</button>
-        <button class="fs-btn" onclick="openFS()">⛶ FULLSCREEN</button>
-      </div>
-    </div>
-
-    <!-- 2nd: LUXURY FROSTED GLASS TOUCHPAD TRACKPAD PANEL -->
-    <div style="background:rgba(22, 18, 16, 0.65); border:1px solid rgba(255,255,255,0.12); border-top:1px solid rgba(255,255,255,0.25); border-radius:22px; padding:16px; margin-bottom:16px; backdrop-filter:blur(28px) saturate(190%); -webkit-backdrop-filter:blur(28px) saturate(190%); box-shadow:0 16px 36px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.15);">
-      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; padding:0 2px;">
-        <div style="display:flex; align-items:center; gap:8px;">
-          <span style="font-family:'Orbitron',sans-serif; font-size:11.5px; font-weight:800; color:#fff; letter-spacing:1px;">💻 TRACKPAD</span>
-          <span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:#ff9500; box-shadow:0 0 8px #ff9500;"></span>
-        </div>
-        <div style="display:flex; align-items:center; gap:6px; background:rgba(255,149,0,0.1); border:1px solid rgba(255,149,0,0.25); padding:3px 8px; border-radius:6px;">
-          <span style="font-family:'Share Tech Mono',monospace; font-size:9.5px; color:#ff9500; letter-spacing:0.5px;">SPEED: <b id="sensValDisplay" style="color:#fff;">3.2x</b></span>
-          <input type="range" id="sensSlider" min="1.0" max="5.0" step="0.2" value="3.2" style="width:70px; height:4px; accent-color:#ff9500; cursor:pointer;" oninput="document.getElementById('sensValDisplay').textContent=this.value+'x'; localStorage.setItem('trackpadSens', this.value);">
-        </div>
-      </div>
-
-      <div id="touchpadPad" style="width:100%; height:160px; background:radial-gradient(circle at 50% 50%, rgba(35,28,24,0.75) 0%, rgba(12,10,9,0.95) 100%); border:1px solid rgba(255,255,255,0.08); border-radius:14px 14px 0 0; display:flex; align-items:center; justify-content:center; touch-action:none; user-select:none; position:relative;">
-        <div style="width:40px; height:40px; border-radius:50%; border:1px dashed rgba(255,149,0,0.35); display:flex; align-items:center; justify-content:center; opacity:0.6;">
-          <span style="font-size:16px; color:#ff9500;">⊹</span>
-        </div>
-      </div>
-
-      <div style="display:flex; border-top:1px solid rgba(255,255,255,0.10); border-radius:0 0 14px 14px; overflow:hidden;">
-        <button style="flex:1; padding:13px; background:rgba(255,149,0,0.12); color:#ffaa33; border:none; border-right:1px solid rgba(255,255,255,0.08); font-family:'Orbitron',sans-serif; font-size:11px; font-weight:800; letter-spacing:1px; cursor:pointer; transition:all 0.15s;" onmousedown="this.style.background='rgba(255,149,0,0.3)'" onmouseup="this.style.background='rgba(255,149,0,0.12)'" onclick="sendMouseClick(1)">LEFT CLICK</button>
-        <button style="flex:1; padding:13px; background:rgba(255,255,255,0.05); color:#ffffff; border:none; font-family:'Orbitron',sans-serif; font-size:11px; font-weight:800; letter-spacing:1px; cursor:pointer; transition:all 0.15s;" onmousedown="this.style.background='rgba(255,255,255,0.15)'" onmouseup="this.style.background='rgba(255,255,255,0.05)'" onclick="sendMouseClick(2)">RIGHT CLICK</button>
-      </div>
-    </div>
-
-    <!-- 3rd: REAL-TIME LIVE KEYBOARD CONTROL BAR -->
-    <div style="background:rgba(22, 18, 16, 0.65); border:1px solid rgba(255,255,255,0.12); border-top:1px solid rgba(255,255,255,0.25); border-radius:20px; padding:14px 16px; margin-bottom:16px; backdrop-filter:blur(28px) saturate(190%); -webkit-backdrop-filter:blur(28px) saturate(190%); box-shadow:0 16px 36px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.12); display:flex; flex-direction:column; gap:10px;">
-      <div style="display:flex; align-items:center; justify-content:space-between;">
-        <span style="font-family:'Orbitron',sans-serif; font-size:11px; font-weight:700; color:#fff; letter-spacing:1px;">⌨️ KEYBOARD TYPING</span>
-        <span style="font-family:'Share Tech Mono',monospace; font-size:10px; color:#10b981; display:flex; align-items:center; gap:4px;"><span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:#10b981; box-shadow:0 0 6px #10b981;"></span> SYNC</span>
-      </div>
-
-      <div style="display:flex; gap:8px;">
-        <input type="text" id="remoteTextInput" placeholder="Type live on PC..." style="flex:1; background:rgba(0,0,0,0.55); border:1px solid rgba(255,255,255,0.15); color:#fff; padding:12px 14px; border-radius:12px; font-family:'Inter',sans-serif; font-size:13.5px; outline:none; transition:border-color 0.2s;" onfocus="this.style.borderColor='#ff9500'" onblur="this.style.borderColor='rgba(255,255,255,0.15)'" oninput="handleLiveInput(event)" onkeydown="handleLiveKeydown(event)">
-        <button class="fs-btn" style="padding:12px 16px; font-size:11px; color:#ff6666; border-color:rgba(255,102,102,0.3); border-radius:12px;" onclick="clearLiveInput()">CLEAR</button>
-      </div>
-
-      <div style="display:flex; gap:6px;">
-        <button class="fs-btn" style="flex:1; font-size:10px; padding:8px;" onclick="sendSpecialKey('{ENTER}')">ENTER</button>
-        <button class="fs-btn" style="flex:1; font-size:10px; padding:8px;" onclick="sendSpecialKey('{BACKSPACE}')">BACKSPACE</button>
-        <button class="fs-btn" style="flex:1; font-size:10px; padding:8px;" onclick="sendSpecialKey('{ESC}')">ESC</button>
-        <button class="fs-btn" style="flex:1; font-size:10px; padding:8px;" onclick="sendSpecialKey('{TAB}')">TAB</button>
+      <!-- Minimalist author watermark tribute -->
+      <div class="bento-credit-badge">
+        <span class="bento-credit-dot"></span>
+        <span>@bee_ui.ux &bull; Monitor Dashboard</span>
       </div>
     </div>
   </div>
@@ -212,9 +505,9 @@ static const char* DASHBOARD_HTML = R"HTML(
           <!-- 📂 SECTION: CONTROLS -->
           <div class="cg-menu-group-label">Controls</div>
           <div class="cg-menu-card-group">
-            <button type="button" class="cg-menu-card-row" data-preview="monitor" onclick="switchTab('home'); if(window.innerWidth < 860) closeCgSidebar();">
+            <button type="button" class="cg-menu-card-row active" data-preview="monitor" onclick="switchTab('home'); if(window.innerWidth < 860) closeCgSidebar();" title="PC Monitor">
               <span class="cg-menu-row-icon">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0f172a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
                   <line x1="8" y1="21" x2="16" y2="21"></line>
                   <line x1="12" y1="17" x2="12" y2="21"></line>
@@ -223,7 +516,26 @@ static const char* DASHBOARD_HTML = R"HTML(
               <span class="cg-menu-row-text">PC Monitor</span>
             </button>
 
-            <button type="button" class="cg-menu-card-row" data-preview="panic" onclick="triggerPanic(); if(window.innerWidth < 860) closeCgSidebar();">
+            <button type="button" class="cg-menu-card-row" data-preview="gemini" onclick="switchTab('gemini'); if(window.innerWidth < 860) closeCgSidebar();" title="Gemini AI Assistant">
+              <span class="cg-menu-row-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 2a10 10 0 0 1 10 10c0 5.523-4.477 10-10 10a9.96 9.96 0 0 1-5.016-1.345L2 22l1.345-4.984A9.96 9.96 0 0 1 2 12C2 6.477 6.477 2 12 2z"></path>
+                </svg>
+              </span>
+              <span class="cg-menu-row-text">Gemini AI</span>
+            </button>
+
+            <button type="button" class="cg-menu-card-row" data-preview="controls" onclick="switchTab('controls'); if(window.innerWidth < 860) closeCgSidebar();" title="System Controls">
+              <span class="cg-menu-row-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="3"></circle>
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                </svg>
+              </span>
+              <span class="cg-menu-row-text">Controls</span>
+            </button>
+
+            <button type="button" class="cg-menu-card-row" data-preview="panic" onclick="triggerPanic(); if(window.innerWidth < 860) closeCgSidebar();" title="Emergency Panic">
               <span class="cg-menu-row-icon">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
@@ -234,9 +546,9 @@ static const char* DASHBOARD_HTML = R"HTML(
               <span class="cg-menu-row-text" style="color:#ef4444; font-weight:600;">Emergency Panic</span>
             </button>
 
-            <button type="button" id="sidebarApkBtn" class="cg-menu-card-row" data-preview="apk" style="display:none;" onclick="window.open('/download/app.apk', '_blank'); if(window.innerWidth < 860) closeCgSidebar();">
+            <button type="button" id="sidebarApkBtn" class="cg-menu-card-row" data-preview="apk" style="display:none;" onclick="window.open('/download/app.apk', '_blank'); if(window.innerWidth < 860) closeCgSidebar();" title="Download Android App">
               <span class="cg-menu-row-icon">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0f172a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                   <polyline points="7 10 12 15 17 10"></polyline>
                   <line x1="12" y1="15" x2="12" y2="3"></line>
@@ -364,27 +676,21 @@ static const char* DASHBOARD_HTML = R"HTML(
       <div class="cg-main-viewport">
         <!-- 🌟 TOP MINIMAL HEADER -->
         <header class="cg-header">
-        <div style="display:flex; align-items:center; gap:8px; position:relative;">
-          <!-- 🗂️ Antigravity Sidebar Toggle Icon [ | ] (Shows when sidebar is collapsed or on mobile) -->
+        <div class="cg-header-left" style="display:flex; align-items:center; gap:8px; position:relative;">
+          <!-- 🗂️ ChatGPT Mobile-Style Sidebar Toggle Icon (2-line staggered menu) -->
           <button class="cg-icon-btn cg-viewport-toggle-btn" onclick="toggleCgSidebar()" title="Open Sidebar (Ctrl+B)">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-              <line x1="9" y1="3" x2="9" y2="21"></line>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+              <line x1="4.5" y1="8.5" x2="19.5" y2="8.5"></line>
+              <line x1="4.5" y1="15.5" x2="13.5" y2="15.5"></line>
             </svg>
           </button>
-          <!-- ChatGPT / Gemini Model Dropdown — moved to left -->
+          <!-- ChatGPT / Gemini Model Dropdown -->
           <div class="cg-model-title" onclick="toggleGeminiModelMenu(event)" title="Switch AI Model">
             <span id="cgCurrentModelName">Gemini 3.1 Flash Live</span>
             <svg class="cg-caret" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="6 9 12 15 18 9"></polyline>
             </svg>
           </div>
-          <button class="cg-icon-btn" onclick="clearGeminiTerminal()" title="New Chat" style="margin-left:2px;">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 20h9"></path>
-              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
-            </svg>
-          </button>
           
           <!-- 🧠 AI MODEL SELECTION MENU -->
           <div id="geminiModelDropdown" class="cg-menu-dropdown cg-model-dropdown" style="display:none;">
@@ -535,6 +841,62 @@ static const char* DASHBOARD_HTML = R"HTML(
           </div>
         </div>
 
+        <!-- 💊 ChatGPT Mobile Action Capsule (New Chat + 3-Dot Options) -->
+        <div class="cg-header-right" style="display:flex; align-items:center; position:relative;">
+          <div class="cg-header-action-capsule">
+            <!-- New Chat Compose Button -->
+            <button type="button" class="cg-capsule-btn" onclick="clearGeminiTerminal()" title="New Chat">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                <path d="M18.375 2.625a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4Z"></path>
+              </svg>
+            </button>
+            <span class="cg-capsule-divider"></span>
+            <!-- 3-Dot More Options Button -->
+            <button type="button" class="cg-capsule-btn cg-3dot-trigger" onclick="toggleGemini3DotMenu(event)" title="More Options">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <circle cx="12" cy="5" r="1.75"></circle>
+                <circle cx="12" cy="12" r="1.75"></circle>
+                <circle cx="12" cy="19" r="1.75"></circle>
+              </svg>
+            </button>
+          </div>
+
+          <!-- ⚙️ 3-DOT QUICK ACTION MENU -->
+          <div id="gemini3DotDropdown" class="cg-menu-dropdown cg-options-dropdown" style="display:none;">
+            <div class="cg-option-item" onclick="toggleGeminiModelMenu(event); closeGemini3DotMenu();">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/>
+              </svg>
+              <span>Switch AI Model</span>
+            </div>
+            <div class="cg-option-item" onclick="clearGeminiTerminal(); closeGemini3DotMenu();">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 6h18"></path>
+                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+              </svg>
+              <span>Clear Conversation</span>
+            </div>
+            <div class="cg-option-item" onclick="toggleVoicePicker(event); closeGemini3DotMenu();">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                <line x1="12" y1="19" x2="12" y2="22"></line>
+              </svg>
+              <span>Voice Settings</span>
+            </div>
+            <div class="cg-option-divider"></div>
+            <div class="cg-option-item" id="cgThemeToggleOption" onclick="toggleGeminiTheme(); closeGemini3DotMenu();">
+              <span id="cgThemeToggleIcon" style="display:inline-flex; align-items:center;">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
+                </svg>
+              </span>
+              <span id="cgThemeToggleLabel">Dark Theme</span>
+            </div>
+          </div>
+        </div>
       </header>
 
       <!-- 📜 MAIN CHAT & HERO BODY -->
@@ -1074,69 +1436,151 @@ static const char* DASHBOARD_HTML = R"HTML(
     </div>
   </div> <!-- End tab-gemini -->
 
-  <!-- ==================== TAB 3: ⚡ CONTROLS (2-COLUMN GRID, NO ICONS) ==================== -->
+  <!-- ==================== TAB 3: ⚡ CONTROLS (TACTICAL CYBERPUNK CONTROL CENTER) ==================== -->
   <div id="tab-controls" class="tab-content">
-    <!-- SYSTEM STATUS CARD -->
-    <div class="status-card" id="statusBox" style="margin-bottom:12px;">
-      <div>
-        <div class="status-title">SYSTEM DEFENSE STATUS</div>
-        <div class="status-text" id="statusText">SYSTEM SECURE</div>
-      </div>
-      <div style="font-size: 22px;" id="statusIcon">●</div>
-    </div>
-
-    <!-- 🌐 LIVE NETWORK ROUTING CARD -->
-    <div id="networkDetailCard" style="background:rgba(18,22,30,0.7); border:1px solid rgba(0,240,255,0.25); border-radius:14px; padding:12px 14px; margin-bottom:16px; font-family:'Share Tech Mono',monospace; font-size:11px;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-        <span style="color:#8892b0;">ACTIVE CONNECTION</span>
-        <span id="detailLinkType" style="color:#00f0ff; font-weight:bold; font-family:'Orbitron',sans-serif;">DETECTING...</span>
-      </div>
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-        <span style="color:#8892b0;">HOST PC ENDPOINT</span>
-        <span id="detailHostIp" style="color:#fff;">--</span>
-      </div>
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <span style="color:#8892b0;">LINK LATENCY</span>
-        <span id="detailPingMs" style="color:#00ff41;">--</span>
-      </div>
-    </div>
-
-    <!-- ⚡ 2-COLUMN ACTION BUTTONS GRID (1. PANIC, 2. LOCK, 3. UNLOCK, 4. SLEEP, 5. WAKE UP, 6. SHUTDOWN, 7. RESTART) -->
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-      <!-- 1. PANIC MODE -->
-      <button class="btn-ctrl-2col btn-panic-col" onclick="triggerPanic()">
-        PANIC MODE
-      </button>
+    <div class="ctrl-deck-container">
       
-      <!-- 2. LOCK -->
-      <button class="btn-ctrl-2col" onclick="lockPC()">
-        LOCK
+      <!-- 🧭 TOP NAVIGATION HEADER & LIVE PILL -->
+      <div class="ctrl-nav-header">
+        <button onclick="switchTab('home')" class="ctrl-nav-btn ctrl-back-btn" title="Return to PC Monitor">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+          <span>MONITOR</span>
+        </button>
+        
+        <div class="ctrl-title-pill">
+          <span class="ctrl-title-dot"></span>
+          <span class="ctrl-title-text">SYSTEM CONTROLS</span>
+        </div>
+
+        <button onclick="openPairingModal()" class="ctrl-nav-btn ctrl-qr-btn" title="Open QR Device Pairing">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect></svg>
+          <span>QR PAIR</span>
+        </button>
+      </div>
+
+      <!-- 🛡️ ORIGINAL SYSTEM STATUS CARD -->
+      <div class="status-card" id="statusBox" style="margin-bottom:12px;">
+        <div class="status-info">
+          <div class="status-title">SYSTEM DEFENSE STATUS</div>
+          <div class="status-text" id="statusText">🟢 SYSTEM SECURE</div>
+        </div>
+        <div style="font-size: 22px;" id="statusIcon">🟢</div>
+      </div>
+
+      <!-- 🌐 LIVE NETWORK ROUTING CARD -->
+      <div id="networkDetailCard" style="background:rgba(18,22,30,0.7); border:1px solid rgba(0,240,255,0.25); border-radius:14px; padding:12px 14px; margin-bottom:16px; font-family:'Share Tech Mono',monospace; font-size:11px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <span style="color:#8892b0;">ACTIVE CONNECTION</span>
+          <span id="detailLinkType" style="color:#00f0ff; font-weight:bold; font-family:'Orbitron',sans-serif;">DETECTING...</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <span style="color:#8892b0;">HOST PC ENDPOINT</span>
+          <span id="detailHostIp" style="color:#fff;">--</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span style="color:#8892b0;">LINK LATENCY</span>
+          <span id="detailPingMs" style="color:#00ff41;">--</span>
+        </div>
+      </div>
+
+      <!-- ⚡ TACTICAL COMMAND CENTER (2-COLUMN ARCHITECTURE) -->
+      <!-- 1. HERO EMERGENCY PANIC BAR -->
+      <button class="ctrl-panic-hero" onclick="triggerPanic()" title="Activate Instant Emergency Defense Lockdown">
+        <div class="ctrl-panic-hero-left">
+          <div class="ctrl-panic-hero-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <span class="ctrl-panic-pulse-ring"></span>
+          </div>
+          <div class="ctrl-panic-hero-text">
+            <div class="ctrl-panic-hero-title">
+              <span>EMERGENCY PANIC</span>
+              <span class="ctrl-panic-live-dot"></span>
+            </div>
+            <span class="ctrl-panic-hero-sub">INSTANT DEFENSE LOCKDOWN &bull; DISENGAGE PC</span>
+          </div>
+        </div>
+        <div class="ctrl-panic-hero-badge">ARMED ⚡</div>
       </button>
 
-      <!-- 3. UNLOCK -->
-      <button class="btn-ctrl-2col btn-unlock-col" onclick="unlockPC()">
-        UNLOCK
-      </button>
-      
-      <!-- 4. SLEEP MODE -->
-      <button class="btn-ctrl-2col btn-sleep-col" onclick="sleepPC()">
-        SLEEP MODE
-      </button>
+      <!-- 2. 6-TILE CYBER TACTICAL GRID (2 COLUMNS) -->
+      <div class="ctrl-grid-2col">
+        <!-- 1. LOCK WORKSTATION -->
+        <button class="ctrl-tile ctrl-tile-lock" onclick="lockPC()" title="Lock Windows Workstation">
+          <div class="ctrl-tile-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+          </div>
+          <div class="ctrl-tile-info">
+            <div class="ctrl-tile-title">LOCK</div>
+            <div class="ctrl-tile-sub">Winlogon Lock</div>
+          </div>
+          <span class="ctrl-tile-pill"></span>
+        </button>
 
-      <!-- 5. WAKE UP -->
-      <button class="btn-ctrl-2col btn-wake-col" onclick="wakePC()">
-        WAKE UP
-      </button>
+        <!-- 2. UNLOCK WORKSTATION -->
+        <button class="ctrl-tile ctrl-tile-unlock" onclick="unlockPC()" oncontextmenu="event.preventDefault(); openUnlockModal(true)" title="Instant 1-Tap Session Unlock (Hold or click subtitle to edit PIN)">
+          <div class="ctrl-tile-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>
+          </div>
+          <div class="ctrl-tile-info">
+            <div class="ctrl-tile-title">UNLOCK</div>
+            <div class="ctrl-tile-sub" id="ctrlUnlockSub" onclick="event.stopPropagation(); openUnlockModal(true)" title="Configure 1-Tap PIN">1-Tap Armed ⚡</div>
+          </div>
+          <span class="ctrl-tile-pill"></span>
+        </button>
 
-      <!-- 6. SHUTDOWN -->
-      <button class="btn-ctrl-2col btn-shutdown-col" onclick="if(confirm('Shutdown PC?'))shutdownPC()">
-        SHUTDOWN
-      </button>
+        <!-- 3. WAKE UP -->
+        <button class="ctrl-tile ctrl-tile-wake" onclick="wakePC()" title="Wake Monitor Display & Backlight">
+          <div class="ctrl-tile-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line></svg>
+          </div>
+          <div class="ctrl-tile-info">
+            <div class="ctrl-tile-title">WAKE UP</div>
+            <div class="ctrl-tile-sub">Display Screen</div>
+          </div>
+          <span class="ctrl-tile-pill"></span>
+        </button>
 
-      <!-- 7. RESTART -->
-      <button class="btn-ctrl-2col btn-restart-col" style="grid-column: span 2;" onclick="if(confirm('Restart PC?'))restartPC()">
-        RESTART
-      </button>
+        <!-- 4. SLEEP -->
+        <button class="ctrl-tile ctrl-tile-sleep" onclick="sleepPC()" title="Put PC into Sleep Mode">
+          <div class="ctrl-tile-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+          </div>
+          <div class="ctrl-tile-info">
+            <div class="ctrl-tile-title">SLEEP</div>
+            <div class="ctrl-tile-sub">Low Power Idle</div>
+          </div>
+          <span class="ctrl-tile-pill"></span>
+        </button>
+
+        <!-- 5. RESTART -->
+        <button class="ctrl-tile ctrl-tile-restart" onclick="if(confirm('Restart PC?'))restartPC()" title="Restart Windows PC">
+          <div class="ctrl-tile-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+          </div>
+          <div class="ctrl-tile-info">
+            <div class="ctrl-tile-title">RESTART</div>
+            <div class="ctrl-tile-sub">Reboot Machine</div>
+          </div>
+          <span class="ctrl-tile-pill"></span>
+        </button>
+
+        <!-- 6. SHUTDOWN -->
+        <button class="ctrl-tile ctrl-tile-shutdown" onclick="if(confirm('Shutdown PC?'))shutdownPC()" title="Shutdown Windows PC">
+          <div class="ctrl-tile-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>
+          </div>
+          <div class="ctrl-tile-info">
+            <div class="ctrl-tile-title">SHUTDOWN</div>
+            <div class="ctrl-tile-sub">Power Off PC</div>
+          </div>
+          <span class="ctrl-tile-pill"></span>
+        </button>
+      </div>
+
     </div>
   </div>
 </div>
@@ -2996,12 +3440,21 @@ function startCanvasStream() {
   clearInterval(_fpsTimer);
   _fpsTimer = setInterval(function() {
     if (!isStreaming) { clearInterval(_fpsTimer); return; }
+    var currentFps = _frameCount;
     var q = document.querySelector('.stream-quality');
     if (q) {
-      q.textContent = "1080P • " + (_frameCount * 2) + " FPS";
+      q.textContent = "1080P • " + currentFps + " FPS";
+    }
+    var bStats = document.getElementById('bentoStatsText');
+    if (bStats) {
+      if (currentFps > 0) {
+        bStats.innerHTML = '<span class="fps-target">60 FPS</span> <span class="fps-arrow">›</span> <span class="fps-current">' + currentFps + ' FPS</span>';
+      } else {
+        bStats.innerHTML = '<span class="fps-target">60 FPS</span> <span class="fps-arrow">›</span> <span class="fps-current zero">0 FPS</span>';
+      }
     }
     if (window.Telemetry) {
-      Telemetry.log("STREAM_HEARTBEAT", { fps: _frameCount, fallback: _fallbackActive, zoom: fsZoom });
+      Telemetry.log("STREAM_HEARTBEAT", { fps: currentFps, fallback: _fallbackActive, zoom: fsZoom });
     }
     _frameCount = 0;
   }, 1000);
@@ -3114,12 +3567,18 @@ function toggleStream() {
   var canvas = document.getElementById("gpuCanvas");
   var btn = document.getElementById("toggleBtn");
   var q = document.querySelector('.stream-quality');
+  var bentoBtn = document.getElementById("bentoToggleBtn");
+  var bentoText = document.getElementById("bentoToggleText");
+  var bentoIcon = document.getElementById("bentoToggleIcon");
 
   if (isStreaming) {
     if (btn) btn.textContent = "⏸ PAUSE MONITOR";
     if (holder) holder.style.display = "none";
     if (canvas) canvas.style.display = "block";
     if (q) q.textContent = "1080P • CONNECTING...";
+    if (bentoBtn) bentoBtn.classList.add("active");
+    if (bentoText) bentoText.textContent = "PAUSE STREAM";
+    if (bentoIcon) bentoIcon.textContent = "⏸";
 
     if (window.AndroidNativeStream && typeof window.AndroidNativeStream.start === 'function') {
       try {
@@ -3142,8 +3601,285 @@ function toggleStream() {
     if (holder) holder.style.display = "block";
     if (btn) btn.textContent = "▶ PLAY LIVE STREAM";
     if (q) q.textContent = "1080P • 60 FPS";
+    if (bentoBtn) bentoBtn.classList.remove("active");
+    if (bentoText) bentoText.textContent = "LIVE STREAM";
+    if (bentoIcon) bentoIcon.textContent = "▶";
+    var bStats = document.getElementById('bentoStatsText');
+    if (bStats) {
+      bStats.innerHTML = '<span class="fps-target">60 FPS</span> <span class="fps-arrow">›</span> <span class="fps-current zero">0 FPS</span>';
+    }
   }
 }
+
+// ──────────────────────────────────────────────────────────────────
+// 🍱 BENTO GRID MONITOR CONTROLLER HELPERS (media_1789121500907.png)
+// ──────────────────────────────────────────────────────────────────
+
+// ⚡ Codec Switcher Toggle (H.264 / JPEG)
+var _currentBentoCodec = "h264";
+function toggleStreamCodec() {
+  _currentBentoCodec = (_currentBentoCodec === "h264") ? "jpeg" : "h264";
+  var btn = document.getElementById("bentoCodecText");
+  if (btn) btn.textContent = (_currentBentoCodec === "h264") ? "H.264 HD" : "TURBO JPEG";
+  showCyberToast("Streaming Codec: " + (_currentBentoCodec === "h264" ? "H.264 Hardware Acceleration" : "Turbo JPEG Fallback"), "info");
+  if (isStreaming) {
+    toggleStream();
+    setTimeout(toggleStream, 160);
+  }
+}
+
+// 🔊 Master Volume Slider (Thick Capsule Slider & Debounced API)
+var _bentoVolDebounce = null;
+var _currentBentoVol = 75;
+
+function handleBentoVolume(val) {
+  _currentBentoVol = Math.max(0, Math.min(100, parseInt(val, 10) || 0));
+  var display = document.getElementById("bentoVolVal");
+  if (display) display.textContent = _currentBentoVol + "%";
+  
+  var knob = document.getElementById("bentoVolKnob");
+  var capsule = document.getElementById("bentoVolCapsule");
+  if (knob && capsule) {
+    var maxTravel = capsule.clientWidth - knob.clientWidth - 8;
+    if (maxTravel > 0) {
+      var knobX = (_currentBentoVol / 100) * maxTravel;
+      knob.style.transform = "translateX(" + knobX + "px)";
+    }
+  }
+
+  clearTimeout(_bentoVolDebounce);
+  _bentoVolDebounce = setTimeout(function() {
+    fetch("/api/volume?key=" + KEY + "&level=" + _currentBentoVol).catch(function(){});
+  }, 40);
+}
+
+function onCapsuleSliderClick(e) {
+  var capsule = document.getElementById("bentoVolCapsule");
+  if (!capsule) return;
+  var rect = capsule.getBoundingClientRect();
+  var clickX = e.clientX - rect.left;
+  var pct = Math.round((clickX / rect.width) * 100);
+  handleBentoVolume(pct);
+}
+
+function scrollToInputsSuite() {
+  var el = document.getElementById("bentoInputsSuite");
+  if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+function toggleMonitorMenu(e) {
+  if (e) {
+    e.stopPropagation();
+    if (typeof e.preventDefault === 'function') e.preventDefault();
+  }
+  closeActionsMenu();
+  var panel = document.getElementById("bentoMonitorMenuPanel");
+  if (!panel) return;
+  var isVis = (panel.style.display !== "none");
+  panel.style.display = isVis ? "none" : "flex";
+}
+
+function closeMonitorMenu() {
+  var panel = document.getElementById("bentoMonitorMenuPanel");
+  if (panel) panel.style.display = "none";
+}
+
+function toggleActionsMenu(e) {
+  if (e) {
+    e.stopPropagation();
+    if (typeof e.preventDefault === 'function') e.preventDefault();
+  }
+  closeMonitorMenu();
+  var panel = document.getElementById("bentoActionsMenuPanel");
+  if (!panel) return;
+  var isVis = (panel.style.display !== "none");
+  panel.style.display = isVis ? "none" : "flex";
+}
+
+function closeActionsMenu() {
+  var panel = document.getElementById("bentoActionsMenuPanel");
+  if (panel) panel.style.display = "none";
+}
+
+document.addEventListener("click", function(e) {
+  var monitorWrap = document.getElementById("bentoMonitorMenuBtn") ? document.getElementById("bentoMonitorMenuBtn").closest(".bento-header-menu-wrap") : null;
+  var actionsWrap = document.getElementById("bentoActionsMenuBtn") ? document.getElementById("bentoActionsMenuBtn").closest(".bento-header-menu-wrap") : null;
+
+  if (monitorWrap && !monitorWrap.contains(e.target)) {
+    closeMonitorMenu();
+  }
+  if (actionsWrap && !actionsWrap.contains(e.target)) {
+    closeActionsMenu();
+  }
+});
+
+// Support dragging on capsule knob
+(function initCapsuleDrag() {
+  var isDragging = false;
+  window.addEventListener("DOMContentLoaded", function() {
+    var knob = document.getElementById("bentoVolKnob");
+    var capsule = document.getElementById("bentoVolCapsule");
+    if (!capsule || !knob) return;
+    
+    function onMove(clientX) {
+      var rect = capsule.getBoundingClientRect();
+      var x = clientX - rect.left;
+      var pct = Math.round((x / rect.width) * 100);
+      handleBentoVolume(pct);
+    }
+    
+    knob.addEventListener("mousedown", function(e) {
+      isDragging = true;
+      e.stopPropagation();
+    });
+    window.addEventListener("mousemove", function(e) {
+      if (isDragging) onMove(e.clientX);
+    });
+    window.addEventListener("mouseup", function() { isDragging = false; });
+    
+    knob.addEventListener("touchstart", function(e) {
+      isDragging = true;
+      e.stopPropagation();
+    }, { passive: true });
+    window.addEventListener("touchmove", function(e) {
+      if (isDragging && e.touches[0]) onMove(e.touches[0].clientX);
+    }, { passive: true });
+    window.addEventListener("touchend", function() { isDragging = false; });
+  });
+})();
+
+// 🎵 5-Button Media Bar Dispatcher
+function sendMediaCmd(action) {
+  var vkMap = {
+    playpause: 179, // VK_MEDIA_PLAY_PAUSE
+    next: 176,      // VK_MEDIA_NEXT_TRACK
+    prev: 177,      // VK_MEDIA_PREV_TRACK
+    volup: 175,     // VK_VOLUME_UP
+    voldown: 174,   // VK_VOLUME_DOWN
+    mute: 173       // VK_VOLUME_MUTE
+  };
+  var vk = vkMap[action];
+  if (!vk) return;
+  var pCmd = "$ws = New-Object -ComObject WScript.Shell; $ws.SendKeys([char]" + vk + ")";
+  fetch("/api/exec?key=" + KEY + "&cmd=" + encodeURIComponent(pCmd)).catch(function(){});
+  
+  var labels = { playpause: "⏯ PLAY/PAUSE", next: "⏭ NEXT TRACK", prev: "⏮ PREV TRACK", volup: "🔊 VOLUME +", voldown: "🔉 VOLUME -", mute: "🔇 AUDIO MUTE" };
+  showCyberToast(labels[action] || "Media Key", "info");
+}
+
+// 📊 System Telemetry Updater (Card C) - Zero Overhead Native Cyber HUD
+function updateTelemetryUI(d) {
+  if (!d) return;
+
+  // 1. CPU LOAD & RADIAL GAUGE
+  if (d.cpu_pct !== undefined) {
+    var cpu = Math.round(d.cpu_pct);
+    var cpuVal = document.getElementById("bentoCpuVal");
+    var cpuDial = document.getElementById("bentoCpuDial");
+    if (cpuVal) cpuVal.textContent = cpu + "%";
+    if (cpuDial) {
+      var cpuPctClamped = Math.min(100, Math.max(0, cpu));
+      var offset = 188.5 - (188.5 * cpuPctClamped / 100);
+      cpuDial.style.strokeDashoffset = offset;
+    }
+  }
+  if (d.cpu_cores) {
+    var coresBadge = document.getElementById("bentoCoresBadge");
+    if (coresBadge) coresBadge.textContent = d.cpu_cores + " CORES ACTIVE";
+  }
+
+  // 2. RAM USAGE & RADIAL GAUGE
+  if (d.ram_used !== undefined && d.ram_total !== undefined) {
+    var ramUsed = d.ram_used.toFixed(1);
+    var ramTotal = d.ram_total.toFixed(1);
+    var ramPct = d.ram_pct || Math.round((d.ram_used / d.ram_total) * 100);
+    var ramVal = document.getElementById("bentoRamVal");
+    var ramDial = document.getElementById("bentoRamDial");
+    var ramGbVal = document.getElementById("bentoRamGbVal");
+    if (ramVal) ramVal.textContent = ramPct + "%";
+    if (ramGbVal) ramGbVal.textContent = ramUsed + " / " + ramTotal + " GB";
+    if (ramDial) {
+      var ramPctClamped = Math.min(100, Math.max(0, ramPct));
+      var offset = 188.5 - (188.5 * ramPctClamped / 100);
+      ramDial.style.strokeDashoffset = offset;
+    }
+  }
+
+  // 3. STORAGE (C:)
+  if (d.disk_free !== undefined && d.disk_total !== undefined) {
+    var diskFree = Math.round(d.disk_free);
+    var diskVal = document.getElementById("bentoDiskVal");
+    if (diskVal) diskVal.textContent = diskFree + " GB FREE";
+  }
+
+  // 4. DISPLAY & SYS
+  if (d.disp_w !== undefined && d.disp_h !== undefined) {
+    var dispVal = document.getElementById("bentoDispVal");
+    if (dispVal) dispVal.textContent = d.disp_w + "×" + d.disp_h + (d.disp_hz ? " @" + d.disp_hz + "Hz" : "");
+  }
+
+  // Uptime footer pill
+  var uptimeBadge = document.getElementById("bentoTelemetryUptime");
+  if (uptimeBadge && d.uptime) {
+    uptimeBadge.textContent = "UP: " + d.uptime;
+  }
+}
+
+function pollBentoTelemetry() {
+  if (document.hidden) return;
+  var k = getActiveSessionKey();
+  fetch("/api/status?key=" + encodeURIComponent(k), { cache: "no-store", keepalive: true })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      updateTelemetryUI(d);
+    })
+    .catch(function(){});
+}
+
+// ⏱️ Auto-poll Telemetry on active monitor tab (ultra-fast, zero-overhead 2s interval)
+setInterval(pollBentoTelemetry, 2000);
+setTimeout(pollBentoTelemetry, 400);
+
+// 👁️ Display Stealth Toggle
+var _isDisplayStealth = false;
+function toggleDisplayStealth() {
+  _isDisplayStealth = !_isDisplayStealth;
+  var sw = document.getElementById("bentoStealthSwitch");
+  var sub = document.getElementById("bentoStealthSub");
+  var tile = document.getElementById("bentoStealthTile");
+  var badge = document.getElementById("bentoStealthBadge");
+
+  if (_isDisplayStealth) {
+    if (sw) sw.classList.add("active");
+    if (tile) tile.classList.add("active");
+    if (badge) { badge.textContent = "BLANKED"; badge.classList.add("active"); }
+    if (sub) sub.textContent = "Screen Blanked";
+    var cmd = "(Add-Type '[DllImport(\"user32.dll\")]public static extern int SendMessage(int hWnd, int hMsg, int wParam, int lParam);' -Name a -PassThru)::SendMessage(-1,0x0112,0xF170,2)";
+    fetch("/api/exec?key=" + KEY + "&cmd=" + encodeURIComponent(cmd)).catch(function(){});
+    showCyberToast("👁️ DISPLAY STEALTH: BACKLIGHT OFF", "info");
+  } else {
+    if (sw) sw.classList.remove("active");
+    if (tile) tile.classList.remove("active");
+    if (badge) { badge.textContent = "ACTIVE"; badge.classList.remove("active"); }
+    if (sub) sub.textContent = "Screen Blanking";
+    wakePC();
+  }
+}
+
+// 🛡️ Auto-Shield Toggle
+function toggleAutoShield() {
+  var sw = document.getElementById("bentoAutoShieldSwitch");
+  if (sw) {
+    sw.classList.toggle("active");
+    var active = sw.classList.contains("active");
+    localStorage.setItem("auto_shield_enabled", active ? "1" : "0");
+    showCyberToast(active ? "🛡️ AUTO-SHIELD ARMED" : "⚠️ AUTO-SHIELD DISARMED", active ? "success" : "info");
+  }
+}
+
+// Start periodic telemetry poll (2s for true real-time response)
+setInterval(pollBentoTelemetry, 2000);
+setTimeout(pollBentoTelemetry, 500);
 // ──────────────────────────────────────────────────────────────────
 
 function showCyberToast(msg, type) {
@@ -3189,9 +3925,11 @@ function showCyberToast(msg, type) {
 
 function getStatus(force){
   if (isStreaming && !force) return;
-  fetch("/api/status?key=" + KEY, { cache: "no-store", keepalive: true })
+  var k = getActiveSessionKey();
+  fetch("/api/status?key=" + encodeURIComponent(k), { cache: "no-store", keepalive: true })
     .then(function(res){ return res.json(); })
     .then(function(d){
+      updateTelemetryUI(d);
       var box=document.getElementById("statusBox");
       var txt=document.getElementById("statusText");
       var icon=document.getElementById("statusIcon");
@@ -3320,8 +4058,37 @@ function restartPC(){
   showCyberToast("🔄 RESTART INITIATED (5s)", "warning");
   fetch("/restart?key=" + encodeURIComponent(k), { keepalive: true })
     .then(function(){
-      showCyberToast("🔄 PC REBOOTING NOW", "warning");
+      showCyberToast("🔄 PC REBOOTING... WILL AUTO-DETECT LOGIN SCREEN", "warning");
+      _startRebootWatchdog();
     }); 
+}
+
+var _rebootWatchTimer = null;
+function _startRebootWatchdog() {
+  if (_rebootWatchTimer) clearInterval(_rebootWatchTimer);
+  var attempts = 0;
+  // Allow 12s for OS shutdown & reboot before polling
+  setTimeout(function() {
+    _rebootWatchTimer = setInterval(function() {
+      attempts++;
+      if (attempts > 35) {
+        clearInterval(_rebootWatchTimer);
+        _rebootWatchTimer = null;
+        return;
+      }
+      var k = getActiveSessionKey();
+      fetch("/api/status?key=" + encodeURIComponent(k), { cache: 'no-store' })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          clearInterval(_rebootWatchTimer);
+          _rebootWatchTimer = null;
+          vibratePhone([100, 50, 100]);
+          showCyberToast("🟢 PC READY AT LOGIN SCREEN! TAP UNLOCK ⚡", "success");
+          getStatus(true);
+        })
+        .catch(function(){});
+    }, 2000);
+  }, 10000);
 }
 
 function shutdownPC(){ 
@@ -3336,51 +4103,173 @@ function shutdownPC(){
 
 function wakePC() {
   vibratePhone([80, 40, 80]);
-  showCyberToast("📡 MAGIC PACKET BROADCAST SENT!", "success");
-  var savedMac = localStorage.getItem("targetMac") || "Registered";
-  alert("⚡ WAKE-ON-LAN DISPATCHED!\n\nTarget Network Adapter: " + savedMac + "\n\nMagic Packet broadcast dispatched across local Wi-Fi. PC will unsleep/wake up in 1-3 seconds!");
+  var k = getActiveSessionKey();
+  showCyberToast("☀️ WAKING DISPLAY & RESTORING BACKLIGHT...", "success");
+  fetch("/api/wake?key=" + encodeURIComponent(k), { keepalive: true })
+    .then(function() {
+      showCyberToast("☀️ DISPLAY AWAKENED & BACKLIGHT RESTORED", "success");
+      getStatus(true);
+    })
+    .catch(function() {
+      try {
+        var svcUrl = "http://" + window.location.hostname + ":8086/wake";
+        fetch(svcUrl, { mode: 'no-cors' }).catch(function(){});
+      } catch(e){}
+      fetch("/wake?key=" + encodeURIComponent(k), { keepalive: true }).catch(function(){});
+    });
 }
 
-// 🔓 Modern Cyberpunk Unlock Modal Functions
-function unlockPC(){
+// 🔓 Modern Cyberpunk 1-Tap Unlock Engine & PIN Manager
+function updateUnlockTileBadge() {
+  var sub = document.getElementById("bentoUnlockSub");
+  if (sub) {
+    var hasPin = !!localStorage.getItem("panic_win_pin");
+    sub.textContent = hasPin ? "1-Tap Armed ⚡" : "Set PIN ⚙️";
+    sub.style.color = hasPin ? "#00ff88" : "#f59e0b";
+  }
+}
+
+function unlockPC() {
   vibratePhone(50);
+  var savedPin = localStorage.getItem("panic_win_pin");
+  if (savedPin && savedPin.trim() !== "") {
+    _performUnlock(savedPin.trim(), 1);
+  } else {
+    // First time: prompt user to set PIN
+    openUnlockModal(false);
+  }
+}
+
+function _performUnlock(pin, attempt) {
+  var k = getActiveSessionKey();
+  if (attempt === 1) {
+    showCyberToast("🔓 1-TAP UNLOCKING PC...", "info");
+  } else {
+    showCyberToast("🔄 CONNECTING TO LOGIN SCREEN (RETRY " + attempt + "/3)...", "warning");
+  }
+
+  fetch("/unlock?key=" + encodeURIComponent(k) + "&pin=" + encodeURIComponent(pin), { keepalive: true })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d && d.status === "wrong_password") {
+        showCyberToast("❌ SAVED PIN REJECTED! TAP 'PIN ⚙️' TO UPDATE", "danger");
+        openUnlockModal(true);
+      } else if (d && d.status === "already_unlocked") {
+        showCyberToast("ℹ️ PC IS ALREADY UNLOCKED!", "info");
+        getStatus(true);
+      } else if (d && d.status === "unlocked") {
+        vibratePhone([50, 50, 100]);
+        showCyberToast("🎉 PC UNLOCKED SUCCESSFULLY!", "success");
+        getStatus(true);
+      } else {
+        showCyberToast("🔓 UNLOCK SIGNAL DISPATCHED!", "success");
+        getStatus(true);
+      }
+    })
+    .catch(function(err) {
+      // If PC network is still establishing right after reboot, auto-retry up to 3 times
+      if (attempt < 3) {
+        setTimeout(function() {
+          _performUnlock(pin, attempt + 1);
+        }, 1200);
+      } else {
+        showCyberToast("⚠️ PC NOT READY YET. WAITING 3s...", "warning");
+        setTimeout(function() { getStatus(true); }, 2000);
+      }
+    });
+}
+
+function openUnlockModal(force) {
+  vibratePhone(40);
   var modal = document.getElementById("unlockModal");
   var input = document.getElementById("pinInput");
-  if (modal) modal.style.display = "flex";
+  var clearWrap = document.getElementById("clearPinWrap");
+  var rememberCheck = document.getElementById("rememberPinCheck");
+  var savedPin = localStorage.getItem("panic_win_pin");
+
+  if (clearWrap) {
+    clearWrap.style.display = savedPin ? "block" : "none";
+  }
+  if (rememberCheck) {
+    rememberCheck.checked = true;
+  }
+  if (modal) {
+    modal.style.display = "flex";
+  }
   if (input) {
-    input.value = "";
-    setTimeout(function(){ input.focus(); }, 100);
+    input.value = savedPin || "";
+    setTimeout(function() { 
+      input.focus(); 
+      if (savedPin) input.select();
+    }, 100);
   }
 }
-function closeUnlockModal(){
-  document.getElementById("unlockModal").style.display = "none";
+
+function closeUnlockModal() {
+  var modal = document.getElementById("unlockModal");
+  if (modal) modal.style.display = "none";
 }
-function togglePassVisibility(){
+
+function togglePassVisibility() {
   var input = document.getElementById("pinInput");
-  input.type = (input.type === "password") ? "text" : "password";
-}
-function submitUnlock(){
-  var pin = document.getElementById("pinInput").value;
-  if(pin.trim() !== ""){
-    vibratePhone(50);
-    showCyberToast("🔓 VERIFYING CREDENTIALS...", "info");
-    fetch("/unlock?key=" + KEY + "&pin=" + encodeURIComponent(pin), { keepalive: true })
-      .then(function(r) { return r.json(); })
-      .then(function(d) {
-        if (d && d.status === "already_unlocked") {
-          showCyberToast("ℹ️ PC IS ALREADY UNLOCKED!", "info");
-        } else {
-          showCyberToast("🔓 UNLOCK SIGNAL DISPATCHED!", "success");
-        }
-        getStatus(true);
-      })
-      .catch(function(){
-        showCyberToast("🔓 UNLOCK SENT", "success");
-        getStatus(true);
-      });
-    closeUnlockModal();
+  if (input) {
+    input.type = (input.type === "password") ? "text" : "password";
   }
 }
+
+function clearSavedPin() {
+  localStorage.removeItem("panic_win_pin");
+  var input = document.getElementById("pinInput");
+  if (input) input.value = "";
+  var clearWrap = document.getElementById("clearPinWrap");
+  if (clearWrap) clearWrap.style.display = "none";
+  showCyberToast("🗑️ SAVED PIN CLEARED (1-Tap Disabled)", "info");
+  updateUnlockTileBadge();
+}
+
+function submitUnlock() {
+  var input = document.getElementById("pinInput");
+  var pin = input ? input.value : "";
+  if (!pin || pin.trim() === "") {
+    showCyberToast("⚠️ PLEASE ENTER A PIN OR PASSWORD", "warning");
+    return;
+  }
+  pin = pin.trim();
+
+  var remember = document.getElementById("rememberPinCheck");
+  if (remember && remember.checked) {
+    localStorage.setItem("panic_win_pin", pin);
+    showCyberToast("💾 PIN SAVED FOR 1-TAP UNLOCK!", "info");
+  } else {
+    localStorage.removeItem("panic_win_pin");
+  }
+  updateUnlockTileBadge();
+
+  vibratePhone(50);
+  showCyberToast("🔓 VERIFYING CREDENTIALS...", "info");
+  var k = getActiveSessionKey();
+  fetch("/unlock?key=" + encodeURIComponent(k) + "&pin=" + encodeURIComponent(pin), { keepalive: true })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d && d.status === "wrong_password") {
+        showCyberToast("❌ WRONG PIN OR PASSWORD!", "danger");
+      } else if (d && d.status === "already_unlocked") {
+        showCyberToast("ℹ️ PC IS ALREADY UNLOCKED!", "info");
+        getStatus(true);
+      } else {
+        showCyberToast("🔓 UNLOCK SIGNAL DISPATCHED!", "success");
+        getStatus(true);
+      }
+    })
+    .catch(function() {
+      showCyberToast("🔓 UNLOCK SENT", "success");
+      getStatus(true);
+    });
+  closeUnlockModal();
+}
+
+// Initialize 1-Tap status badge on start
+updateUnlockTileBadge();
 
 getStatus();
 setInterval(getStatus, 1500);
@@ -3490,9 +4379,10 @@ function sendTelemetry(event, isClick, overrideClickType) {
 }
 
 // 💻 HARDWARE-GRADE LAPTOP PRECISION TRACKPAD ENGINE (Kinetic Friction Physics)
-(function initTouchpadSensor() {
+function initTouchpadSensor() {
     var pad = document.getElementById("touchpadPad");
-    if (!pad) return;
+    if (!pad || pad._hasTouchpadListeners) return;
+    pad._hasTouchpadListeners = true;
 
     var lastX = 0, lastY = 0;
     var touchStartTime = 0;
@@ -3674,11 +4564,32 @@ function sendTelemetry(event, isClick, overrideClickType) {
             maxTouches = 0;
         }
     });
-})();
+}
+initTouchpadSensor();
+window.addEventListener("DOMContentLoaded", initTouchpadSensor);
 
 // -------------------------------------------------------------
 // 🧠 GEMINI 3.1 FLASH LIVE VOICE AI & CYBER SANDBOX TERMINAL
 // -------------------------------------------------------------
+
+// 🖥️ Snug 16:9 Dynamic Monitor HUD Sizing (Matches screen with subtle gap)
+function updateMonitorHudDimensions() {
+  var vp = document.querySelector('.bento-card-a .bento-viewport');
+  if (!vp) return;
+  var vpHeight = vp.clientHeight;
+  if (vpHeight <= 10) return;
+  
+  // Exact 16:9 stream width + 14px (6px padding each side + 1px border each side)
+  var cardW = Math.round(vpHeight * (16 / 9)) + 14;
+  document.documentElement.style.setProperty('--monitor-card-w', cardW + 'px');
+}
+window.updateMonitorHudDimensions = updateMonitorHudDimensions;
+window.addEventListener('resize', updateMonitorHudDimensions);
+window.addEventListener('DOMContentLoaded', function() {
+  setTimeout(updateMonitorHudDimensions, 50);
+  setTimeout(updateMonitorHudDimensions, 300);
+  setTimeout(updateMonitorHudDimensions, 1000);
+});
 
 
 // --- streamer.js ---
@@ -4830,6 +5741,77 @@ var currentAiStreamText = "";
 var currentUserStreamRow = null;
 var currentUserStreamText = "";
 
+function scrollGeminiToBottom(smooth) {
+  var scrollArea = document.getElementById("chatgptScrollContainer");
+  var logs = document.getElementById("geminiTerminalLogs");
+  if (!scrollArea && !logs) return;
+  var target = scrollArea || logs;
+  
+  if (smooth) {
+    try {
+      target.scrollTo({ top: target.scrollHeight + 1000, behavior: 'smooth' });
+    } catch(e) {
+      target.scrollTop = target.scrollHeight + 1000;
+    }
+  } else {
+    target.scrollTop = target.scrollHeight + 1000;
+  }
+  
+  if (logs && logs.lastElementChild) {
+    try {
+      logs.lastElementChild.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'end' });
+    } catch(e) {}
+  }
+}
+
+// 📱 Mobile Virtual Keyboard & Viewport Fix (Native ChatGPT / Gemini parity)
+(function initMobileKeyboardHandler() {
+  function adjustGeminiViewport() {
+    if (!document.body || !document.body.classList.contains('gemini-mode')) return;
+    if (window.visualViewport) {
+      var vv = window.visualViewport;
+      var appContainer = document.querySelector('#tab-gemini .cg-app-container');
+      if (appContainer) {
+        appContainer.style.height = vv.height + 'px';
+        appContainer.style.maxHeight = vv.height + 'px';
+      }
+    }
+    // Prevent the outer browser window / document from scrolling up
+    window.scrollTo(0, 0);
+    document.body.scrollTop = 0;
+    if (document.documentElement) document.documentElement.scrollTop = 0;
+    
+    // Smoothly ensure the chat stream shows the latest message
+    scrollGeminiToBottom(false);
+  }
+
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', adjustGeminiViewport);
+    window.visualViewport.addEventListener('scroll', function() {
+      if (document.body && document.body.classList.contains('gemini-mode')) {
+        window.scrollTo(0, 0);
+        document.body.scrollTop = 0;
+      }
+    });
+  }
+
+  window.addEventListener('DOMContentLoaded', function() {
+    var manualInput = document.getElementById('manualTerminalInput');
+    if (manualInput) {
+      manualInput.addEventListener('focus', function() {
+        setTimeout(function() {
+          adjustGeminiViewport();
+          scrollGeminiToBottom(true);
+        }, 80);
+        setTimeout(function() {
+          window.scrollTo(0, 0);
+          document.body.scrollTop = 0;
+        }, 260);
+      });
+    }
+  });
+})();
+
 function updateUserSpeechBubble(text) {
   var l = document.getElementById("geminiTerminalLogs");
   if (!l) return;
@@ -4853,12 +5835,7 @@ function updateUserSpeechBubble(text) {
   }
   currentAiStreamRow = null;
   currentAiStreamText = "";
-  var _scrollArea = document.getElementById("chatgptScrollContainer");
-  if (_scrollArea) {
-    _scrollArea.scrollTop = _scrollArea.scrollHeight;
-  } else if (l) {
-    l.scrollTop = l.scrollHeight;
-  }
+  scrollGeminiToBottom(true);
 }
 
 function appendGeminiLog(type, text, isStreamChunk) {
@@ -4950,12 +5927,7 @@ function appendGeminiLog(type, text, isStreamChunk) {
   }
   
   // Auto scroll smooth to bottom
-  var scrollArea = document.getElementById("chatgptScrollContainer");
-  if (scrollArea) {
-    scrollArea.scrollTop = scrollArea.scrollHeight;
-  } else {
-    l.scrollTop = l.scrollHeight;
-  }
+  scrollGeminiToBottom(true);
 }
 
 function formatToolOutput(raw) {
@@ -5135,8 +6107,7 @@ function showAiTypingIndicator() {
       '<div class="cg-typing-dots"><span></span><span></span><span></span></div>' +
     '</div>';
   l.appendChild(row);
-  var scrollArea = document.getElementById("chatgptScrollContainer");
-  if (scrollArea) scrollArea.scrollTop = scrollArea.scrollHeight;
+  scrollGeminiToBottom(true);
 }
 
 function removeAiTypingIndicator() {
@@ -7473,7 +8444,7 @@ function renderOptionFlyoutHTML(type) {
       '</div>' +
       '<div class="cg-flyout-row">' +
         '<span class="cg-flyout-row-label">🔒 Key Vault</span>' +
-        '<span class="cg-flyout-row-val" style="color:#0f172a">' + masked + '</span>' +
+        '<span class="cg-flyout-row-val">' + masked + '</span>' +
       '</div>' +
       '<div class="cg-flyout-pills" style="margin-top:2px;">' +
         '<span class="cg-flyout-pill">🎙️ Realtime Voice</span>' +
@@ -7537,7 +8508,7 @@ function renderOptionFlyoutHTML(type) {
       '</div>' +
       '<div class="cg-flyout-row">' +
         '<span class="cg-flyout-row-label">🌐 Host Node</span>' +
-        '<span class="cg-flyout-row-val" style="color:#0f172a">' + hostName + '</span>' +
+        '<span class="cg-flyout-row-val">' + hostName + '</span>' +
       '</div>' +
       '<div class="cg-flyout-pills" style="margin-top:2px;">' +
         '<span class="cg-flyout-pill">📷 1-Sec QR Scan</span>' +
@@ -7577,12 +8548,12 @@ function renderOptionFlyoutHTML(type) {
   } else if (type === "monitor") {
     return '<div class="cg-flyout-header">' +
       '<div class="cg-flyout-title-wrap">' +
-        '<div class="cg-flyout-icon-box" style="background:#f1f5f9; color:#0f172a; border:1px solid #cbd5e1;">' +
+        '<div class="cg-flyout-icon-box cg-icon-cyan">' +
           '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>' +
         '</div>' +
         '<span class="cg-flyout-title">PC Monitor</span>' +
       '</div>' +
-      '<span class="cg-flyout-badge" style="background:rgba(15,23,42,0.08); color:#0f172a; border:1px solid rgba(15,23,42,0.15);">Live Mirror</span>' +
+      '<span class="cg-flyout-badge" style="background:rgba(14,165,233,0.12); color:#0284c7; border:1px solid rgba(14,165,233,0.25);">Live Mirror</span>' +
     '</div>' +
     '<div class="cg-flyout-demo-card">' +
       '<div class="cg-flyout-row">' +
@@ -7805,7 +8776,8 @@ function checkOnboardingPairing() {
   }
   var savedEndpoint = localStorage.getItem('panic_pc_endpoint');
   var savedKey = localStorage.getItem('panic_key');
-  if (!savedEndpoint || savedEndpoint.indexOf('127.0.0.1') > -1 || !savedKey) {
+  var isLocal = (location.hostname === '127.0.0.1' || location.hostname === 'localhost');
+  if (!isLocal && (!savedEndpoint || savedEndpoint.indexOf('127.0.0.1') > -1 || !savedKey)) {
     var modal = document.getElementById('cyberPairingModal');
     if (modal) modal.style.display = 'flex';
   }
@@ -8105,11 +9077,59 @@ function applySystemBarColor(colorHex, isLightIcons) {
   }
 }
 
+// 🌓 GEMINI THEME CONTROLLER (Light Acrylic / Dark Obsidian Glass)
+function getGeminiTheme() {
+  return localStorage.getItem('gemini_theme') || 'light';
+}
+
+function setGeminiTheme(theme) {
+  var isDark = (theme === 'dark');
+  try {
+    localStorage.setItem('gemini_theme', theme);
+  } catch(e) {}
+
+  var body = document.body;
+  if (body) {
+    body.classList.toggle('gemini-dark', isDark);
+    if (body.classList.contains('gemini-mode')) {
+      body.style.background = isDark ? '#171717' : '#ffffff';
+      applySystemBarColor(isDark ? '#171717' : '#ffffff', isDark);
+    }
+  }
+  updateGeminiThemeUI(isDark);
+}
+
+function toggleGeminiTheme() {
+  var current = getGeminiTheme();
+  var next = (current === 'dark') ? 'light' : 'dark';
+  setGeminiTheme(next);
+}
+
+function updateGeminiThemeUI(isDark) {
+  var iconEl = document.getElementById('cgThemeToggleIcon');
+  var labelEl = document.getElementById('cgThemeToggleLabel');
+  if (labelEl) {
+    labelEl.textContent = isDark ? 'Light Theme' : 'Dark Theme';
+  }
+  if (iconEl) {
+    if (isDark) {
+      // Sun icon to switch back to Light
+      iconEl.innerHTML = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg>';
+    } else {
+      // Moon icon to switch to Dark
+      iconEl.innerHTML = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg>';
+    }
+  }
+}
+
 function switchTab(tabId) {
   document.querySelectorAll('.tab-content').forEach(function(el) {
     el.classList.remove('active');
   });
-  document.querySelectorAll('.cyber-nav-tab, .cyber-nav-btn').forEach(function(el) {
+  document.querySelectorAll('.cyber-nav-tab, .cyber-nav-btn, .bento-rail-tab, .bento-rail-btn').forEach(function(el) {
+    el.classList.remove('active');
+  });
+  document.querySelectorAll('.cg-menu-card-row').forEach(function(el) {
     el.classList.remove('active');
   });
   
@@ -8117,27 +9137,59 @@ function switchTab(tabId) {
   if (target) target.classList.add('active');
   var navBtn = document.getElementById('nav-' + tabId);
   if (navBtn) navBtn.classList.add('active');
+  var bentoNavBtn = document.getElementById('bento-nav-' + tabId);
+  if (bentoNavBtn) bentoNavBtn.classList.add('active');
+
+  var sideKey = (tabId === 'home') ? 'monitor' : tabId;
+  var activeSideBtn = document.querySelector('.cg-menu-card-row[data-preview="' + sideKey + '"]');
+  if (activeSideBtn) activeSideBtn.classList.add('active');
+  
+  if (tabId === 'home' && window.updateMonitorHudDimensions) {
+    setTimeout(window.updateMonitorHudDimensions, 50);
+  }
   
   var mainHeader = document.getElementById('mainTopHeader');
   var bottomNav = document.getElementById('mainBottomNav') || document.querySelector('.cyber-bottom-nav');
   var body = document.body;
   
   if (tabId === 'gemini') {
-    // 🎨 Gemini AI Tab: Pure White Background, Hide Cyber Header, Hide Bottom Nav
+    // 🎨 Gemini AI Tab: Honor Theme (Frosted Acrylic Light vs Obsidian Dark Glass)
     if (mainHeader) mainHeader.style.setProperty('display', 'none', 'important');
     if (bottomNav) bottomNav.style.setProperty('display', 'none', 'important');
+    var isDark = (getGeminiTheme() === 'dark');
     if (body) {
       body.classList.add('gemini-mode');
-      body.style.background = '#ffffff';
+      body.classList.toggle('gemini-dark', isDark);
+      body.style.background = isDark ? '#171717' : '#ffffff';
     }
-    applySystemBarColor('#ffffff', false); // White bar + dark icons
+    applySystemBarColor(isDark ? '#171717' : '#ffffff', isDark);
+    updateGeminiThemeUI(isDark);
+    window.scrollTo(0, 0);
+    if (document.documentElement) document.documentElement.scrollTop = 0;
+    if (document.body) document.body.scrollTop = 0;
+    if (window.visualViewport) {
+      var appContainer = document.querySelector('#tab-gemini .cg-app-container');
+      if (appContainer) {
+        appContainer.style.height = window.visualViewport.height + 'px';
+      }
+    }
+    setTimeout(function() {
+      if (typeof scrollGeminiToBottom === 'function') {
+        scrollGeminiToBottom(false);
+      }
+    }, 60);
   } else {
-    // 🖥️ Monitor / Other Tabs: Show Cyber Header & Bottom Nav, Restore Dark Background
-    if (mainHeader) mainHeader.style.setProperty('display', 'flex', 'important');
-    if (bottomNav) bottomNav.style.setProperty('display', 'flex', 'important');
+    // 🖥️ Monitor / Other Tabs: Show Cyber Header on Mobile, Restore Dark Background
+    if (window.innerWidth >= 860) {
+      if (mainHeader) mainHeader.style.setProperty('display', 'none', 'important');
+      if (bottomNav) bottomNav.style.setProperty('display', 'none', 'important');
+    } else {
+      if (mainHeader) mainHeader.style.setProperty('display', 'flex', 'important');
+      if (bottomNav) bottomNav.style.setProperty('display', 'flex', 'important');
+    }
     if (body) {
       body.classList.remove('gemini-mode');
-      body.style.background = '';
+      body.style.background = '#080b11';
     }
     applySystemBarColor('#07090e', true); // Dark bar + white icons
   }
@@ -8152,6 +9204,7 @@ function switchTab(tabId) {
 
 window.addEventListener('DOMContentLoaded', function() {
   try {
+    updateGeminiThemeUI(getGeminiTheme() === 'dark');
     checkOnboardingPairing();
     var savedTab = sessionStorage.getItem('panic_active_tab') || 'home';
     switchTab(savedTab);

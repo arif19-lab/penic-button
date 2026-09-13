@@ -407,7 +407,7 @@ static void SvcSend(SOCKET c, const std::string& body, const std::string& ctype)
 }
 
 static bool SvcPipeWrite(const char* data, DWORD len) {
-    for (int retry = 0; retry < 8; ++retry) {
+    for (int retry = 0; retry < 15; ++retry) {
         HANDLE hPipe = CreateFileA("\\\\.\\pipe\\PanicUnlockPipe", GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
         if (hPipe != INVALID_HANDLE_VALUE) {
             DWORD dwWritten = 0;
@@ -416,7 +416,7 @@ static bool SvcPipeWrite(const char* data, DWORD len) {
             return dwWritten == len;
         }
         if (WaitNamedPipeA("\\\\.\\pipe\\PanicUnlockPipe", 200)) continue;
-        Sleep(80);
+        Sleep(100);
     }
     return false;
 }
@@ -732,7 +732,11 @@ VOID WINAPI MasterServiceMain(DWORD dwArgc, LPTSTR *lpszArgv) {
     }
 
     // ⚡ Start 24/7 SYSTEM Remote Wake Gateway Thread (Listens on TCP 8086 & UDP 9)
+    SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_AWAYMODE_REQUIRED);
     CreateThread(NULL, 0, WakeGatewayThread, NULL, 0, NULL);
+
+    // 🚀 CRITICAL FIX: Immediately bind critical port 8085 at boot (zero delay!)
+    ServiceWatchdogTick();
 
     // Watchdog loop: maintains 24/7 SYSTEM service and keeps Agent active in user session
     while (WaitForSingleObject(g_SvcStopEvent, 3000) == WAIT_TIMEOUT) {
