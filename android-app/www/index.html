@@ -393,6 +393,12 @@
                   <span>RIGHT CLICK</span>
                 </button>
               </div>
+
+              <!-- 🔒 Dynamic Lock Screen Overlay for Trackpad -->
+              <div id="trackpadLockedOverlay" class="hud-locked-overlay" style="display:none;">
+                <div class="hud-locked-badge">🔒 PC IS LOCKED</div>
+                <div class="hud-locked-sub">Tap UNLOCK to enable trackpad</div>
+              </div>
             </div>
 
             <!-- CARD E: HIGH-TECH LIVE KEYBOARD HUD (Directly below System Controls) -->
@@ -433,6 +439,12 @@
                   <button class="bento-key-tile" onclick="sendSpecialKey('^a')">CTRL+A</button>
                   <button class="bento-key-tile kbd-altf4" onclick="sendSpecialKey('%{F4}')">ALT+F4</button>
                 </div>
+              </div>
+
+              <!-- 🔒 Dynamic Lock Screen Overlay for Keyboard -->
+              <div id="keyboardLockedOverlay" class="hud-locked-overlay" style="display:none;">
+                <div class="hud-locked-badge">🔒 PC IS LOCKED</div>
+                <div class="hud-locked-sub">Tap UNLOCK to enable keyboard</div>
               </div>
             </div>
           </div>

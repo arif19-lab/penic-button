@@ -322,6 +322,55 @@ void ReleaseDisplayWake() {
     SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_AWAYMODE_REQUIRED);
 }
 
+// 🛡️ SHIELD 2: ATOMIC IN-FLIGHT ACTION MUTEX & RECOVERY GUARD
+static std::mutex g_actionGuardMutex;
+static std::atomic<bool> g_isActionInProgress{false};
+static std::atomic<uint64_t> g_actionStartTimeMs{0};
+static std::string g_currentActionName = "";
+
+inline uint64_t GetCurrentActionTimeMs() {
+    return (uint64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count();
+}
+
+class ActionGuard {
+public:
+    bool acquired = false;
+    std::string actionName;
+
+    ActionGuard(const std::string& name) : actionName(name) {
+        std::lock_guard<std::mutex> lock(g_actionGuardMutex);
+        uint64_t now = GetCurrentActionTimeMs();
+        // Self-healing: if an action hung for > 15 seconds, force recovery
+        if (g_isActionInProgress.load()) {
+            uint64_t elapsed = now - g_actionStartTimeMs.load();
+            if (elapsed > 15000) {
+                AppLog(("[action-guard] Forcing recovery of timed-out action: " + g_currentActionName).c_str());
+                g_isActionInProgress.store(false);
+            }
+        }
+        if (!g_isActionInProgress.load()) {
+            g_isActionInProgress.store(true);
+            g_actionStartTimeMs.store(now);
+            g_currentActionName = name;
+            acquired = true;
+            AppLog(("[action-guard] Action locked & started: " + name).c_str());
+        } else {
+            AppLog(("[action-guard] BUSY: Rejected " + name + " because " + g_currentActionName + " is in progress").c_str());
+        }
+    }
+
+    ~ActionGuard() {
+        if (acquired) {
+            std::lock_guard<std::mutex> lock(g_actionGuardMutex);
+            g_isActionInProgress.store(false);
+            g_actionStartTimeMs.store(0);
+            g_currentActionName = "";
+            AppLog(("[action-guard] Action completed & released: " + actionName).c_str());
+        }
+    }
+};
+
 void ProcessClient(SOCKET clientSocket) {
     try {
         EnsureKeepAwakeThread();
@@ -1112,12 +1161,27 @@ showMode(currentMode);
 
             } else if (request.find("GET /lock") != std::string::npos) {
                 // 🔒 Lock the workstation remotely!
+                if (IsWorkstationLocked()) {
+                    responseBody = "{\"status\":\"already_locked\"}";
+                    std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n\r\n" + responseBody;
+                    send(clientSocket, res.c_str(), (int)res.size(), 0);
+                    closesocket(clientSocket);
+                    return;
+                }
+                ActionGuard act("lock");
+                if (!act.acquired) {
+                    responseBody = "{\"status\":\"busy\",\"message\":\"Another action is already in progress\"}";
+                    std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n\r\n" + responseBody;
+                    send(clientSocket, res.c_str(), (int)res.size(), 0);
+                    closesocket(clientSocket);
+                    return;
+                }
                 LockWorkStation();
                 responseBody = "{\"status\":\"locked\"}";
-            std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n\r\n" + responseBody;
-            send(clientSocket, res.c_str(), (int)res.size(), 0);
-            closesocket(clientSocket);
-            return;
+                std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n\r\n" + responseBody;
+                send(clientSocket, res.c_str(), (int)res.size(), 0);
+                closesocket(clientSocket);
+                return;
 
         } else if (request.find("GET /api/wake") != std::string::npos || request.find("GET /wake") != std::string::npos) {
             // ⚡ HACKER-LEVEL PROCESS-PERSISTENT DISPLAY REMOTE WAKE ENGINE
@@ -1142,6 +1206,21 @@ showMode(currentMode);
 
         } else if (request.find("GET /unlock") != std::string::npos) {
             // 🔓 Unlock Workstation Engine
+            if (!IsWorkstationLocked()) {
+                responseBody = "{\"status\":\"already_unlocked\"}";
+                std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n\r\n" + responseBody;
+                send(clientSocket, res.c_str(), (int)res.size(), 0);
+                closesocket(clientSocket);
+                return;
+            }
+            ActionGuard act("unlock");
+            if (!act.acquired) {
+                responseBody = "{\"status\":\"busy\",\"message\":\"Unlock or another action is already in progress\"}";
+                std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n\r\n" + responseBody;
+                send(clientSocket, res.c_str(), (int)res.size(), 0);
+                closesocket(clientSocket);
+                return;
+            }
             // 1. ⚡ Ensure power state is active
             EnsureKeepAwakeThread();
             g_keepDisplayAwake.store(true);
@@ -1285,6 +1364,15 @@ showMode(currentMode);
 
         } else if (request.find("GET /sleep") != std::string::npos) {
             // 💤 Stealth Sleep: Instant Lock + Pure Black Window + Zero Light Bleed + Monitor Power Down
+            ActionGuard act("sleep");
+            if (!act.acquired) {
+                responseBody = "{\"status\":\"busy\",\"message\":\"Another action is already in progress\"}";
+                std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n\r\n" + responseBody;
+                send(clientSocket, res.c_str(), (int)res.size(), 0);
+                shutdown(clientSocket, SD_SEND);
+                closesocket(clientSocket);
+                return;
+            }
             ULONGLONG now = GetTickCount64();
             if (g_isSleepActive.load() || (now - g_lastSleepTick.load() < 1200)) {
                 // Prevent duplicate sleep storms
@@ -1359,6 +1447,15 @@ showMode(currentMode);
 
         } else if (request.find("GET /restart") != std::string::npos) {
             // 🔄 Restart PC remotely!
+            ActionGuard act("restart");
+            if (!act.acquired) {
+                responseBody = "{\"status\":\"busy\",\"message\":\"Power action already in progress\"}";
+                std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n\r\n" + responseBody;
+                send(clientSocket, res.c_str(), (int)res.size(), 0);
+                shutdown(clientSocket, SD_SEND);
+                closesocket(clientSocket);
+                return;
+            }
             system("shutdown /r /t 5 /c \"Remote restart initiated.\"");
             responseBody = "{\"status\":\"restarting\"}";
             std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n\r\n" + responseBody;
@@ -1368,6 +1465,15 @@ showMode(currentMode);
             return;
         } else if (request.find("GET /shutdown") != std::string::npos) {
             // ⏻ Shutdown PC remotely!
+            ActionGuard act("shutdown");
+            if (!act.acquired) {
+                responseBody = "{\"status\":\"busy\",\"message\":\"Power action already in progress\"}";
+                std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n\r\n" + responseBody;
+                send(clientSocket, res.c_str(), (int)res.size(), 0);
+                shutdown(clientSocket, SD_SEND);
+                closesocket(clientSocket);
+                return;
+            }
             responseBody = "{\"status\":\"shutting_down\"}";
             std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n\r\n" + responseBody;
             send(clientSocket, res.c_str(), (int)res.size(), 0);
@@ -1378,6 +1484,23 @@ showMode(currentMode);
 
         } else if (request.find("GET /panic") != std::string::npos) {
             // ✅ /panic?key=imran2024 → Panic Mode Toggle!
+            if (IsWorkstationLocked()) {
+                responseBody = "{\"panic\":false,\"locked\":true,\"state\":1,\"message\":\"Workstation is locked\"}";
+                std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: " + std::to_string(responseBody.size()) + "\r\nConnection: close\r\n\r\n" + responseBody;
+                send(clientSocket, res.c_str(), (int)res.size(), 0);
+                shutdown(clientSocket, SD_SEND);
+                closesocket(clientSocket);
+                return;
+            }
+            ActionGuard act("panic");
+            if (!act.acquired) {
+                responseBody = "{\"status\":\"busy\",\"message\":\"Another action is already in progress\"}";
+                std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: " + std::to_string(responseBody.size()) + "\r\nConnection: close\r\n\r\n" + responseBody;
+                send(clientSocket, res.c_str(), (int)res.size(), 0);
+                shutdown(clientSocket, SD_SEND);
+                closesocket(clientSocket);
+                return;
+            }
             if (hMainWnd) {
                 SendMessage(hMainWnd, WM_COMMAND, IDM_TRIGGER, 0);
             } else {
@@ -1803,6 +1926,12 @@ showMode(currentMode);
 
         } else if (request.find("GET /api/mouse") != std::string::npos || request.find("GET /api/touch") != std::string::npos || request.find("GET /api/telemetry") != std::string::npos) {
             // 🎮 PARSEC HARDWARE TOUCH & MOUSE INJECTION
+            if (IsWorkstationLocked()) {
+                std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\nConnection: close\r\n\r\n{\"status\":\"blocked\",\"reason\":\"workstation_locked\"}";
+                send(clientSocket, res.c_str(), (int)res.size(), 0);
+                closesocket(clientSocket);
+                return;
+            }
             size_t px = request.find("px=");
             if (px == std::string::npos) px = request.find("x=");
             size_t py = request.find("py=");
@@ -1913,6 +2042,12 @@ showMode(currentMode);
 
         } else if (request.find("GET /api/mouse_rel") != std::string::npos) {
             // 🖱️ REAL-TIME LAPTOP TOUCHPAD SENSOR ENDPOINT (Relative Movement + Scroll + Clicks)
+            if (IsWorkstationLocked()) {
+                std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\nConnection: close\r\n\r\n{\"status\":\"blocked\",\"reason\":\"workstation_locked\"}";
+                send(clientSocket, res.c_str(), (int)res.size(), 0);
+                closesocket(clientSocket);
+                return;
+            }
             size_t pdx = request.find("dx=");
             size_t pdy = request.find("dy=");
             size_t pc  = request.find("click=");
@@ -1959,6 +2094,12 @@ showMode(currentMode);
 
         } else if (request.find("GET /api/type") != std::string::npos) {
             // ⌨️ Remote Keyboard Type Endpoint (Unicode + Key Codes)
+            if (IsWorkstationLocked()) {
+                std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\nConnection: close\r\n\r\n{\"status\":\"blocked\",\"reason\":\"workstation_locked\"}";
+                send(clientSocket, res.c_str(), (int)res.size(), 0);
+                closesocket(clientSocket);
+                return;
+            }
             size_t textPos = request.find("text=");
             if (textPos != std::string::npos) {
                 size_t spacePos = request.find(" ", textPos);

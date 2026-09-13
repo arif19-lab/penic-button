@@ -407,6 +407,12 @@ static const char* DASHBOARD_HTML = R"HTML(
                   <span>RIGHT CLICK</span>
                 </button>
               </div>
+
+              <!-- 🔒 Dynamic Lock Screen Overlay for Trackpad -->
+              <div id="trackpadLockedOverlay" class="hud-locked-overlay" style="display:none;">
+                <div class="hud-locked-badge">🔒 PC IS LOCKED</div>
+                <div class="hud-locked-sub">Tap UNLOCK to enable trackpad</div>
+              </div>
             </div>
 
             <!-- CARD E: HIGH-TECH LIVE KEYBOARD HUD (Directly below System Controls) -->
@@ -447,6 +453,12 @@ static const char* DASHBOARD_HTML = R"HTML(
                   <button class="bento-key-tile" onclick="sendSpecialKey('^a')">CTRL+A</button>
                   <button class="bento-key-tile kbd-altf4" onclick="sendSpecialKey('%{F4}')">ALT+F4</button>
                 </div>
+              </div>
+
+              <!-- 🔒 Dynamic Lock Screen Overlay for Keyboard -->
+              <div id="keyboardLockedOverlay" class="hud-locked-overlay" style="display:none;">
+                <div class="hud-locked-badge">🔒 PC IS LOCKED</div>
+                <div class="hud-locked-sub">Tap UNLOCK to enable keyboard</div>
               </div>
             </div>
           </div>
@@ -3823,6 +3835,11 @@ function updateTelemetryUI(d) {
   if (uptimeBadge && d.uptime) {
     uptimeBadge.textContent = "UP: " + d.uptime;
   }
+
+  // 🔒 Tri-Shield: Dynamic Lock State Machine UI sync
+  if (d && d.locked !== undefined) {
+    updateWorkstationLockState(d.locked);
+  }
 }
 
 function pollBentoTelemetry() {
@@ -3998,21 +4015,148 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').catch(function(){});
 }
 
-// ⚡ Sub-10ms Zero-Latency Control Actions with Real-time Cyber HUD Feedback
+/// ⚡ Sub-10ms Zero-Latency Control Actions with Real-time Cyber HUD Feedback
 function getActiveSessionKey() {
   var k = window.KEY || (typeof KEY !== "undefined" ? KEY : "") || localStorage.getItem("panic_key") || "imran2024";
   return k || "imran2024";
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// 🛡️ TRI-SHIELD: STATE MACHINE & CONCURRENCY DEBOUNCE ENGINE
+// ══════════════════════════════════════════════════════════════════════
+var _isActionPending = false;
+var _lastKnownLocked = false;
+var _actionPendingTimer = null;
+
+function _setActionPending(pending, targetSelector, loadingLabel) {
+  _isActionPending = !!pending;
+  if (_actionPendingTimer) {
+    clearTimeout(_actionPendingTimer);
+    _actionPendingTimer = null;
+  }
+  
+  var allActionTiles = document.querySelectorAll(".bento-c-tile, .ctrl-tile, .bento-panic-hero-bar");
+  
+  if (pending) {
+    // 4.5s self-healing safety fallback so UI is never stuck
+    _actionPendingTimer = setTimeout(function() {
+      _setActionPending(false);
+    }, 4500);
+
+    if (targetSelector) {
+      var targets = document.querySelectorAll(targetSelector);
+      targets.forEach(function(el) {
+        el.classList.add("action-in-flight");
+        if (loadingLabel) {
+          var sub = el.querySelector(".bento-c-sub, .ctrl-sub");
+          if (sub && !el.dataset.prevSub) {
+            el.dataset.prevSub = sub.textContent;
+            sub.textContent = loadingLabel;
+          }
+        }
+      });
+    }
+  } else {
+    allActionTiles.forEach(function(el) {
+      el.classList.remove("action-in-flight");
+      if (el.dataset.prevSub) {
+        var sub = el.querySelector(".bento-c-sub, .ctrl-sub");
+        if (sub) sub.textContent = el.dataset.prevSub;
+        delete el.dataset.prevSub;
+      }
+    });
+  }
+}
+
+function updateWorkstationLockState(isLocked) {
+  _lastKnownLocked = !!isLocked;
+  var lockTiles = document.querySelectorAll(".bento-c-lock, .ctrl-tile-lock");
+  var unlockTiles = document.querySelectorAll(".bento-c-unlock, .ctrl-tile-unlock");
+  var panicHero = document.querySelector(".bento-panic-hero-bar");
+  var tpOverlay = document.getElementById("trackpadLockedOverlay");
+  var kbdOverlay = document.getElementById("keyboardLockedOverlay");
+
+  if (_lastKnownLocked) {
+    // 🔒 STATE: WORKSTATION IS LOCKED
+    lockTiles.forEach(function(el) {
+      el.classList.add("btn-state-dimmed");
+      var sub = el.querySelector(".bento-c-sub, .ctrl-sub");
+      if (sub && !el.classList.contains("action-in-flight")) sub.textContent = "LOCKED 🔒";
+    });
+
+    unlockTiles.forEach(function(el) {
+      el.classList.add("hero-unlock-active");
+      el.classList.remove("btn-state-dimmed");
+      var sub = el.querySelector(".bento-c-sub, .ctrl-sub");
+      if (sub && !el.classList.contains("action-in-flight")) sub.textContent = "TAP TO UNLOCK ⚡";
+    });
+
+    if (panicHero) {
+      panicHero.classList.add("btn-state-dimmed");
+      panicHero.title = "LOCKED (PANIC SECURED)";
+    }
+
+    if (tpOverlay) {
+      tpOverlay.style.display = "flex";
+      requestAnimationFrame(function() { tpOverlay.classList.add("visible"); });
+    }
+    if (kbdOverlay) {
+      kbdOverlay.style.display = "flex";
+      requestAnimationFrame(function() { kbdOverlay.classList.add("visible"); });
+    }
+  } else {
+    // 🟢 STATE: WORKSTATION IS UNLOCKED
+    lockTiles.forEach(function(el) {
+      el.classList.remove("btn-state-dimmed");
+      var sub = el.querySelector(".bento-c-sub, .ctrl-sub");
+      if (sub && !el.classList.contains("action-in-flight")) sub.textContent = "Winlogon Lock";
+    });
+
+    unlockTiles.forEach(function(el) {
+      el.classList.remove("hero-unlock-active");
+      el.classList.add("btn-state-dimmed");
+      var hasPin = !!localStorage.getItem("panic_win_pin");
+      var sub = el.querySelector(".bento-c-sub, .ctrl-sub");
+      if (sub && !el.classList.contains("action-in-flight")) sub.textContent = hasPin ? "1-Tap Armed ⚡" : "Set PIN ⚙️";
+    });
+
+    if (panicHero) {
+      panicHero.classList.remove("btn-state-dimmed");
+      panicHero.title = "Activate Instant Emergency Defense Lockdown";
+    }
+
+    if (tpOverlay) {
+      tpOverlay.classList.remove("visible");
+      setTimeout(function() { if (!_lastKnownLocked && tpOverlay) tpOverlay.style.display = "none"; }, 350);
+    }
+    if (kbdOverlay) {
+      kbdOverlay.classList.remove("visible");
+      setTimeout(function() { if (!_lastKnownLocked && kbdOverlay) kbdOverlay.style.display = "none"; }, 350);
+    }
+  }
+}
+
 function triggerPanic(){
+  if (_isActionPending) {
+    showCyberToast("⏳ ACTION IN PROGRESS, PLEASE WAIT...", "warning");
+    return;
+  }
+  if (_lastKnownLocked) {
+    showCyberToast("🔒 PC IS LOCKED — PANIC SECURED", "info");
+    return;
+  }
+  _setActionPending(true, ".bento-panic-hero-bar", "ACTIVATING...");
   vibratePhone([100, 50, 100]);
   var k = getActiveSessionKey();
   showCyberToast("⚡ EMERGENCY PANIC TRIGGERED!", "danger");
   fetch("/panic?key=" + encodeURIComponent(k), { keepalive: true })
     .then(function(r){ return r.json(); })
     .then(function(d){
+      _setActionPending(false);
       getStatus(true);
-      if (d && (d.panic || d.state === 1)) {
+      if (d && d.status === "busy") {
+        showCyberToast("⚠️ " + (d.message || "SYSTEM BUSY"), "warning");
+      } else if (d && (d.panic || d.state === 1)) {
         showCyberToast("🚨 STATE 1: INTRUDER TRAP (LOCKED)", "danger");
       } else if (d && d.state === 2) {
         showCyberToast("🛡️ STATE 2: SAFE WORKING (DECOY DESKTOP)", "warning");
@@ -4021,45 +4165,92 @@ function triggerPanic(){
       }
     })
     .catch(function(){
+      _setActionPending(false);
       getStatus(true);
     });
 }
 
 function lockPC(){ 
+  if (_isActionPending) {
+    showCyberToast("⏳ ACTION IN PROGRESS, PLEASE WAIT...", "warning");
+    return;
+  }
+  if (_lastKnownLocked) {
+    showCyberToast("ℹ️ WORKSTATION IS ALREADY LOCKED", "info");
+    return;
+  }
+  _setActionPending(true, ".bento-c-lock, .ctrl-tile-lock", "LOCKING...");
   vibratePhone(50); 
   var k = getActiveSessionKey();
   showCyberToast("🔒 LOCK COMMAND SENT TO PC", "info");
   fetch("/lock?key=" + encodeURIComponent(k), { keepalive: true })
     .then(function(r){ return r.json(); })
-    .then(function(){
-      showCyberToast("🔒 WORKSTATION LOCKED SUCCESSFULLY!", "info");
+    .then(function(d){
+      _setActionPending(false);
+      if (d && d.status === "already_locked") {
+        showCyberToast("ℹ️ WORKSTATION IS ALREADY LOCKED", "info");
+      } else if (d && d.status === "busy") {
+        showCyberToast("⚠️ " + (d.message || "SYSTEM BUSY"), "warning");
+      } else {
+        showCyberToast("🔒 WORKSTATION LOCKED SUCCESSFULLY!", "info");
+      }
       getStatus(true);
     })
     .catch(function(){
+      _setActionPending(false);
       showCyberToast("🔒 LOCK SENT TO PC", "info");
       getStatus(true);
     });
 }
 
 function sleepPC(){ 
+  if (_isActionPending) {
+    showCyberToast("⏳ ACTION IN PROGRESS, PLEASE WAIT...", "warning");
+    return;
+  }
+  _setActionPending(true, ".bento-c-sleep, .ctrl-tile-sleep", "SLEEPING...");
   vibratePhone(50); 
   var k = getActiveSessionKey();
   showCyberToast("💤 PUTTING PC TO SLEEP...", "warning");
   fetch("/sleep?key=" + encodeURIComponent(k), { keepalive: true })
-    .then(function(){
-      showCyberToast("💤 PC ENTERED SLEEP MODE", "warning");
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      _setActionPending(false);
+      if (d && d.status === "busy") {
+        showCyberToast("⚠️ " + (d.message || "SYSTEM BUSY"), "warning");
+      } else {
+        showCyberToast("💤 PC ENTERED SLEEP MODE", "warning");
+      }
+      getStatus(true);
+    })
+    .catch(function(){
+      _setActionPending(false);
       getStatus(true);
     }); 
 }
 
 function restartPC(){ 
+  if (_isActionPending) {
+    showCyberToast("⏳ POWER ACTION IN PROGRESS...", "warning");
+    return;
+  }
+  _setActionPending(true, ".bento-c-restart, .ctrl-tile-restart", "REBOOTING...");
   vibratePhone(100); 
   var k = getActiveSessionKey();
   showCyberToast("🔄 RESTART INITIATED (5s)", "warning");
   fetch("/restart?key=" + encodeURIComponent(k), { keepalive: true })
-    .then(function(){
-      showCyberToast("🔄 PC REBOOTING... WILL AUTO-DETECT LOGIN SCREEN", "warning");
-      _startRebootWatchdog();
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      _setActionPending(false);
+      if (d && d.status === "busy") {
+        showCyberToast("⚠️ " + (d.message || "SYSTEM BUSY"), "warning");
+      } else {
+        showCyberToast("🔄 PC REBOOTING... WILL AUTO-DETECT LOGIN SCREEN", "warning");
+        _startRebootWatchdog();
+      }
+    })
+    .catch(function(){
+      _setActionPending(false);
     }); 
 }
 
@@ -4092,25 +4283,47 @@ function _startRebootWatchdog() {
 }
 
 function shutdownPC(){ 
+  if (_isActionPending) {
+    showCyberToast("⏳ POWER ACTION IN PROGRESS...", "warning");
+    return;
+  }
+  _setActionPending(true, ".bento-c-shutdown, .ctrl-tile-shutdown", "SHUTTING DOWN...");
   vibratePhone(100); 
   var k = getActiveSessionKey();
   showCyberToast("⏻ SHUTDOWN INITIATED (10s)", "danger");
   fetch("/shutdown?key=" + encodeURIComponent(k), { keepalive: true })
-    .then(function(){
-      showCyberToast("⏻ PC SHUTTING DOWN", "danger");
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      _setActionPending(false);
+      if (d && d.status === "busy") {
+        showCyberToast("⚠️ " + (d.message || "SYSTEM BUSY"), "warning");
+      } else {
+        showCyberToast("⏻ PC SHUTTING DOWN", "danger");
+      }
+    })
+    .catch(function(){
+      _setActionPending(false);
     }); 
 }
 
 function wakePC() {
+  if (_isActionPending) {
+    showCyberToast("⏳ ACTION IN PROGRESS, PLEASE WAIT...", "warning");
+    return;
+  }
+  _setActionPending(true, ".bento-c-wake, .ctrl-tile-wake", "WAKING...");
   vibratePhone([80, 40, 80]);
   var k = getActiveSessionKey();
   showCyberToast("☀️ WAKING DISPLAY & RESTORING BACKLIGHT...", "success");
   fetch("/api/wake?key=" + encodeURIComponent(k), { keepalive: true })
-    .then(function() {
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      _setActionPending(false);
       showCyberToast("☀️ DISPLAY AWAKENED & BACKLIGHT RESTORED", "success");
       getStatus(true);
     })
     .catch(function() {
+      _setActionPending(false);
       try {
         var svcUrl = "http://" + window.location.hostname + ":8086/wake";
         fetch(svcUrl, { mode: 'no-cors' }).catch(function(){});
@@ -4124,12 +4337,22 @@ function updateUnlockTileBadge() {
   var sub = document.getElementById("bentoUnlockSub");
   if (sub) {
     var hasPin = !!localStorage.getItem("panic_win_pin");
-    sub.textContent = hasPin ? "1-Tap Armed ⚡" : "Set PIN ⚙️";
-    sub.style.color = hasPin ? "#00ff88" : "#f59e0b";
+    if (!_lastKnownLocked) {
+      sub.textContent = hasPin ? "1-Tap Armed ⚡" : "Set PIN ⚙️";
+      sub.style.color = hasPin ? "#00ff88" : "#f59e0b";
+    }
   }
 }
 
 function unlockPC() {
+  if (_isActionPending) {
+    showCyberToast("⏳ UNLOCK IN PROGRESS, PLEASE WAIT...", "warning");
+    return;
+  }
+  if (!_lastKnownLocked) {
+    showCyberToast("ℹ️ WORKSTATION IS ALREADY UNLOCKED", "info");
+    return;
+  }
   vibratePhone(50);
   var savedPin = localStorage.getItem("panic_win_pin");
   if (savedPin && savedPin.trim() !== "") {
@@ -4142,6 +4365,7 @@ function unlockPC() {
 
 function _performUnlock(pin, attempt) {
   var k = getActiveSessionKey();
+  _setActionPending(true, ".bento-c-unlock, .ctrl-tile-unlock", "UNLOCKING...");
   if (attempt === 1) {
     showCyberToast("🔓 1-TAP UNLOCKING PC...", "info");
   } else {
@@ -4151,12 +4375,15 @@ function _performUnlock(pin, attempt) {
   fetch("/unlock?key=" + encodeURIComponent(k) + "&pin=" + encodeURIComponent(pin), { keepalive: true })
     .then(function(r) { return r.json(); })
     .then(function(d) {
+      _setActionPending(false);
       if (d && d.status === "wrong_password") {
         showCyberToast("❌ SAVED PIN REJECTED! TAP 'PIN ⚙️' TO UPDATE", "danger");
         openUnlockModal(true);
       } else if (d && d.status === "already_unlocked") {
         showCyberToast("ℹ️ PC IS ALREADY UNLOCKED!", "info");
         getStatus(true);
+      } else if (d && d.status === "busy") {
+        showCyberToast("⚠️ " + (d.message || "SYSTEM BUSY"), "warning");
       } else if (d && d.status === "unlocked") {
         vibratePhone([50, 50, 100]);
         showCyberToast("🎉 PC UNLOCKED SUCCESSFULLY!", "success");
@@ -4173,6 +4400,7 @@ function _performUnlock(pin, attempt) {
           _performUnlock(pin, attempt + 1);
         }, 1200);
       } else {
+        _setActionPending(false);
         showCyberToast("⚠️ PC NOT READY YET. WAITING 3s...", "warning");
         setTimeout(function() { getStatus(true); }, 2000);
       }
@@ -4308,6 +4536,11 @@ function setClickMode(mode) {
 var prevTypedValue = "";
 
 function handleLiveInput(e) {
+    if (_lastKnownLocked) {
+        showCyberToast("🔒 PC IS LOCKED — Tap UNLOCK first!", "info");
+        e.target.value = "";
+        return;
+    }
     var curVal = e.target.value;
     var diff = curVal.length - prevTypedValue.length;
 
@@ -4330,6 +4563,7 @@ function handleLiveInput(e) {
 }
 
 function handleLiveKeydown(e) {
+    if (_lastKnownLocked) return;
     if (e.key === "Enter") {
         vibratePhone(20);
         fetch("/api/type?key=" + KEY + "&text={ENTER}", { keepalive: true }).catch(function(){});
@@ -4348,7 +4582,9 @@ function clearLiveInput() {
     var input = document.getElementById("remoteTextInput");
     if (input) {
         vibratePhone(30);
-        fetch("/api/type?key=" + KEY + "&text={CLEAR}", { keepalive: true }).catch(function(){});
+        if (!_lastKnownLocked) {
+            fetch("/api/type?key=" + KEY + "&text={CLEAR}", { keepalive: true }).catch(function(){});
+        }
         input.value = "";
         prevTypedValue = "";
         input.focus();
@@ -4356,12 +4592,16 @@ function clearLiveInput() {
 }
 
 function sendSpecialKey(keyStr) {
+    if (_lastKnownLocked) {
+        showCyberToast("🔒 PC IS LOCKED — Tap UNLOCK first!", "info");
+        return;
+    }
     vibratePhone(30);
     fetch("/api/type?key=" + KEY + "&text=" + encodeURIComponent(keyStr), { keepalive: true });
 }
 
 function sendTelemetry(event, isClick, overrideClickType) {
-    if (!isStreaming) return;
+    if (!isStreaming || _lastKnownLocked) return;
     var img = event.target;
     var rect = img.getBoundingClientRect();
     
@@ -4418,6 +4658,10 @@ function initTouchpadSensor() {
     }
 
     window.sendMouseClick = function(btn) {
+        if (_lastKnownLocked) {
+            showCyberToast("🔒 PC IS LOCKED — Tap UNLOCK first!", "info");
+            return;
+        }
         vibratePhone(40);
         if (_canvasWS && _canvasWS.readyState === 1) {
             _canvasWS.send("M:0:0:0:" + btn);
