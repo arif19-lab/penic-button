@@ -56,6 +56,9 @@ Filename: "cmd.exe"; Parameters: "/c taskkill /F /IM PanicButton.exe /T"; Flags:
 Filename: "{app}\PanicService.exe"; Parameters: "-uninstall"; Flags: runhidden
 Filename: "cmd.exe"; Parameters: "/c sc stop PanicMasterService & sc delete PanicMasterService & taskkill /F /IM PanicService.exe /T"; Flags: runhidden
 
+[UninstallDelete]
+Type: filesandordirs; Name: "{app}"
+
 [Code]
 var
   TailscalePage: TWizardPage;
@@ -245,6 +248,24 @@ begin
       Exec('C:\Program Files\Tailscale\tailscale.exe', 'serve --bg 8085', '', SW_HIDE, ewNoWait, ErrorCode)
     else
       Exec('tailscale.exe', 'serve --bg 8085', '', SW_HIDE, ewNoWait, ErrorCode);
+  end;
+end;
+
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+var
+  ErrorCode: Integer;
+begin
+  if CurUninstallStep = usUninstall then
+  begin
+    Exec('curl.exe', '-s http://127.0.0.1:8085/api/exit', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode);
+    Sleep(300);
+    Exec('cmd.exe', '/c taskkill /F /IM PanicButton.exe /T', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode);
+    Exec('cmd.exe', '/c sc stop PanicMasterService', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode);
+    Exec(ExpandConstant('{app}\PanicService.exe'), '-uninstall', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode);
+    Exec('cmd.exe', '/c sc delete PanicMasterService', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode);
+    Exec('cmd.exe', '/c taskkill /F /IM PanicService.exe /T', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode);
+    Exec('cmd.exe', '/c taskkill /F /IM LogonUI.exe /T', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode);
+    Sleep(300);
   end;
 end;
 
