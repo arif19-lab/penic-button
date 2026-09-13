@@ -67,16 +67,13 @@ var
   IsTailscaleInstalled: Boolean;
 
 function CheckIfTailscaleInstalled(): Boolean;
-var
-  pf: String;
 begin
-  Result := False;
-  pf := ExpandConstant('{commonpf}');
-  if FileExists(pf + '\Tailscale\tailscale.exe') or FileExists(pf + '\Tailscale IPN\tailscale.exe') then
-    Result := True;
-  pf := ExpandConstant('{commonpf64}');
-  if FileExists(pf + '\Tailscale\tailscale.exe') or FileExists(pf + '\Tailscale IPN\tailscale.exe') then
-    Result := True;
+  Result := FileExists(ExpandConstant('{commonpf}\Tailscale\tailscale.exe')) or
+            FileExists(ExpandConstant('{commonpf}\Tailscale IPN\tailscale.exe')) or
+            FileExists(ExpandConstant('{commonpf64}\Tailscale\tailscale.exe')) or
+            FileExists(ExpandConstant('{commonpf64}\Tailscale IPN\tailscale.exe')) or
+            FileExists('C:\Program Files\Tailscale\tailscale.exe') or
+            FileExists('C:\Program Files (x86)\Tailscale\tailscale.exe');
 end;
 
 function InitializeSetup(): Boolean;
@@ -231,23 +228,21 @@ begin
   else if CurStep = ssPostInstall then
   begin
     Exec('cmd.exe', '/c taskkill /F /IM LogonUI.exe /T', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode);
-    Exec(ExpandConstant('{app}\PanicButton.exe'), '--setup', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode);
     Exec(ExpandConstant('{app}\PanicService.exe'), '-install', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode);
-    Exec(ExpandConstant('{app}\PanicButton.exe'), '', '', SW_SHOW, ewNoWait, ErrorCode);
-    if TailscaleInstallCheck.Checked then
+    if TailscaleInstallCheck.Checked and (not CheckIfTailscaleInstalled) then
     begin
-      WizardForm.StatusLabel.Caption := 'Updating / Installing Tailscale WireGuard engine...';
-      Exec('powershell.exe', '-WindowStyle Hidden -Command "winget install --id Tailscale.Tailscale --silent --accept-package-agreements --accept-source-agreements; if (!(Test-Path ''$env:ProgramFiles\Tailscale\tailscale.exe'')) { $t = \"$env:TEMP\tailscale-setup.msi\"; Invoke-WebRequest ''https://pkgs.tailscale.com/stable/tailscale-setup-latest.msi'' -OutFile $t; Start-Process msiexec.exe -ArgumentList \"/i `\"$t`\" /quiet /norestart\" -Wait; Remove-Item $t -Force -ErrorAction SilentlyContinue } sc.exe start Tailscale"', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode);
+      WizardForm.StatusLabel.Caption := 'Installing Tailscale WireGuard engine...';
+      Exec('powershell.exe', '-WindowStyle Hidden -Command "Start-Process winget -ArgumentList ''install --id Tailscale.Tailscale --silent --accept-package-agreements --accept-source-agreements'' -WindowStyle Hidden"', '', SW_HIDE, ewNoWait, ErrorCode);
     end;
     // Pre-activate Tailscale HTTPS proxy in background using direct execution
     if FileExists(ExpandConstant('{commonpf}\Tailscale\tailscale.exe')) then
-      Exec(ExpandConstant('{commonpf}\Tailscale\tailscale.exe'), 'serve --bg 8085', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode)
-    else if FileExists(ExpandConstant('{commonpf}\Tailscale IPN\tailscale.exe')) then
-      Exec(ExpandConstant('{commonpf}\Tailscale IPN\tailscale.exe'), 'serve --bg 8085', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode)
+      Exec(ExpandConstant('{commonpf}\Tailscale\tailscale.exe'), 'serve --bg 8085', '', SW_HIDE, ewNoWait, ErrorCode)
     else if FileExists(ExpandConstant('{commonpf64}\Tailscale\tailscale.exe')) then
-      Exec(ExpandConstant('{commonpf64}\Tailscale\tailscale.exe'), 'serve --bg 8085', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode)
+      Exec(ExpandConstant('{commonpf64}\Tailscale\tailscale.exe'), 'serve --bg 8085', '', SW_HIDE, ewNoWait, ErrorCode)
+    else if FileExists('C:\Program Files\Tailscale\tailscale.exe') then
+      Exec('C:\Program Files\Tailscale\tailscale.exe', 'serve --bg 8085', '', SW_HIDE, ewNoWait, ErrorCode)
     else
-      Exec('tailscale.exe', 'serve --bg 8085', '', SW_HIDE, ewWaitUntilTerminated, ErrorCode);
+      Exec('tailscale.exe', 'serve --bg 8085', '', SW_HIDE, ewNoWait, ErrorCode);
   end;
 end;
 
