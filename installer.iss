@@ -52,7 +52,9 @@ Root: HKLM64; Subkey: "SOFTWARE\Classes\CLSID\{{A735A943-BB41-45A5-A444-2CD08FAF
 Root: HKLM64; Subkey: "SOFTWARE\Policies\Microsoft\Windows\Personalization"; ValueName: "NoLockScreen"; ValueType: dword; ValueData: "1"; Flags: uninsdeletevalue
 
 [UninstallRun]
+Filename: "cmd.exe"; Parameters: "/c taskkill /F /IM PanicButton.exe /T"; Flags: runhidden
 Filename: "{app}\PanicService.exe"; Parameters: "-uninstall"; Flags: runhidden
+Filename: "cmd.exe"; Parameters: "/c sc stop PanicMasterService & sc delete PanicMasterService & taskkill /F /IM PanicService.exe /T"; Flags: runhidden
 
 [Code]
 var
