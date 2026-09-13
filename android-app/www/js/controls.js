@@ -1254,9 +1254,9 @@ function updateTelemetryUI(d) {
     uptimeBadge.textContent = "UP: " + d.uptime;
   }
 
-  // 🔒 Tri-Shield: Dynamic Lock State Machine UI sync
+  // 🔒 Tri-Shield: Dynamic Lock & Sleep State Machine UI sync
   if (d && d.locked !== undefined) {
-    updateWorkstationLockState(d.locked);
+    updateWorkstationLockState(d.locked, d.sleeping);
   }
 }
 
@@ -1486,16 +1486,22 @@ function _setActionPending(pending, targetSelector, loadingLabel) {
   }
 }
 
-function updateWorkstationLockState(isLocked) {
+var _lastKnownSleeping = false;
+
+function updateWorkstationLockState(isLocked, isSleeping) {
   _lastKnownLocked = !!isLocked;
+  if (isSleeping !== undefined) _lastKnownSleeping = !!isSleeping;
+
   var lockTiles = document.querySelectorAll(".bento-c-lock, .ctrl-tile-lock");
   var unlockTiles = document.querySelectorAll(".bento-c-unlock, .ctrl-tile-unlock");
+  var wakeTiles = document.querySelectorAll(".bento-c-wake, .ctrl-tile-wake");
+  var sleepTiles = document.querySelectorAll(".bento-c-sleep, .ctrl-tile-sleep");
   var panicHero = document.querySelector(".bento-panic-hero-bar");
   var tpOverlay = document.getElementById("trackpadLockedOverlay");
   var kbdOverlay = document.getElementById("keyboardLockedOverlay");
 
+  // 1. 🔒 ACCESS PAIR: LOCK ⟷ UNLOCK
   if (_lastKnownLocked) {
-    // 🔒 STATE: WORKSTATION IS LOCKED
     lockTiles.forEach(function(el) {
       el.classList.add("btn-state-dimmed");
       var sub = el.querySelector(".bento-c-sub, .ctrl-sub");
@@ -1523,7 +1529,6 @@ function updateWorkstationLockState(isLocked) {
       requestAnimationFrame(function() { kbdOverlay.classList.add("visible"); });
     }
   } else {
-    // 🟢 STATE: WORKSTATION IS UNLOCKED
     lockTiles.forEach(function(el) {
       el.classList.remove("btn-state-dimmed");
       var sub = el.querySelector(".bento-c-sub, .ctrl-sub");
@@ -1551,6 +1556,35 @@ function updateWorkstationLockState(isLocked) {
       kbdOverlay.classList.remove("visible");
       setTimeout(function() { if (!_lastKnownLocked && kbdOverlay) kbdOverlay.style.display = "none"; }, 350);
     }
+  }
+
+  // 2. ⚡ DISPLAY POWER PAIR: SLEEP ⟷ WAKE UP
+  // When locked or sleeping: WAKE UP is active, SLEEP is dimmed ("SLEEPING 💤")
+  // When unlocked & active: SLEEP is active, WAKE UP is dimmed ("AWAKE ☀️")
+  if (_lastKnownLocked || _lastKnownSleeping) {
+    wakeTiles.forEach(function(el) {
+      el.classList.remove("btn-state-dimmed");
+      var sub = el.querySelector(".bento-c-sub, .ctrl-sub");
+      if (sub && !el.classList.contains("action-in-flight")) sub.textContent = "WAKE SCREEN ☀️";
+    });
+
+    sleepTiles.forEach(function(el) {
+      el.classList.add("btn-state-dimmed");
+      var sub = el.querySelector(".bento-c-sub, .ctrl-sub");
+      if (sub && !el.classList.contains("action-in-flight")) sub.textContent = "SLEEPING 💤";
+    });
+  } else {
+    wakeTiles.forEach(function(el) {
+      el.classList.add("btn-state-dimmed");
+      var sub = el.querySelector(".bento-c-sub, .ctrl-sub");
+      if (sub && !el.classList.contains("action-in-flight")) sub.textContent = "AWAKE ☀️";
+    });
+
+    sleepTiles.forEach(function(el) {
+      el.classList.remove("btn-state-dimmed");
+      var sub = el.querySelector(".bento-c-sub, .ctrl-sub");
+      if (sub && !el.classList.contains("action-in-flight")) sub.textContent = "Low Power Idle";
+    });
   }
 }
 
@@ -1626,7 +1660,12 @@ function sleepPC(){
     showCyberToast("⏳ ACTION IN PROGRESS, PLEASE WAIT...", "warning");
     return;
   }
+  if (_lastKnownSleeping) {
+    showCyberToast("💤 PC IS ALREADY IN SLEEP MODE", "info");
+    return;
+  }
   _setActionPending(true, ".bento-c-sleep, .ctrl-tile-sleep", "SLEEPING...");
+  _lastKnownSleeping = true;
   vibratePhone(50); 
   var k = getActiveSessionKey();
   showCyberToast("💤 PUTTING PC TO SLEEP...", "warning");
@@ -1729,6 +1768,10 @@ function wakePC() {
     showCyberToast("⏳ ACTION IN PROGRESS, PLEASE WAIT...", "warning");
     return;
   }
+  if (!_lastKnownLocked && !_lastKnownSleeping) {
+    showCyberToast("☀️ DISPLAY IS ALREADY AWAKE & ACTIVE", "info");
+    return;
+  }
   _setActionPending(true, ".bento-c-wake, .ctrl-tile-wake", "WAKING...");
   vibratePhone([80, 40, 80]);
   var k = getActiveSessionKey();
@@ -1737,11 +1780,17 @@ function wakePC() {
     .then(function(r) { return r.json(); })
     .then(function(d) {
       _setActionPending(false);
-      showCyberToast("☀️ DISPLAY AWAKENED & BACKLIGHT RESTORED", "success");
+      _lastKnownSleeping = false;
+      if (d && d.status === "already_awake") {
+        showCyberToast("☀️ DISPLAY IS ALREADY AWAKE", "info");
+      } else {
+        showCyberToast("☀️ DISPLAY AWAKENED & BACKLIGHT RESTORED", "success");
+      }
       getStatus(true);
     })
     .catch(function() {
       _setActionPending(false);
+      _lastKnownSleeping = false;
       try {
         var svcUrl = "http://" + window.location.hostname + ":8086/wake";
         fetch(svcUrl, { mode: 'no-cors' }).catch(function(){});

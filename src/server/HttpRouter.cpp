@@ -1185,6 +1185,13 @@ showMode(currentMode);
 
         } else if (request.find("GET /api/wake") != std::string::npos || request.find("GET /wake") != std::string::npos) {
             // ⚡ HACKER-LEVEL PROCESS-PERSISTENT DISPLAY REMOTE WAKE ENGINE
+            if (!IsWorkstationLocked() && !g_isSleepActive.load()) {
+                responseBody = "{\"status\":\"already_awake\",\"message\":\"Display is already awake\"}";
+                std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n\r\n" + responseBody;
+                send(clientSocket, res.c_str(), (int)res.size(), 0);
+                closesocket(clientSocket);
+                return;
+            }
             ULONGLONG now = GetTickCount64();
             if (now - g_lastWakeTick.load() < 800) {
                 responseBody = "{\"status\":\"woken\",\"cooldown\":true}";
@@ -1604,6 +1611,7 @@ showMode(currentMode);
 
             responseBody = "{\"panic\":" + std::string(isPanicMode ? "true" : "false") + 
                            ",\"locked\":" + std::string(isLocked ? "true" : "false") + 
+                           ",\"sleeping\":" + std::string(g_isSleepActive.load() ? "true" : "false") + 
                            ",\"state\":" + std::to_string(panicState) + 
                            ",\"lan_ip\":\"" + lanIp + "\"" + 
                            ",\"mac\":\"" + mac + "\"" + 
