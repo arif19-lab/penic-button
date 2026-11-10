@@ -1,7 +1,8 @@
 @echo off
 schtasks /End /TN "PanicButton_Autostart" >nul 2>&1
-taskkill /F /IM PanicButton.exe 2>nul
-taskkill /F /IM PanicService.exe 2>nul
+taskkill /F /IM PanicButton.exe >nul 2>&1
+taskkill /F /IM PanicService.exe >nul 2>&1
+ping 127.0.0.1 -n 3 >nul
 echo ===================================================
 echo   Compiling PanicButton (Commercial Modular Build)
 echo ===================================================
@@ -44,8 +45,9 @@ echo   [AUTO-DEPLOY] Deploying Binaries to System...
 echo ===================================================
 
 schtasks /End /TN "PanicButton_Autostart" >nul 2>&1
-taskkill /F /IM PanicButton.exe 2>nul
-taskkill /F /IM PanicService.exe 2>nul
+taskkill /F /IM PanicButton.exe >nul 2>&1
+taskkill /F /IM PanicService.exe >nul 2>&1
+ping 127.0.0.1 -n 3 >nul
 ping 127.0.0.1 -n 2 >nul
 
 if not exist "C:\ProgramData\PanicButton" mkdir "C:\ProgramData\PanicButton"

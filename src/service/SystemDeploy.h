@@ -5,3 +5,4 @@ void AddToStartup();
 void EnableKernelWakeOnLAN();
 void AutoInstallProvider();
 void EnsureTailscaleInstalled();
+void EnsureGeminiProxyRunning();

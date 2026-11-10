@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "memory": {
+      "command": "node",
+      "args": [
+        "./node_modules/@modelcontextprotocol/server-memory/dist/index.js"
+      ]
+    },
+    "sequential_thinking": {
+      "command": "node",
+      "args": [
+        "./node_modules/@modelcontextprotocol/server-sequential-thinking/dist/index.js"
+      ]
+    }
+  }
+}

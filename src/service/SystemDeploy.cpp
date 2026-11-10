@@ -230,3 +230,82 @@ void EnsureTailscaleInstalled() {
     }
 }
 
+// 🎙️ Automatically start Node.js Gemini Live proxy on port 3001 if not already running
+void EnsureGeminiProxyRunning() {
+    // 1. Quick TCP probe: is port 3001 already alive on 127.0.0.1?
+    SOCKET s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (s != INVALID_SOCKET) {
+        sockaddr_in addr{};
+        addr.sin_family = AF_INET;
+        addr.sin_port = htons(3001);
+        addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+        if (connect(s, (sockaddr*)&addr, sizeof(addr)) == 0) {
+            closesocket(s);
+            return; // Already running and healthy!
+        }
+        closesocket(s);
+    }
+
+    // 2. Locate gemini-proxy folder
+    char szPathToExe[MAX_PATH];
+    GetModuleFileNameA(NULL, szPathToExe, MAX_PATH);
+    std::string exeDir = szPathToExe;
+    size_t pos = exeDir.find_last_of("\\/");
+    if (pos != std::string::npos) exeDir = exeDir.substr(0, pos);
+
+    std::vector<std::string> candidateDirs = {
+        exeDir + "\\gemini-proxy",
+        GetProgramDataFolder() + "\\gemini-proxy",
+        "c:\\Users\\Imran\\panic-button\\gemini-proxy"
+    };
+
+    std::string targetDir = "";
+    for (const auto& d : candidateDirs) {
+        std::string srv = d + "\\server.js";
+        if (GetFileAttributesA(srv.c_str()) != INVALID_FILE_ATTRIBUTES) {
+            targetDir = d;
+            break;
+        }
+    }
+
+    if (targetDir.empty()) {
+        AppLog("[gemini-proxy] server.js not found in candidate paths");
+        return;
+    }
+
+    // 3. Launch node server.js silently as a detached background process.
+    //    Use "node.exe" directly (not via cmd.exe /c) so that CREATE_NO_WINDOW
+    //    is inherited by the actual process and no console window appears.
+    STARTUPINFOA si = { sizeof(si) };
+    si.dwFlags     = STARTF_USESHOWWINDOW;
+    si.wShowWindow = SW_HIDE;
+    PROCESS_INFORMATION pi = { 0 };
+
+    // Resolve full path to node.exe via PATH or standard paths
+    char nodeExePath[MAX_PATH] = "node.exe";
+    char nodeResolved[MAX_PATH] = {};
+    char* filePart = nullptr;
+    if (SearchPathA(NULL, "node", ".exe", MAX_PATH, nodeResolved, &filePart) > 0) {
+        strncpy_s(nodeExePath, nodeResolved, MAX_PATH - 1);
+    } else if (GetFileAttributesA("C:\\Program Files\\nodejs\\node.exe") != INVALID_FILE_ATTRIBUTES) {
+        strncpy_s(nodeExePath, "C:\\Program Files\\nodejs\\node.exe", MAX_PATH - 1);
+    } else if (GetFileAttributesA("C:\\Program Files (x86)\\nodejs\\node.exe") != INVALID_FILE_ATTRIBUTES) {
+        strncpy_s(nodeExePath, "C:\\Program Files (x86)\\nodejs\\node.exe", MAX_PATH - 1);
+    }
+
+    // Build command line: node.exe server.js  (no cmd.exe wrapper)
+    std::string cmd = std::string("\"") + nodeExePath + "\" server.js";
+    std::vector<char> cmdBuf(cmd.begin(), cmd.end());
+    cmdBuf.push_back('\0');
+
+    if (CreateProcessA(nodeExePath, cmdBuf.data(), NULL, NULL, FALSE,
+                       CREATE_NO_WINDOW | DETACHED_PROCESS,
+                       NULL, targetDir.c_str(), &si, &pi)) {
+        CloseHandle(pi.hProcess);
+        CloseHandle(pi.hThread);
+        AppLog(("[gemini-proxy] Launched background node server.js in " + targetDir).c_str());
+    } else {
+        AppLog("[gemini-proxy] Failed to launch node server.js");
+    }
+}
+

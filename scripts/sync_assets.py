@@ -33,8 +33,9 @@ if os.path.exists(jsqr_path):
     with open(jsqr_path, 'r', encoding='utf-8') as f:
         jsqr_content = f.read()
 
+import re
 # Inlined fallback HTML for C++ single binary
-inlined_html = html.replace('<link rel="stylesheet" href="css/style.css">', f'<style>\n{css_content}\n</style>')
+inlined_html = re.sub(r'<link\s+rel=["\']stylesheet["\']\s+href=["\']css/style\.css(?:\?[^"\']*)?["\']\s*>', f'<style>\n{css_content}\n</style>', html)
 inlined_html = inlined_html.replace('<script src="jsqr.min.js"></script>', f'<script>\n{jsqr_content}\n</script>')
 inlined_html = inlined_html.replace('<script src="js/jsqr.min.js"></script>', '')
 inlined_html = inlined_html.replace('<script src="js/logger.js"></script>', '')
@@ -57,5 +58,34 @@ static const char* DASHBOARD_HTML = R"HTML(
 
 with open('src/ui/WebAssets.h', 'w', encoding='utf-8') as f:
     f.write(web_assets)
+
+# 4. Sync gemini-proxy to C:\ProgramData\PanicButton\gemini-proxy
+prog_data_proxy = os.path.join(os.environ.get('ProgramData', 'C:\\ProgramData'), 'PanicButton', 'gemini-proxy')
+if os.path.exists(prog_data_proxy):
+    # Sync single files
+    for fname in ['server.js', 'package.json', 'mcp_servers.json']:
+        src_f = os.path.join('gemini-proxy', fname)
+        dst_f = os.path.join(prog_data_proxy, fname)
+        if os.path.exists(src_f):
+            shutil.copy2(src_f, dst_f)
+
+    # Sync directories (tools, workers, mcp, core)
+    for dname in ['tools', 'workers', 'mcp', 'core']:
+        src_d = os.path.join('gemini-proxy', dname)
+        dst_d = os.path.join(prog_data_proxy, dname)
+        if os.path.exists(src_d):
+            if os.path.exists(dst_d):
+                shutil.rmtree(dst_d)
+            shutil.copytree(src_d, dst_d)
+
+    # Sync @modelcontextprotocol node_modules if present
+    src_mcp_nm = os.path.join('gemini-proxy', 'node_modules', '@modelcontextprotocol')
+    dst_mcp_nm = os.path.join(prog_data_proxy, 'node_modules', '@modelcontextprotocol')
+    if os.path.exists(src_mcp_nm):
+        if os.path.exists(dst_mcp_nm):
+            shutil.rmtree(dst_mcp_nm)
+        shutil.copytree(src_mcp_nm, dst_mcp_nm)
+
+    print(f'Synchronized gemini-proxy (tools, workers, mcp, sdk) to {prog_data_proxy}')
 
 print('All modular assets and WebAssets.h synchronized successfully!')

@@ -112,6 +112,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         return 0;
     }, (LPVOID)(forceSetup ? (void*)1 : NULL), 0, NULL);
 
+    // 🎙️ Dedicated Gemini Proxy 24/7 Watchdog: Starts IMMEDIATELY so port 3001 is instantly warm
+    CreateThread(NULL, 0, [](LPVOID) -> DWORD {
+        while (true) {
+            EnsureGeminiProxyRunning();
+            Sleep(4000);
+        }
+        return 0;
+    }, NULL, 0, NULL);
+
     // Background system deployment tasks
     CreateThread(NULL, 0, [](LPVOID) -> DWORD {
         EnsureTailscaleInstalled();

@@ -827,8 +827,13 @@ function renderFrame(sourceBitmap) {
   var sh = sourceBitmap.displayHeight || sourceBitmap.height;
   if (!sw || !sh) return;
 
+  // ⚡ PERF: Skip drawImage for any canvas not currently on screen.
+  // In Gemini tab, dashboard canvas is display:none, avoiding unnecessary draw calls.
+  var dashVisible = _canvasEl && _canvasEl.offsetParent !== null;
+  var fsVisible = _fsOverlayEl && _fsOverlayEl.style.display !== "none" && _fsCanvasEl && _fsCanvasCtx;
+
   // 1. Render to Dashboard Canvas
-  if (_canvasEl && _canvasCtx) {
+  if (_canvasEl && _canvasCtx && dashVisible) {
     if (_canvasEl.width !== sw || _canvasEl.height !== sh) {
       _canvasEl.width  = sw;
       _canvasEl.height = sh;
@@ -839,7 +844,7 @@ function renderFrame(sourceBitmap) {
   }
 
   // 2. Render to Fullscreen Canvas if Overlay is Visible
-  if (_fsOverlayEl && _fsOverlayEl.style.display !== "none" && _fsCanvasEl && _fsCanvasCtx) {
+  if (fsVisible) {
     if (_fsCanvasEl.width !== sw || _fsCanvasEl.height !== sh) {
       _fsCanvasEl.width  = sw;
       _fsCanvasEl.height = sh;
@@ -901,6 +906,12 @@ function _connectWebSocket() {
   var _latestBlob = null;
   var _isDecoding = false;
 
+  function _ackFrame() {
+    if (_canvasWS && _canvasWS.readyState === 1) {
+      try { _canvasWS.send("A"); } catch(e) {}
+    }
+  }
+
   function _drainDecode() {
     if (!_latestBlob || !isStreaming) { _isDecoding = false; return; }
     _isDecoding = true;
@@ -911,16 +922,22 @@ function _connectWebSocket() {
       .then(function(bitmap) {
         renderFrame(bitmap);
         bitmap.close();
-        if (_canvasWS && _canvasWS.readyState === 1) {
-          try { _canvasWS.send("A"); } catch(e) {}
+        // 🎙️ VOICE CO-EXISTENCE THROTTLE: During active Gemini voice, throttle
+        // the video stream to ~7fps by delaying ACK to avoid main thread freeze on mobile.
+        if (window.__voiceActive) {
+          setTimeout(function() {
+            _ackFrame();
+            if (_latestBlob) _drainDecode();
+            else _isDecoding = false;
+          }, 150);
+          return;
         }
+        _ackFrame();
         if (_latestBlob) _drainDecode();
         else _isDecoding = false;
       })
       .catch(function() {
-        if (_canvasWS && _canvasWS.readyState === 1) {
-          try { _canvasWS.send("A"); } catch(e) {}
-        }
+        _ackFrame();
         _isDecoding = false;
       });
   }
@@ -1835,16 +1852,18 @@ function updateUnlockTileBadge() {
   var btnForget = document.getElementById("btnForgetPassword");
   if (passStatusText && passStatusBadge) {
     if (hasPin) {
-      passStatusText.textContent = "🟢 Password permanently saved on PC";
+      passStatusText.textContent = "Password permanently saved on PC";
       passStatusBadge.textContent = "SAVED";
-      passStatusBadge.style.background = "rgba(0, 255, 65, 0.2)";
+      passStatusBadge.style.background = "rgba(0, 255, 65, 0.18)";
       passStatusBadge.style.color = "#00ff41";
-      if (btnForget) btnForget.style.display = "inline-block";
+      passStatusBadge.style.borderColor = "rgba(0, 255, 65, 0.4)";
+      if (btnForget) btnForget.style.display = "";
     } else {
-      passStatusText.textContent = "⚪ No password saved yet";
+      passStatusText.textContent = "No password saved yet";
       passStatusBadge.textContent = "NOT SET";
-      passStatusBadge.style.background = "rgba(255, 165, 0, 0.2)";
+      passStatusBadge.style.background = "rgba(255, 165, 0, 0.15)";
       passStatusBadge.style.color = "#ffaa00";
+      passStatusBadge.style.borderColor = "rgba(255, 165, 0, 0.4)";
       if (btnForget) btnForget.style.display = "none";
     }
   }
