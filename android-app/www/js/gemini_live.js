@@ -6203,43 +6203,11 @@ function sendTextToGeminiRest(text) {
 
 
 
-var _speechRecognizer = null;
-function startClientSpeechRecognition() {
-  var SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRec) return;
-  try {
-    if (_speechRecognizer) {
-      try { _speechRecognizer.stop(); } catch(e) {}
-    }
-    _speechRecognizer = new SpeechRec();
-    _speechRecognizer.continuous = true;
-    _speechRecognizer.interimResults = true;
-    _speechRecognizer.lang = navigator.language || "en-US";
-
-    _speechRecognizer.onresult = function(event) {
-      for (var i = event.resultIndex; i < event.results.length; ++i) {
-        var transcript = event.results[i][0].transcript;
-        if (transcript) {
-          updateUserSpeechBubble(transcript, Boolean(event.results[i].isFinal));
-        }
-      }
-    };
-    _speechRecognizer.onerror = function() {};
-    _speechRecognizer.onend = function() {
-      if (window.__voiceActive && audioInputCtx && audioInputCtx.state === "running") {
-        try { _speechRecognizer.start(); } catch(e) {}
-      }
-    };
-    _speechRecognizer.start();
-  } catch(e) {}
-}
-
 function startMicrophoneCapture() {
 
   // 🎙️ Voice-active flag: enables controls.js stream FPS throttling while voice is active to prevent thread starvation
 
   window.__voiceActive = true;
-  startClientSpeechRecognition();
 
   if (audioInputCtx && audioInputSource) {
 
@@ -6472,26 +6440,12 @@ function startMicrophoneCapture() {
 
       var rms = Math.sqrt(sum / inputChannelData.length);
 
-      // ─── ACOUSTIC ECHO GATING & BARGE-IN DETECTION ───
-      // When AI audio is actively playing through speakers or Bluetooth box, the mic
-      // records speaker bleed. Streaming this bleed to Gemini Live causes an infinite
-      // acoustic feedback loop, self-interruption, and unsolicited tool execution.
+      // ─── ACOUSTIC ECHO GATING ───
+      // When AI audio is actively playing through speakers, do not stream mic audio to Gemini.
+      // This completely eliminates acoustic feedback loops, speaker echo, and self-interruption.
       var aiPlaying = isGeminiAudioPlaying();
       if (aiPlaying) {
-        // High threshold for barge-in: user must speak clearly over the speaker
-        var bargeInThreshold = 0.085;
-        if (rms >= bargeInThreshold) {
-          // Intentional user barge-in detected!
-          console.log('[Audio] Barge-in detected (RMS:', rms.toFixed(3), '), interrupting AI playback!');
-          stopAllAudioPlayback();
-          try {
-            geminiWs.send(JSON.stringify({ type: 'interrupt' }));
-          } catch(err) {}
-          aiPlaying = false;
-        } else {
-          // Pure speaker bleed / echo — DO NOT send to Gemini WebSocket!
-          return;
-        }
+        return;
       }
 
       var prevSpeaking = isUserSpeaking;
