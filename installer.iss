@@ -33,6 +33,7 @@ Source: "libwinpthread-1.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "libwinpthread-1.dll"; DestDir: "{sys}"; Flags: restartreplace uninsrestartdelete
 Source: "alarm*.wav"; DestDir: "{app}"; Flags: ignoreversion
 Source: "PanicCTRL.apk"; DestDir: "{app}"; Flags: ignoreversion
+Source: "gemini-proxy\*"; DestDir: "{app}\gemini-proxy"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [InstallDelete]
 Type: files; Name: "{app}\setup_shown.txt"

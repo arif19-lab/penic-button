@@ -46,6 +46,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     }
 
     CreateDirectoryA("C:\\ProgramData\\PanicButton", NULL);
+    EnsureAuthKeyLoaded();
     AppLog("WinMain: PANIC CTRL starting");
     // Heartbeat for PanicMasterService handoff: while this process lives, the
     // service yields port 8085 to this full agent (streaming needs user session).

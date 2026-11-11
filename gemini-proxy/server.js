@@ -39,6 +39,15 @@ const isNodeEndpoint = (p) => {
          p.startsWith("/api/tools");
 };
 
+// Strip /gemini-proxy prefix if forwarded through the C++ server bridge.
+// MUST run before the reverse proxy below: otherwise /gemini-proxy/* is sent
+// back to the C++ server unchanged, which bridges it here again (endless loop).
+app.use((req, _res, next) => {
+  if (req.url === "/gemini-proxy") req.url = "/";
+  else if (req.url.startsWith("/gemini-proxy/")) req.url = req.url.slice("/gemini-proxy".length);
+  next();
+});
+
 app.use((req, res, next) => {
   if (!isNodeEndpoint(req.path)) {
     const proxyReq = http.request({
@@ -61,17 +70,25 @@ app.use((req, res, next) => {
   next();
 });
 
-// Strip /gemini-proxy prefix if forwarded through the C++ server bridge
-app.use((req, _res, next) => {
-  if (req.url === "/gemini-proxy") req.url = "/";
-  else if (req.url.startsWith("/gemini-proxy/")) req.url = req.url.slice("/gemini-proxy".length);
-  next();
-});
 app.use(express.json({ limit: "25mb" }));
 
 const PORT = parseInt(process.env.PORT, 10) > 0 ? parseInt(process.env.PORT, 10) : 3001;
 const KEY_FILE = "C:\\ProgramData\\PanicButton\\gemini_key.txt";
-const CPP_KEY_URL = "http://127.0.0.1:8085/api/gemini_key?key=imran2024";
+// The agent rotates to a per-install key, so the bridge credential is read
+// from the file the agent writes instead of a compiled-in default.
+const AUTH_KEY_FILE = process.env.PANIC_AUTH_KEY_FILE || "C:\\ProgramData\\PanicButton\\auth.key";
+
+function agentAccessKey() {
+  try {
+    const k = fs.readFileSync(AUTH_KEY_FILE, "utf8").trim();
+    if (k) return k;
+  } catch (e) {}
+  return "imran2024";
+}
+
+function cppKeyUrl() {
+  return "http://127.0.0.1:8085/api/gemini_key?key=" + encodeURIComponent(agentAccessKey());
+}
 
 const server = http.createServer(app);
 
@@ -89,7 +106,7 @@ function readKeyFromFile() {
 
 async function fetchKeyFromCppServer() {
   try {
-    const res = await fetch(CPP_KEY_URL);
+    const res = await fetch(cppKeyUrl());
     if (!res.ok) return;
     const data = await res.json();
     if (data && data.key) {
@@ -398,6 +415,23 @@ server.on("upgrade", (req, socket, head) => {
     url === "/gemini-proxy" ||
     url === "/"
   ) {
+    const rawUrl = req.url || "";
+    let providedKey = "";
+    const keyMatch = rawUrl.match(/[?&]key=([^&#\s]+)/);
+    if (keyMatch) providedKey = decodeURIComponent(keyMatch[1]);
+    if (!providedKey && req.headers["authorization"]) {
+      providedKey = req.headers["authorization"].replace(/^Bearer\s+/i, "").trim();
+    }
+    if (!providedKey && req.headers["x-panic-key"]) {
+      providedKey = String(req.headers["x-panic-key"]).trim();
+    }
+
+    if (providedKey !== agentAccessKey()) {
+      socket.write("HTTP/1.1 403 Forbidden\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{\"ok\":false,\"error\":\"unauthorized\"}");
+      socket.destroy();
+      return;
+    }
+
     wss.handleUpgrade(req, socket, head, (ws) => wss.emit("connection", ws, req));
   } else if (url === "/ws" || url === "/cmd-ws") {
     // Proxy screen streamer / command websocket to C++ server on 8085

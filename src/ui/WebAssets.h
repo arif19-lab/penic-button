@@ -12660,7 +12660,7 @@ body.gemini-dark .cg-persona-desc {
 
           <input type="text" id="manualIpInput" class="cg-modal-input" placeholder="e.g. 192.168.0.104:8085" style="margin-bottom:8px; padding-left:14px;">
 
-          <input type="text" id="manualKeyInput" class="cg-modal-input" placeholder="Session Key (e.g. imran2024)" style="margin-bottom:8px; padding-left:14px;">
+          <input type="text" id="manualKeyInput" class="cg-modal-input" placeholder="Session Key (from the PC pairing screen)" style="margin-bottom:8px; padding-left:14px;">
 
           <button type="button" onclick="saveManualPairing()" class="cg-modal-btn-primary" style="width:100%; justify-content:center;">
 
@@ -12972,7 +12972,7 @@ body.gemini-dark .cg-persona-desc {
 
   <!-- 🎙️ 7. GEMINI MULTIMODAL LIVE AI ENGINE -->
 
-  <script src="js/gemini_live.js?v=2.7.0"></script>
+  
 
 
 
@@ -13131,7 +13131,7 @@ function sanitizeEndpoint(url) {
 
 var _urlParams = new URLSearchParams(window.location.search);
 
-var KEY = _urlParams.get('key') || localStorage.getItem('panic_key') || 'imran2024';
+var KEY = _urlParams.get('key') || localStorage.getItem('panic_key') || '';
 
 var PC_ENDPOINT = (function() {
 
@@ -13519,7 +13519,7 @@ function quickConnectIp(hostPort) {
 
   var url = (hostPort.startsWith('http') ? hostPort : ('http://' + hostPort));
 
-  var key = localStorage.getItem('panic_key') || KEY || 'imran2024';
+  var key = localStorage.getItem('panic_key') || KEY || '';
 
   var fullUrl = url + (url.includes('?') ? '&' : '/?') + 'key=' + key;
 
@@ -13573,7 +13573,7 @@ function updateQuickConnectButtons(lanIp, tailscaleIp, localHttpsUrl, tailscaleD
 
   if (!lHttps && lanIp) {
 
-    var key = localStorage.getItem('panic_key') || KEY || 'imran2024';
+    var key = localStorage.getItem('panic_key') || KEY || '';
 
     lHttps = 'https://' + lanIp + ':8443/?key=' + key;
 
@@ -13595,7 +13595,7 @@ function updateQuickConnectButtons(lanIp, tailscaleIp, localHttpsUrl, tailscaleD
 
     var dns = tailscaleDns || localStorage.getItem('panic_tailscale_dns');
 
-    var key = localStorage.getItem('panic_key') || KEY || 'imran2024';
+    var key = localStorage.getItem('panic_key') || KEY || '';
 
     tHttps = 'https://' + dns + '/?key=' + key;
 
@@ -13621,7 +13621,7 @@ function quickConnectTailscaleHttps() {
 
     var dns = localStorage.getItem('panic_tailscale_dns');
 
-    var key = localStorage.getItem('panic_key') || KEY || 'imran2024';
+    var key = localStorage.getItem('panic_key') || KEY || '';
 
     if (dns) url = 'https://' + dns + '/?key=' + key;
 
@@ -13649,7 +13649,7 @@ function quickConnectHttps() {
 
     var lan = localStorage.getItem('panic_lan_ip') || window.location.hostname;
 
-    var key = localStorage.getItem('panic_key') || KEY || 'imran2024';
+    var key = localStorage.getItem('panic_key') || KEY || '';
 
     if (lan && lan !== 'localhost' && lan !== '127.0.0.1') {
 
@@ -13736,23 +13736,23 @@ function checkPcConnection() {
       updateNetworkUi(true, ms);
 
       if (data) {
+        if (data.authenticated === false || data.requires_auth) {
+          _isCurrentlyConnected = false;
+          updateNetworkUi(false, ms, 'PAIRING REQUIRED');
+          var modal = document.getElementById('cyberPairingModal');
+          if (modal && (!modal.style.display || modal.style.display === 'none')) {
+            openPairingModal();
+          }
+          return;
+        }
 
         if (data.lan_ip) localStorage.setItem('panic_lan_ip', data.lan_ip);
-
         if (data.tailscale_ip) localStorage.setItem('panic_tailscale_ip', data.tailscale_ip);
-
         if (data.tailscale_dns) localStorage.setItem('panic_tailscale_dns', data.tailscale_dns);
-
         if (data.tailscale_https_url) localStorage.setItem('panic_tailscale_https', data.tailscale_https_url);
-
         if (data.local_https_url) localStorage.setItem('panic_local_https', data.local_https_url);
-
         if (data.local_https_url || data.https_url) localStorage.setItem('panic_https_url', data.local_https_url || data.https_url);
-
-        if (data.key) localStorage.setItem('panic_key', data.key);
-
         updateQuickConnectButtons(data.lan_ip, data.tailscale_ip, data.local_https_url, data.tailscale_dns, data.tailscale_https_url);
-
       }
 
     })
@@ -13791,7 +13791,7 @@ function probeBestEndpoint(force, callback) {
 
 
 
-  var key = localStorage.getItem('panic_key') || KEY || 'imran2024';
+  var key = localStorage.getItem('panic_key') || KEY || '';
 
   var candidates = [];
 
@@ -14281,7 +14281,7 @@ window.GEMINI_CONFIG = {
  * ⚡ SYSTEM CONTROLS & DEFENSE ENGINE
  */
 
-var KEY = window.KEY || "imran2024";
+var KEY = window.KEY || localStorage.getItem("panic_key") || "";
 var _cmdWS = null;
 
 // 📊 REAL-TIME CLIENT TELEMETRY & BLACKBOX LOGGER
@@ -15737,8 +15737,8 @@ if ('serviceWorker' in navigator) {
 
 /// ⚡ Sub-10ms Zero-Latency Control Actions with Real-time Cyber HUD Feedback
 function getActiveSessionKey() {
-  var k = window.KEY || (typeof KEY !== "undefined" ? KEY : "") || localStorage.getItem("panic_key") || "imran2024";
-  return k || "imran2024";
+  var k = window.KEY || (typeof KEY !== "undefined" ? KEY : "") || localStorage.getItem("panic_key") || "";
+  return k || "";
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -17237,17 +17237,13 @@ var _proxyHasKey = true; // Default true: PC proxy holds key and serves as prima
 
 
 function geminiProxyWsUrl() {
-
+  var k = (typeof KEY !== "undefined" && KEY) ? KEY : (localStorage.getItem("panic_key") || "");
+  var query = k ? "?key=" + encodeURIComponent(k) : "";
   if (typeof getWsUrl === "function") {
-
-    return getWsUrl("/gemini-proxy/ws/live");
-
+    return getWsUrl("/gemini-proxy/ws/live" + query);
   }
-
   var proto = window.location.protocol === "https:" ? "wss:" : "ws:";
-
-  return proto + "//" + window.location.host + "/gemini-proxy/ws/live";
-
+  return proto + "//" + window.location.host + "/gemini-proxy/ws/live" + query;
 }
 
 
@@ -23400,7 +23396,7 @@ function startMicrophoneCapture() {
 
       var lan = localStorage.getItem("panic_lan_ip") || window.location.hostname;
 
-      var key = localStorage.getItem("panic_key") || window.KEY || "imran2024";
+      var key = localStorage.getItem("panic_key") || window.KEY || "";
 
       if (lan && lan !== "localhost" && lan !== "127.0.0.1") {
 
@@ -23420,7 +23416,7 @@ function startMicrophoneCapture() {
 
       setTimeout(function() {
 
-        var target = secureUrl + (secureUrl.includes("?") ? "&" : "/?") + "key=" + (window.KEY || "imran2024");
+        var target = secureUrl + (secureUrl.includes("?") ? "&" : "/?") + "key=" + (window.KEY || "");
 
         window.location.href = target;
 
@@ -26130,7 +26126,7 @@ function onQrCodeSuccess(decodedText) {
 
   try {
     var parsedUrl = new URL(decodedText);
-    var key = parsedUrl.searchParams.get('key') || 'imran2024';
+    var key = parsedUrl.searchParams.get('key') || '';
     var endpoint = parsedUrl.origin;
 
     localStorage.setItem('panic_pc_endpoint', endpoint);
@@ -26159,7 +26155,7 @@ function toggleManualSetup() {
 
 function saveManualPairing() {
   var ip = document.getElementById('manualIpInput').value.trim();
-  var key = document.getElementById('manualKeyInput').value.trim() || 'imran2024';
+  var key = document.getElementById('manualKeyInput').value.trim() || '';
   if (!ip) { alert('Please enter PC IP address'); return; }
   if (!ip.startsWith('http://') && !ip.startsWith('https://')) ip = 'http://' + ip;
 
@@ -26185,7 +26181,7 @@ function triggerAutoDetectPc() {
     if (ep && ep.indexOf('127.0.0.1') === -1) {
       stopInAppQrScanner();
       closePairingModal();
-      var k = localStorage.getItem('panic_key') || 'imran2024';
+      var k = localStorage.getItem('panic_key') || '';
       var targetUrl = ep + (ep.includes('?') ? '&' : '/?') + 'key=' + k;
       if (window.AndroidNativeStream && typeof window.AndroidNativeStream.savePcUrl === 'function') {
         window.AndroidNativeStream.savePcUrl(targetUrl);

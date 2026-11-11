@@ -36,16 +36,10 @@ if os.path.exists(jsqr_path):
 import re
 # Inlined fallback HTML for C++ single binary
 inlined_html = re.sub(r'<link\s+rel=["\']stylesheet["\']\s+href=["\']css/style\.css(?:\?[^"\']*)?["\']\s*>', f'<style>\n{css_content}\n</style>', html)
-inlined_html = inlined_html.replace('<script src="jsqr.min.js"></script>', f'<script>\n{jsqr_content}\n</script>')
-inlined_html = inlined_html.replace('<script src="js/jsqr.min.js"></script>', '')
-inlined_html = inlined_html.replace('<script src="js/logger.js"></script>', '')
-inlined_html = inlined_html.replace('<script src="js/network.js"></script>', '')
-inlined_html = inlined_html.replace('<script src="js/gemini_prompt.js"></script>', '')
-inlined_html = inlined_html.replace('<script src="js/controls.js"></script>', '')
-inlined_html = inlined_html.replace('<script src="js/streamer.js"></script>', '')
-inlined_html = inlined_html.replace('<script src="js/personas.js"></script>', '')
-inlined_html = inlined_html.replace('<script src="js/gemini_live.js"></script>', '')
-inlined_html = inlined_html.replace('<script src="js/app.js"></script>', f'<script>\n{js_bundle}\n</script>')
+inlined_html = re.sub(r'<script\s+src=["\'](?:js/)?jsqr\.min\.js(?:\?[^"\']*)?["\']\s*></script>', f'<script>\n{jsqr_content}\n</script>', inlined_html)
+for sname in ['logger', 'network', 'gemini_prompt', 'controls', 'streamer', 'personas', 'gemini_live']:
+    inlined_html = re.sub(rf'<script\s+src=["\']js/{sname}\.js(?:\?[^"\']*)?["\']\s*></script>', '', inlined_html)
+inlined_html = re.sub(r'<script\s+src=["\']js/app\.js(?:\?[^"\']*)?["\']\s*></script>', lambda m: f'<script>\n{js_bundle}\n</script>', inlined_html)
 
 web_assets = f'''#pragma once
 #include <string>

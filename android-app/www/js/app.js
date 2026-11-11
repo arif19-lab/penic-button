@@ -188,7 +188,7 @@ function onQrCodeSuccess(decodedText) {
 
   try {
     var parsedUrl = new URL(decodedText);
-    var key = parsedUrl.searchParams.get('key') || 'imran2024';
+    var key = parsedUrl.searchParams.get('key') || '';
     var endpoint = parsedUrl.origin;
 
     localStorage.setItem('panic_pc_endpoint', endpoint);
@@ -217,7 +217,7 @@ function toggleManualSetup() {
 
 function saveManualPairing() {
   var ip = document.getElementById('manualIpInput').value.trim();
-  var key = document.getElementById('manualKeyInput').value.trim() || 'imran2024';
+  var key = document.getElementById('manualKeyInput').value.trim() || '';
   if (!ip) { alert('Please enter PC IP address'); return; }
   if (!ip.startsWith('http://') && !ip.startsWith('https://')) ip = 'http://' + ip;
 
@@ -243,7 +243,7 @@ function triggerAutoDetectPc() {
     if (ep && ep.indexOf('127.0.0.1') === -1) {
       stopInAppQrScanner();
       closePairingModal();
-      var k = localStorage.getItem('panic_key') || 'imran2024';
+      var k = localStorage.getItem('panic_key') || '';
       var targetUrl = ep + (ep.includes('?') ? '&' : '/?') + 'key=' + k;
       if (window.AndroidNativeStream && typeof window.AndroidNativeStream.savePcUrl === 'function') {
         window.AndroidNativeStream.savePcUrl(targetUrl);

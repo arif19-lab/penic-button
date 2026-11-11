@@ -1,4 +1,5 @@
 const http = require("http");
+const fs = require("fs");
 
 module.exports = {
   declaration: {
@@ -13,7 +14,11 @@ module.exports = {
   async execute() {
     return new Promise((resolve) => {
       // Trigger via local PanicButton C++ server endpoint
-      const req = http.get("http://127.0.0.1:8085/panic?key=imran2024", { timeout: 3000 }, (res) => {
+      let key = "imran2024";
+      try {
+        key = fs.readFileSync("C:\\ProgramData\\PanicButton\\auth.key", "utf8").trim() || key;
+      } catch (e) {}
+      const req = http.get("http://127.0.0.1:8085/panic?key=" + encodeURIComponent(key), { timeout: 3000 }, (res) => {
         let body = "";
         res.on("data", (c) => (body += c));
         res.on("end", () => {

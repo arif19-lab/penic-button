@@ -95,17 +95,13 @@ var _proxyHasKey = true; // Default true: PC proxy holds key and serves as prima
 
 
 function geminiProxyWsUrl() {
-
+  var k = (typeof KEY !== "undefined" && KEY) ? KEY : (localStorage.getItem("panic_key") || "");
+  var query = k ? "?key=" + encodeURIComponent(k) : "";
   if (typeof getWsUrl === "function") {
-
-    return getWsUrl("/gemini-proxy/ws/live");
-
+    return getWsUrl("/gemini-proxy/ws/live" + query);
   }
-
   var proto = window.location.protocol === "https:" ? "wss:" : "ws:";
-
-  return proto + "//" + window.location.host + "/gemini-proxy/ws/live";
-
+  return proto + "//" + window.location.host + "/gemini-proxy/ws/live" + query;
 }
 
 
@@ -6258,7 +6254,7 @@ function startMicrophoneCapture() {
 
       var lan = localStorage.getItem("panic_lan_ip") || window.location.hostname;
 
-      var key = localStorage.getItem("panic_key") || window.KEY || "imran2024";
+      var key = localStorage.getItem("panic_key") || window.KEY || "";
 
       if (lan && lan !== "localhost" && lan !== "127.0.0.1") {
 
@@ -6278,7 +6274,7 @@ function startMicrophoneCapture() {
 
       setTimeout(function() {
 
-        var target = secureUrl + (secureUrl.includes("?") ? "&" : "/?") + "key=" + (window.KEY || "imran2024");
+        var target = secureUrl + (secureUrl.includes("?") ? "&" : "/?") + "key=" + (window.KEY || "");
 
         window.location.href = target;
 

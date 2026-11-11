@@ -369,9 +369,61 @@ static bool IsAgentAlive() {
     return IsProcessRunning("PanicButton.exe");
 }
 
+// The agent writes the per-install key here; this service shares it so a
+// single pairing works against both ports.  Cached because the file only
+// changes when the owner rotates the key deliberately.
+static const std::string& SvcAuthKey() {
+    static std::string cached;
+    if (!cached.empty()) return cached;
+    FILE* f = fopen("C:\\ProgramData\\PanicButton\\auth.key", "rb");
+    if (f) {
+        char buf[128] = {0};
+        size_t n = fread(buf, 1, sizeof(buf) - 1, f);
+        fclose(f);
+        cached.assign(buf, n);
+        while (!cached.empty() && (cached.back() == '\r' || cached.back() == '\n' || cached.back() == ' ')) cached.pop_back();
+    }
+    if (cached.size() < 16) cached = "imran2024"; // agent not deployed yet
+    return cached;
+}
+
+static bool SvcLegacyKeyAllowed() {
+    return true;
+}
+
 static bool SvcHasKey(const std::string& req) {
-    // Mirrors agent HttpRouter: presence of key= passes (same strength, same UX).
-    return req.find("key=") != std::string::npos;
+    // 1. Authorization: Bearer <token>
+    size_t authPos = req.find("Authorization: Bearer ");
+    if (authPos == std::string::npos) authPos = req.find("authorization: bearer ");
+    if (authPos != std::string::npos) {
+        size_t start = authPos + 22;
+        size_t end = req.find_first_of("\r\n ", start);
+        std::string val = req.substr(start, (end == std::string::npos ? req.size() : end) - start);
+        if (!val.empty() && val == SvcAuthKey()) return true;
+    }
+
+    // 2. X-Panic-Key: <token>
+    size_t xPos = req.find("X-Panic-Key: ");
+    if (xPos == std::string::npos) xPos = req.find("x-panic-key: ");
+    if (xPos != std::string::npos) {
+        size_t start = xPos + 13;
+        size_t end = req.find_first_of("\r\n ", start);
+        std::string val = req.substr(start, (end == std::string::npos ? req.size() : end) - start);
+        if (!val.empty() && val == SvcAuthKey()) return true;
+    }
+
+    // 3. Query parameter key=
+    size_t pos = req.find("key=");
+    while (pos != std::string::npos) {
+        size_t start = pos + 4;
+        size_t end = req.find_first_of(" &\r\n\"", start);
+        std::string value = req.substr(start, (end == std::string::npos ? req.size() : end) - start);
+        if (!value.empty()) {
+            if (value == SvcAuthKey()) return true;
+        }
+        pos = req.find("key=", start);
+    }
+    return false;
 }
 
 static std::string SvcUrlDecode(const std::string& s) {
@@ -543,7 +595,8 @@ static DWORD WINAPI CriticalClientThread(LPVOID lpParam) {
         }
 
         if (!SvcHasKey(request)) {
-            std::string res = "HTTP/1.1 302 Found\r\nLocation: /?key=imran2024\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+            // Never hand the key to an unauthenticated caller.
+            std::string res = "HTTP/1.1 403 Forbidden\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
             send(client, res.c_str(), (int)res.size(), 0);
             closesocket(client);
             return 0;
@@ -551,9 +604,9 @@ static DWORD WINAPI CriticalClientThread(LPVOID lpParam) {
 
         if (request.find("GET /api/status") != std::string::npos || request.find("GET /status") != std::string::npos) {
             bool locked = SvcIsLockedByLogonUI();
-            body = "{\"panic\":false,\"locked\":" + std::string(locked ? "true" : "false") +
+            body = "{\"ok\":true,\"service\":\"panic-service\",\"panic\":false,\"locked\":" + std::string(locked ? "true" : "false") +
                    ",\"state\":0,\"lan_ip\":\"" + SvcLocalIP() + "\"" +
-                   ",\"tailscale_ip\":\"\",\"agent\":false,\"service\":true,\"key\":\"imran2024\"}";
+                   ",\"tailscale_ip\":\"\",\"agent\":false,\"service\":true}";
             SvcSend(client, body, ctype);
         } else if (request.find("GET /api/wake") != std::string::npos || request.find("GET /wake") != std::string::npos) {
             {

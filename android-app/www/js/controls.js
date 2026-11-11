@@ -2,7 +2,7 @@
  * ⚡ SYSTEM CONTROLS & DEFENSE ENGINE
  */
 
-var KEY = window.KEY || "imran2024";
+var KEY = window.KEY || localStorage.getItem("panic_key") || "";
 var _cmdWS = null;
 
 // 📊 REAL-TIME CLIENT TELEMETRY & BLACKBOX LOGGER
@@ -1458,8 +1458,8 @@ if ('serviceWorker' in navigator) {
 
 /// ⚡ Sub-10ms Zero-Latency Control Actions with Real-time Cyber HUD Feedback
 function getActiveSessionKey() {
-  var k = window.KEY || (typeof KEY !== "undefined" ? KEY : "") || localStorage.getItem("panic_key") || "imran2024";
-  return k || "imran2024";
+  var k = window.KEY || (typeof KEY !== "undefined" ? KEY : "") || localStorage.getItem("panic_key") || "";
+  return k || "";
 }
 
 // ══════════════════════════════════════════════════════════════════════

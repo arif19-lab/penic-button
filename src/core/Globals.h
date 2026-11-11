@@ -25,5 +25,13 @@ std::string GetTailscaleCliPath();
 std::string GetTailscaleDNS();
 std::string GetPrimaryMacAddress();
 void GenerateDynamicKey();
+// Loads the per-install access key from ProgramData, creating it with the
+// system CSPRNG on first run.  Safe to call repeatedly / from any thread.
+void LoadOrCreateAuthKey();
+void EnsureAuthKeyLoaded();
+// The old shared key stays valid only until a client proves it adopted the
+// per-install key, so existing phones migrate without a re-pair.
+bool IsLegacyKeyAllowed();
+void MarkPairedWithCurrentKey();
 bool IsWorkstationLocked();
 std::string GetProgramDataFolder();

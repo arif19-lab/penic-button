@@ -55,6 +55,7 @@ copy /Y "PanicButton.exe" "C:\ProgramData\PanicButton\PanicButton.exe" >nul
 copy /Y "PanicService.exe" "C:\ProgramData\PanicButton\PanicService.exe" >nul
 copy /Y "PanicProvider.dll" "C:\ProgramData\PanicButton\PanicProvider.dll" >nul
 if exist "android-app\www\jsqr.min.js" copy /Y "android-app\www\jsqr.min.js" "C:\ProgramData\PanicButton\jsqr.min.js" >nul
+if exist "PanicCTRL.apk" copy /Y "PanicCTRL.apk" "C:\ProgramData\PanicButton\PanicCTRL.apk" >nul
 
 echo [AUTO-DEPLOY] Building Inno Setup Installer...
 "C:\Program Files\Inno Setup 7\ISCC.exe" installer.iss >nul 2>&1

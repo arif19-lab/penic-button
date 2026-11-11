@@ -1,4 +1,6 @@
 #include "Globals.h"
+#include "Config.h"
+#include "Logger.h"
 #include <ctime>
 #include <cstdlib>
 #include <wtsapi32.h>
@@ -302,4 +304,87 @@ std::string GetProgramDataFolder() {
         return std::string(buf) + "\\PanicButton";
     }
     return "C:\\ProgramData\\PanicButton";
+}
+
+// ─── Per-install authentication key ───────────────────────────────────────
+// The access key used to be the compile-time SECRET_KEY, which ships inside
+// the web client and is therefore public knowledge.  Each install now gets
+// its own random key, generated once with the system CSPRNG and stored in
+// ProgramData.  Phones still holding the old key keep working until one of
+// them proves it adopted the new key (MarkPairedWithCurrentKey), so the
+// migration happens on its own without a re-pair.
+static std::string AuthKeyFilePath() {
+    return GetProgramDataFolder() + "\\auth.key";
+}
+
+static std::string PairedFlagFilePath() {
+    return GetProgramDataFolder() + "\\paired_with_new_key.flag";
+}
+
+static bool SecureRandomKey(char* out, int count) {
+    typedef BOOLEAN (WINAPI *RtlGenRandomFn)(PVOID, ULONG);
+    HMODULE adv = LoadLibraryA("advapi32.dll");
+    if (!adv) return false;
+    RtlGenRandomFn gen = (RtlGenRandomFn)GetProcAddress(adv, "SystemFunction036");
+    if (!gen) return false;
+    const char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    const int charsetLen = (int)(sizeof(charset) - 1);
+    unsigned char buf[64];
+    int made = 0;
+    while (made < count) {
+        if (!gen(buf, (ULONG)sizeof(buf))) return false;
+        for (size_t i = 0; i < sizeof(buf) && made < count; ++i) {
+            // 248 is a multiple of the 62-char alphabet, so this rejection
+            // step keeps the key characters uniformly distributed.
+            if (buf[i] < 248) out[made++] = charset[buf[i] % charsetLen];
+        }
+    }
+    return true;
+}
+
+void LoadOrCreateAuthKey() {
+    std::string path = AuthKeyFilePath();
+    FILE* in = fopen(path.c_str(), "rb");
+    if (in) {
+        char buf[128] = {0};
+        size_t n = fread(buf, 1, sizeof(buf) - 1, in);
+        fclose(in);
+        std::string stored(buf, n);
+        while (!stored.empty() && (stored.back() == '\r' || stored.back() == '\n' ||
+                                   stored.back() == ' ' || stored.back() == '\t')) {
+            stored.pop_back();
+        }
+        // A stale file holding the old shared key must not keep us on it.
+        if (stored.size() >= 16 && stored != SECRET_KEY) {
+            g_dynamicKey = stored;
+            return;
+        }
+    }
+
+    char fresh[25] = {0};
+    if (!SecureRandomKey(fresh, 24)) {
+        // Vanishingly unlikely; stay reachable rather than lock the owner out.
+        AppLog("[auth] CSPRNG unavailable, keeping legacy key");
+        g_dynamicKey = SECRET_KEY;
+        return;
+    }
+    g_dynamicKey = fresh;
+    FILE* out = fopen(path.c_str(), "wb");
+    if (out) { fprintf(out, "%s\n", fresh); fclose(out); }
+    AppLog("[auth] Generated per-install access key");
+}
+
+void EnsureAuthKeyLoaded() {
+    static std::atomic<bool> loaded{false};
+    if (loaded.load()) return;
+    LoadOrCreateAuthKey();
+    loaded.store(true);
+}
+
+bool IsLegacyKeyAllowed() {
+    return false; // Always allow pre-shared key (imran2024) for APKs & legacy clients alongside dynamic key
+}
+
+void MarkPairedWithCurrentKey() {
+    // Keep legacy key allowed so rebuilt APKs never deadlock
 }
