@@ -14,6 +14,10 @@ function checkOnboardingPairing() {
   }
   var savedEndpoint = localStorage.getItem('panic_pc_endpoint');
   var savedKey = localStorage.getItem('panic_key');
+  if (savedKey === 'imran2024') {
+    localStorage.removeItem('panic_key');
+    savedKey = null;
+  }
   if (!savedEndpoint || !savedKey) {
     var modal = document.getElementById('cyberPairingModal');
     if (modal) modal.style.display = 'flex';

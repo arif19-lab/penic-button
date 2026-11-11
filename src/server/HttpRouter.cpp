@@ -2553,7 +2553,7 @@ showMode(currentMode);
 
   "short_name": "PANIC CTRL",
 
-  "start_url": "/?key=imran2024",
+  "start_url": "/",
 
   "display": "standalone",
 
@@ -4972,7 +4972,7 @@ showMode(currentMode);
 
                 "  \"short_name\": \"PanicCTRL\",\n"
 
-                "  \"start_url\": \"/?key=imran2024\",\n"
+                "  \"start_url\": \"/\",\n"
 
                 "  \"display\": \"standalone\",\n"
 

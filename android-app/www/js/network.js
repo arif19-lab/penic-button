@@ -59,7 +59,25 @@ function sanitizeEndpoint(url) {
 
 
 var _urlParams = new URLSearchParams(window.location.search);
-var KEY = _urlParams.get('key') || localStorage.getItem('panic_key') || '';
+var _rawParamKey = _urlParams.get('key') || '';
+if (_rawParamKey === 'imran2024') {
+  _rawParamKey = '';
+  try {
+    _urlParams.delete('key');
+    var cleanSearch = _urlParams.toString();
+    var cleanPath = window.location.pathname + (cleanSearch ? ('?' + cleanSearch) : '') + window.location.hash;
+    window.history.replaceState({}, document.title, cleanPath);
+  } catch(e) {}
+}
+
+if (localStorage.getItem('panic_key') === 'imran2024') {
+  localStorage.removeItem('panic_key');
+}
+
+var KEY = _rawParamKey || localStorage.getItem('panic_key') || '';
+if (_rawParamKey) {
+  localStorage.setItem('panic_key', _rawParamKey);
+}
 
 var PC_ENDPOINT = (function() {
   // If loading directly in browser over HTTP or HTTPS (LAN, Tailscale, or Localhost):
@@ -420,19 +438,30 @@ function updateNetworkUi(isConnected, ms) {
 
 
 
+function getEffectiveKey() {
+  var k = localStorage.getItem('panic_key') || KEY || '';
+  if (k === 'imran2024') {
+    localStorage.removeItem('panic_key');
+    KEY = '';
+    return '';
+  }
+  return k;
+}
+
 function quickConnectIp(hostPort) {
 
   var url = (hostPort.startsWith('http') ? hostPort : ('http://' + hostPort));
 
-  var key = localStorage.getItem('panic_key') || KEY || '';
+  var key = getEffectiveKey();
 
-  var fullUrl = url + (url.includes('?') ? '&' : '/?') + 'key=' + key;
+  var fullUrl = url + (url.includes('?') ? '&' : '/?') + (key ? ('key=' + key) : '');
 
 
 
   localStorage.setItem('panic_pc_endpoint', url);
 
-  localStorage.setItem('panic_key', key);
+  if (key) localStorage.setItem('panic_key', key);
+  else localStorage.removeItem('panic_key');
 
 
 
@@ -478,7 +507,7 @@ function updateQuickConnectButtons(lanIp, tailscaleIp, localHttpsUrl, tailscaleD
 
   if (!lHttps && lanIp) {
 
-    var key = localStorage.getItem('panic_key') || KEY || '';
+    var key = getEffectiveKey();
 
     lHttps = 'https://' + lanIp + ':8443/?key=' + key;
 
@@ -500,7 +529,7 @@ function updateQuickConnectButtons(lanIp, tailscaleIp, localHttpsUrl, tailscaleD
 
     var dns = tailscaleDns || localStorage.getItem('panic_tailscale_dns');
 
-    var key = localStorage.getItem('panic_key') || KEY || '';
+    var key = getEffectiveKey();
 
     tHttps = 'https://' + dns + '/?key=' + key;
 
@@ -526,7 +555,7 @@ function quickConnectTailscaleHttps() {
 
     var dns = localStorage.getItem('panic_tailscale_dns');
 
-    var key = localStorage.getItem('panic_key') || KEY || '';
+    var key = getEffectiveKey();
 
     if (dns) url = 'https://' + dns + '/?key=' + key;
 
@@ -554,7 +583,7 @@ function quickConnectHttps() {
 
     var lan = localStorage.getItem('panic_lan_ip') || window.location.hostname;
 
-    var key = localStorage.getItem('panic_key') || KEY || '';
+    var key = getEffectiveKey();
 
     if (lan && lan !== 'localhost' && lan !== '127.0.0.1') {
 
@@ -643,6 +672,10 @@ function checkPcConnection() {
       if (data) {
         if (data.authenticated === false || data.requires_auth) {
           _isCurrentlyConnected = false;
+          if (KEY === 'imran2024') {
+            localStorage.removeItem('panic_key');
+            KEY = '';
+          }
           updateNetworkUi(false, ms, 'PAIRING REQUIRED');
           var modal = document.getElementById('cyberPairingModal');
           if (modal && (!modal.style.display || modal.style.display === 'none')) {

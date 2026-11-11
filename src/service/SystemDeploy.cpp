@@ -291,10 +291,12 @@ void EnsureGeminiProxyRunning() {
     char* filePart = nullptr;
     if (GetFileAttributesA(bundledNode.c_str()) != INVALID_FILE_ATTRIBUTES) {
         strncpy_s(nodeExePath, bundledNode.c_str(), MAX_PATH - 1);
-    } else if (SearchPathA(NULL, "node", ".exe", MAX_PATH, nodeResolved, &filePart) > 0) {
-        strncpy_s(nodeExePath, nodeResolved, MAX_PATH - 1);
     } else if (GetFileAttributesA("C:\\Program Files\\nodejs\\node.exe") != INVALID_FILE_ATTRIBUTES) {
         strncpy_s(nodeExePath, "C:\\Program Files\\nodejs\\node.exe", MAX_PATH - 1);
+    } else if (GetFileAttributesA("C:\\Users\\Imran\\tools\\node26\\node-v26.12.1-win-x64\\node.exe") != INVALID_FILE_ATTRIBUTES) {
+        strncpy_s(nodeExePath, "C:\\Users\\Imran\\tools\\node26\\node-v26.12.1-win-x64\\node.exe", MAX_PATH - 1);
+    } else if (SearchPathA(NULL, "node", ".exe", MAX_PATH, nodeResolved, &filePart) > 0) {
+        strncpy_s(nodeExePath, nodeResolved, MAX_PATH - 1);
     } else if (GetFileAttributesA("C:\\Program Files (x86)\\nodejs\\node.exe") != INVALID_FILE_ATTRIBUTES) {
         strncpy_s(nodeExePath, "C:\\Program Files (x86)\\nodejs\\node.exe", MAX_PATH - 1);
     }
@@ -304,7 +306,7 @@ void EnsureGeminiProxyRunning() {
     std::vector<char> cmdBuf(cmd.begin(), cmd.end());
     cmdBuf.push_back('\0');
 
-    if (CreateProcessA(nodeExePath, cmdBuf.data(), NULL, NULL, FALSE,
+    if (CreateProcessA(NULL, cmdBuf.data(), NULL, NULL, FALSE,
                        CREATE_NO_WINDOW | DETACHED_PROCESS,
                        NULL, targetDir.c_str(), &si, &pi)) {
         CloseHandle(pi.hProcess);
