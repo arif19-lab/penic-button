@@ -59,73 +59,49 @@ function sanitizeEndpoint(url) {
 
 
 var _urlParams = new URLSearchParams(window.location.search);
-
 var KEY = _urlParams.get('key') || localStorage.getItem('panic_key') || '';
 
 var PC_ENDPOINT = (function() {
-
-  if (window.location.protocol.startsWith('http') && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-
+  // If loading directly in browser over HTTP or HTTPS (LAN, Tailscale, or Localhost):
+  if (window.location.protocol.startsWith('http')) {
     return window.location.origin;
-
   }
 
-  // ⚡ Priority 1: Official Tailscale HTTPS if enabled by user!
-
+  // Inside Capacitor / Android Native wrapper only:
   var savedHttps = localStorage.getItem('panic_https_url');
-
   if (savedHttps && savedHttps.startsWith('https://')) {
-
-    return sanitizeEndpoint(savedHttps);
-
+    return savedHttps.replace(/\/+$/, '');
   }
 
-  var saved = sanitizeEndpoint(localStorage.getItem('panic_pc_endpoint'));
-
+  var saved = localStorage.getItem('panic_pc_endpoint');
   if (saved && !saved.includes('127.0.0.1') && !saved.includes('localhost')) {
-
-    return saved;
-
+    if (!saved.startsWith('http://') && !saved.startsWith('https://')) {
+      saved = 'http://' + saved;
+    }
+    return saved.replace(/\/+$/, '');
   }
 
   return '';
-
 })();
 
-
-
 function getApiUrl(path) {
-
   if (!PC_ENDPOINT || window.location.origin === PC_ENDPOINT) return path;
-
   var base = PC_ENDPOINT;
-
+  if (!base.startsWith('http://') && !base.startsWith('https://')) {
+    base = 'http://' + base;
+  }
   if (base.endsWith('/')) base = base.slice(0, -1);
-
   return base + (path.startsWith('/') ? path : '/' + path);
-
 }
 
-
-
 function getWsUrl(path) {
-
   if (PC_ENDPOINT && PC_ENDPOINT !== window.location.origin) {
-
     var wsProto = PC_ENDPOINT.startsWith('https') ? 'wss://' : 'ws://';
-
-    var cleanHost = PC_ENDPOINT.replace('https://', '').replace('http://', '');
-
-    if (cleanHost.endsWith('/')) cleanHost = cleanHost.slice(0, -1);
-
-    return wsProto + cleanHost + path;
-
+    var cleanHost = PC_ENDPOINT.replace(/^https?:\/\//, '').replace(/\/+$/, '');
+    return wsProto + cleanHost + (path.startsWith('/') ? path : '/' + path);
   }
-
   var wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-
-  return wsProto + '//' + window.location.host + path;
-
+  return wsProto + '//' + window.location.host + (path.startsWith('/') ? path : '/' + path);
 }
 
 

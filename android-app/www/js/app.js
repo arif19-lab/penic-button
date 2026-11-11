@@ -7,18 +7,14 @@ var _qrStream = null;
 var _qrAnimFrame = null;
 
 function checkOnboardingPairing() {
-  var isDirectHost = (window.location.protocol.startsWith('http') && 
-                      window.location.hostname !== 'localhost' && 
-                      window.location.hostname !== '127.0.0.1');
-  if (isDirectHost || window.location.search.indexOf('key=') > -1) {
+  if (window.location.protocol.startsWith('http')) {
     var modal = document.getElementById('cyberPairingModal');
     if (modal) modal.style.display = 'none';
     return;
   }
   var savedEndpoint = localStorage.getItem('panic_pc_endpoint');
   var savedKey = localStorage.getItem('panic_key');
-  var isLocal = (location.hostname === '127.0.0.1' || location.hostname === 'localhost');
-  if (!isLocal && (!savedEndpoint || savedEndpoint.indexOf('127.0.0.1') > -1 || !savedKey)) {
+  if (!savedEndpoint || !savedKey) {
     var modal = document.getElementById('cyberPairingModal');
     if (modal) modal.style.display = 'flex';
   }

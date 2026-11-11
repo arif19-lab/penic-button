@@ -2109,6 +2109,8 @@ body {
 
             <button class="copy-btn" onclick="copyUrl()">COPY</button>
 
+            <a id="openUrlBtn" href="#" target="_blank" style="text-decoration:none;display:inline-flex;align-items:center;padding:0 12px;background:#00f0ff;color:#050811;font-family:monospace;font-size:11px;font-weight:bold;border-radius:6px;margin-left:6px;white-space:nowrap;">OPEN ↗</a>
+
         </div>
 
 
@@ -2264,6 +2266,8 @@ function showMode(m) {
 
 
     document.getElementById('urlInput').value = u;
+    var openBtn = document.getElementById('openUrlBtn');
+    if (openBtn) openBtn.href = u;
 
     qrcode.clear();
 
