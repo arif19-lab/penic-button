@@ -594,8 +594,8 @@ wss.on("connection", (clientWs, req) => {
     if (configOverride?.model) {
       let m = configOverride.model;
       if (m.startsWith("models/")) m = m.replace("models/", "");
-      if (m.includes("3.8-live-thinking")) {
-        m = "gemini-3.8-live-thinking";
+      if (m.includes("3.8-live-thinking") || m.includes("extended-thinking")) {
+        m = "gemini-3.8-live-extended-thinking";
       } else if (m.includes("3.8-live") || m.includes("3.8")) {
         m = "gemini-3.8-live";
       } else if (m.includes("3.1-flash-live") || m.includes("live-preview")) {
@@ -707,8 +707,22 @@ wss.on("connection", (clientWs, req) => {
         },
       };
 
+      if (targetModel.includes("thinking") || targetModel.includes("extended-thinking")) {
+        liveConnectConfig.thinkingConfig = { thinkingLevel: "low" };
+      }
+
       if (sessionConfig.tools && Array.isArray(sessionConfig.tools) && sessionConfig.tools.length > 0) {
-        liveConnectConfig.tools = sessionConfig.tools;
+        liveConnectConfig.tools = sessionConfig.tools.map(tool => {
+          if (tool && tool.functionDeclarations && Array.isArray(tool.functionDeclarations)) {
+            return {
+              functionDeclarations: tool.functionDeclarations.map(fd => ({
+                ...fd,
+                behavior: "NON_BLOCKING"
+              }))
+            };
+          }
+          return tool;
+        });
       }
 
       liveSession = await ai.live.connect({
@@ -766,12 +780,12 @@ wss.on("connection", (clientWs, req) => {
             }
 
             // Fallback: If no explicit outputTranscription object, stream parts text (STRICTLY non-thought)
-            if (!sentAgentText && parts.length > 0) {
+            if (parts.length > 0) {
               for (const part of parts) {
                 if (part.thought) continue;
                 if (part.text) {
                   const cleanedText = cleanAgentSpeechText(part.text);
-                  if (cleanedText) {
+                  if (cleanedText && !sentAgentText) {
                     safeSend(clientWs, {
                       type: "agent_transcript",
                       text: cleanedText,

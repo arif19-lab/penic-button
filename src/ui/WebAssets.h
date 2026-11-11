@@ -19916,56 +19916,46 @@ function scrollGeminiToBottom(smooth) {
 
 
 
-function updateUserSpeechBubble(text) {
-
-
+function updateUserSpeechBubble(text, isFinal) {
 
   var l = document.getElementById("geminiTerminalLogs");
-
   if (!l) return;
 
   var cleanText = String(text || "").replace(/^👤 User:\s*/, "").replace(/^PS >\s*/, "").trim();
-
   if (!cleanText) return;
 
-
-
   var hero = document.getElementById("geminiHeroGreeting");
-
   if (hero) hero.style.display = "none";
-
-
 
   currentUserStreamText = cleanText;
 
-
-
   if (currentUserStreamRow && l.contains(currentUserStreamRow)) {
-
     var bubble = currentUserStreamRow.querySelector(".user-bubble");
-
-    if (bubble) bubble.textContent = cleanText;
-
+    if (bubble) {
+      bubble.textContent = cleanText;
+      if (isFinal) {
+        bubble.classList.remove("interim-speech");
+      } else {
+        bubble.classList.add("interim-speech");
+      }
+    }
   } else {
-
     var row = document.createElement("div");
-
     row.className = "cg-msg-row user";
-
-    row.innerHTML = '<div class="cg-msg-bubble user-bubble">' + escapeHtml(cleanText) + '</div>';
-
+    var interimClass = isFinal ? "" : " interim-speech";
+    row.innerHTML = '<div class="cg-msg-bubble user-bubble' + interimClass + '">' + escapeHtml(cleanText) + '</div>';
     l.appendChild(row);
-
     currentUserStreamRow = row;
+  }
 
+  if (isFinal) {
+    currentUserStreamRow = null;
+    currentUserStreamText = "";
   }
 
   currentAiStreamRow = null;
-
   currentAiStreamText = "";
-
   scrollGeminiToBottom(true);
-
 }
 
 
@@ -22201,7 +22191,7 @@ function connectGeminiLive() {
     if (liveModel.startsWith("models/")) liveModel = liveModel.replace("models/", "");
 
     if (liveModel.indexOf("3.8-live-thinking") !== -1 || liveModel.indexOf("extended-thinking") !== -1) {
-      liveModel = "gemini-3.8-live-thinking";
+      liveModel = "gemini-3.8-live-extended-thinking";
     } else if (liveModel.indexOf("3.8-live") !== -1 || liveModel.indexOf("3.8") !== -1) {
       liveModel = "gemini-3.8-live";
     } else if (liveModel.indexOf("3.1-flash-live") !== -1 || liveModel.indexOf("live-preview") !== -1) {
@@ -22398,7 +22388,7 @@ function handleGeminiServerMessage(msg) {
 
     if (msg.type === "user_transcript" && msg.text) {
 
-      updateUserSpeechBubble(msg.text);
+      updateUserSpeechBubble(msg.text, Boolean(msg.isFinal));
 
       return;
 
