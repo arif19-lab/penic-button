@@ -636,21 +636,13 @@ function selectGeminiModel(modelId, displayName, isLiveModel) {
 
   var cleanModel = modelId.startsWith("models/") ? modelId.replace("models/", "") : modelId;
 
-  if (cleanModel.indexOf("3.8-live-thinking") !== -1) {
+  if (cleanModel.indexOf("3.8-live-thinking") !== -1 || cleanModel.indexOf("thinking") !== -1 || cleanModel.indexOf("extended-thinking") !== -1) {
 
-    cleanModel = "gemini-3.8-live-thinking";
+    cleanModel = "gemini-3.8-live-extended-thinking";
 
-  } else if (cleanModel.indexOf("3.8-live") !== -1) {
+  } else {
 
     cleanModel = "gemini-3.8-live";
-
-  } else if (cleanModel.indexOf("3.1-flash-live") !== -1 || cleanModel.indexOf("live-preview") !== -1) {
-
-    cleanModel = "gemini-3.1-flash-live-preview";
-
-  } else if (cleanModel.indexOf("2.5-flash-native-audio") !== -1 || cleanModel.indexOf("native-audio") !== -1) {
-
-    cleanModel = "gemini-2.5-flash-native-audio-preview-12-2025";
 
   }
 
@@ -2838,6 +2830,45 @@ function updateUserSpeechBubble(text, isFinal) {
   currentAiStreamRow = null;
   currentAiStreamText = "";
   scrollGeminiToBottom(true);
+}
+
+// 🎙️ Real-Time Word-by-Word Streamer for AI Spoken Responses
+var _aiWordQueue = [];
+var _aiWordTimer = null;
+
+function enqueueAiSpokenText(newChunk, isFinal) {
+  if (!newChunk && !isFinal) return;
+
+  if (newChunk) {
+    var words = String(newChunk).split(/(\s+)/).filter(Boolean);
+    for (var i = 0; i < words.length; i++) {
+      _aiWordQueue.push(words[i]);
+    }
+  }
+
+  if (!_aiWordTimer && _aiWordQueue.length > 0) {
+    _aiWordTimer = setInterval(function() {
+      if (_aiWordQueue.length > 0) {
+        var wordToken = _aiWordQueue.shift();
+        appendGeminiLog("ai", wordToken, true);
+      } else {
+        clearInterval(_aiWordTimer);
+        _aiWordTimer = null;
+      }
+    }, 40);
+  }
+
+  if (isFinal) {
+    while (_aiWordQueue.length > 0) {
+      appendGeminiLog("ai", _aiWordQueue.shift(), true);
+    }
+    if (_aiWordTimer) {
+      clearInterval(_aiWordTimer);
+      _aiWordTimer = null;
+    }
+    currentAiStreamRow = null;
+    currentAiStreamText = "";
+  }
 }
 
 
@@ -5251,15 +5282,11 @@ function handleGeminiServerMessage(msg) {
 
       if (msg.text) {
 
-        appendGeminiLog("ai", msg.text, !msg.isFinal);
+        enqueueAiSpokenText(msg.text, Boolean(msg.isFinal));
 
-      }
+      } else if (msg.isFinal) {
 
-      if (msg.isFinal) {
-
-        currentAiStreamRow = null;
-
-        currentAiStreamText = "";
+        enqueueAiSpokenText("", true);
 
       }
 
@@ -5329,6 +5356,9 @@ function handleGeminiServerMessage(msg) {
 
       stopAllAudioPlayback();
 
+      _aiWordQueue = [];
+      if (_aiWordTimer) { clearInterval(_aiWordTimer); _aiWordTimer = null; }
+
       currentAiStreamRow = null;
 
       currentAiStreamText = "";
@@ -5347,9 +5377,7 @@ function handleGeminiServerMessage(msg) {
 
     if (msg.type === "turn_complete") {
 
-      currentAiStreamRow = null;
-
-      currentAiStreamText = "";
+      enqueueAiSpokenText("", true);
 
       currentUserStreamRow = null;
 
@@ -6175,11 +6203,43 @@ function sendTextToGeminiRest(text) {
 
 
 
+var _speechRecognizer = null;
+function startClientSpeechRecognition() {
+  var SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRec) return;
+  try {
+    if (_speechRecognizer) {
+      try { _speechRecognizer.stop(); } catch(e) {}
+    }
+    _speechRecognizer = new SpeechRec();
+    _speechRecognizer.continuous = true;
+    _speechRecognizer.interimResults = true;
+    _speechRecognizer.lang = navigator.language || "en-US";
+
+    _speechRecognizer.onresult = function(event) {
+      for (var i = event.resultIndex; i < event.results.length; ++i) {
+        var transcript = event.results[i][0].transcript;
+        if (transcript) {
+          updateUserSpeechBubble(transcript, Boolean(event.results[i].isFinal));
+        }
+      }
+    };
+    _speechRecognizer.onerror = function() {};
+    _speechRecognizer.onend = function() {
+      if (window.__voiceActive && audioInputCtx && audioInputCtx.state === "running") {
+        try { _speechRecognizer.start(); } catch(e) {}
+      }
+    };
+    _speechRecognizer.start();
+  } catch(e) {}
+}
+
 function startMicrophoneCapture() {
 
   // 🎙️ Voice-active flag: enables controls.js stream FPS throttling while voice is active to prevent thread starvation
 
   window.__voiceActive = true;
+  startClientSpeechRecognition();
 
   if (audioInputCtx && audioInputSource) {
 
@@ -6465,6 +6525,10 @@ function startMicrophoneCapture() {
           if (goLiveBtn) goLiveBtn.classList.add("user-speaking");
 
           if (voiceBannerTitle) voiceBannerTitle.textContent = "🎙️ SPEAKING (AI LISTENING)";
+
+          if (!currentUserStreamRow) {
+            updateUserSpeechBubble("🎙️ Listening...", false);
+          }
 
         } else {
 
