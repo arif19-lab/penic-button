@@ -70,7 +70,7 @@
 
 // Compares the value of the "key" query parameter EXACTLY with the active key.
 
-// Substring matches ("key=" anywhere, "imran", ...) used to be accepted, which
+// Substring matches ("key=" anywhere) used to be accepted, which
 
 // let any request reach the machine without knowing the key at all.
 
@@ -173,25 +173,7 @@ static bool RequestHasValidKey(const std::string& request, bool* usedCurrentKey 
 // an install rotates it.  Rewrite the finished manifest with the live key.
 
 static std::string WithLiveKey(const std::string& body) {
-
-    const std::string legacy = "/?key=imran2024";
-
-    std::string out = body;
-
-    size_t pos = 0;
-
-    while ((pos = out.find(legacy, pos)) != std::string::npos) {
-
-        const std::string replacement = "/?key=" + g_dynamicKey;
-
-        out.replace(pos, legacy.size(), replacement);
-
-        pos += replacement.size();
-
-    }
-
-    return out;
-
+    return body;
 }
 
 
@@ -3571,7 +3553,7 @@ showMode(currentMode);
 
         } else if (request.find("GET /panic") != std::string::npos) {
 
-            // ✅ /panic?key=imran2024 → Panic Mode Toggle!
+            // ✅ /panic?key=<dynamicKey> → Panic Mode Toggle!
 
             if (IsWorkstationLocked()) {
 
@@ -5455,7 +5437,7 @@ showMode(currentMode);
 
             // When editing files in android-app/www/, browser refresh (F5) INSTANTLY reflects changes without building!
 
-            std::string devPath = "c:\\Users\\Imran\\panic-button\\android-app\\www" + targetFile;
+            std::string devPath = GetProgramDataFolder() + "\\www" + targetFile;
 
             FILE* f = fopen(devPath.c_str(), "rb");
 

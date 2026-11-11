@@ -383,12 +383,12 @@ static const std::string& SvcAuthKey() {
         cached.assign(buf, n);
         while (!cached.empty() && (cached.back() == '\r' || cached.back() == '\n' || cached.back() == ' ')) cached.pop_back();
     }
-    if (cached.size() < 16) cached = "imran2024"; // agent not deployed yet
+    if (cached.size() < 16) cached = "";
     return cached;
 }
 
 static bool SvcLegacyKeyAllowed() {
-    return true;
+    return false;
 }
 
 static bool SvcHasKey(const std::string& req) {
@@ -646,11 +646,10 @@ static DWORD WINAPI CriticalClientThread(LPVOID lpParam) {
             // Invariant 10: candidate fallbacks for the APK path
             const char* candidates[] = {
                 "C:\\ProgramData\\PanicButton\\PanicCTRL.apk",
-                "PanicCTRL.apk",
-                "C:\\Users\\Imran\\panic-button\\PanicCTRL.apk"
+                "PanicCTRL.apk"
             };
             std::string apkPath;
-            for (int i = 0; i < 3; ++i) {
+            for (int i = 0; i < 2; ++i) {
                 if (GetFileAttributesA(candidates[i]) != INVALID_FILE_ATTRIBUTES) { apkPath = candidates[i]; break; }
             }
             if (!apkPath.empty()) {

@@ -354,8 +354,8 @@ void LoadOrCreateAuthKey() {
                                    stored.back() == ' ' || stored.back() == '\t')) {
             stored.pop_back();
         }
-        // A stale file holding the old shared key must not keep us on it.
-        if (stored.size() >= 16 && stored != SECRET_KEY) {
+        // A valid key file must be at least 16 characters.
+        if (stored.size() >= 16) {
             g_dynamicKey = stored;
             return;
         }
@@ -363,10 +363,13 @@ void LoadOrCreateAuthKey() {
 
     char fresh[25] = {0};
     if (!SecureRandomKey(fresh, 24)) {
-        // Vanishingly unlikely; stay reachable rather than lock the owner out.
-        AppLog("[auth] CSPRNG unavailable, keeping legacy key");
-        g_dynamicKey = SECRET_KEY;
-        return;
+        // Fallback emergency generation using high-resolution clock if CSPRNG is unavailable
+        srand((unsigned int)time(NULL));
+        const char charset[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        for (int i = 0; i < 24; i++) {
+            fresh[i] = charset[rand() % (sizeof(charset) - 1)];
+        }
+        fresh[24] = '\0';
     }
     g_dynamicKey = fresh;
     FILE* out = fopen(path.c_str(), "wb");
@@ -382,7 +385,7 @@ void EnsureAuthKeyLoaded() {
 }
 
 bool IsLegacyKeyAllowed() {
-    return false; // Always allow pre-shared key (imran2024) for APKs & legacy clients alongside dynamic key
+    return false; // Legacy pre-shared keys permanently disabled
 }
 
 void MarkPairedWithCurrentKey() {

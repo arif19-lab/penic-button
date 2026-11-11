@@ -2,7 +2,6 @@
  * 🎙️ PanicCTRL — Gemini Live Multimodal WebSocket Server
  * ============================================================================
  * Mirrors the official Google AI Studio reference implementation:
- * (C:\Users\Imran\Downloads\gemini-live-voice-assistant\server.ts)
  *
  * Features:
  *   • Official @google/genai SDK (v2.4.0) with ai.live.connect()
@@ -53,7 +52,7 @@ app.use((req, res, next) => {
     const proxyReq = http.request({
       hostname: "127.0.0.1",
       port: 8085,
-      path: req.url, // retains query parameters e.g. ?key=imran2024
+      path: req.url, // retains query parameters e.g. ?key=...
       method: req.method,
       headers: req.headers
     }, (proxyRes) => {
@@ -83,7 +82,7 @@ function agentAccessKey() {
     const k = fs.readFileSync(AUTH_KEY_FILE, "utf8").trim();
     if (k) return k;
   } catch (e) {}
-  return "imran2024";
+  return "";
 }
 
 function cppKeyUrl() {
@@ -640,7 +639,7 @@ wss.on("connection", (clientWs, req) => {
         "",
         "=== 🛠️ UNIVERSAL WORKSTATION AUTOMATION SUITE ===",
         "You have full root access to automate the user's Windows host PC with universal super-tools:",
-        "1. interact_ui(action, target, app_name, value, steps): Universal Windows UI Automation engine with closed-loop verification. For single actions use action: 'click' / 'set_text'. For multi-step workflows across applications, use action: 'run_sequence' with steps: [{action: 'set_text', value: '...'}, {action: 'click', target: 'File'}, {action: 'click', target: 'Save as'}, {action: 'set_text', target: 'File name:', value: 'C:\\\\Users\\\\Imran\\\\test.txt'}, {action: 'click', target: 'Save'}]. NEVER pass steps as a string inside 'value'; ALWAYS pass the array inside the 'steps' parameter directly.",
+        "1. interact_ui(action, target, app_name, value, steps): Universal Windows UI Automation engine with closed-loop verification. For single actions use action: 'click' / 'set_text'. For multi-step workflows across applications, use action: 'run_sequence' with steps: [{action: 'set_text', value: '...'}, {action: 'click', target: 'File'}, {action: 'click', target: 'Save as'}, {action: 'set_text', target: 'File name:', value: 'test.txt'}, {action: 'click', target: 'Save'}]. NEVER pass steps as a string inside 'value'; ALWAYS pass the array inside the 'steps' parameter directly.",
         "2. execute_system_script(script): Universal system execution primitive. Executes multi-line PowerShell, .NET, WMI, or CMD commands with zero quote-escaping bugs. Handles process management, file operations, hardware telemetry, settings, volume, brightness, and system administration.",
         "3. web_search(query): Background search engine returning live snippets, facts, prices, and specs without opening a browser.",
         "4. web_fetch(url): Fetch web page content from a specific URL. Use ONLY when the user provides a direct URL.",

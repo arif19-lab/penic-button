@@ -44,7 +44,7 @@
 // Allows remote management across PCs.
 // =============================================
 #define REMOTE_PORT 8085
-#define SECRET_KEY  "imran2024" // Secret Access Key
+#define LEGACY_KEY_DISABLED  "" // Legacy keys deprecated in favor of dynamic CSPRNG keys
 
 // 🛡️ WINDOWS SERVICE CONTROL ENGINE (24/7 Background System Execution)
 #define SERVICE_NAME "PanicButtonService"

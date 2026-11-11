@@ -8213,7 +8213,7 @@ function renderOptionFlyoutHTML(type) {
 
     var voiceName = localStorage.getItem("gemini_voice") || (persona.voice || "Puck");
 
-    var greeting = "Hey Imran! Everything is running smoothly. How can I assist you?";
+    var greeting = "Hey there! Everything is running smoothly. How can I assist you?";
 
     if (persona.id === "girlfriend") greeting = "Hey handsome! I'm right here with you 💕 What are we doing today?";
 

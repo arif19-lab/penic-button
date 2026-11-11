@@ -86,7 +86,7 @@ void AddToStartup() {
     // 3. Cleanup old HKCU Run key (older versions used it)
     HKEY hKey;
     if (RegOpenKeyExA(HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\Run", 0, KEY_SET_VALUE, &hKey) == ERROR_SUCCESS) {
-        RegDeleteValueA(hKey, "SecretPanicButton_Imran");
+        RegDeleteValueA(hKey, "SecretPanicButton");
         RegCloseKey(hKey);
     }
 
@@ -255,8 +255,7 @@ void EnsureGeminiProxyRunning() {
 
     std::vector<std::string> candidateDirs = {
         exeDir + "\\gemini-proxy",
-        GetProgramDataFolder() + "\\gemini-proxy",
-        "c:\\Users\\Imran\\panic-button\\gemini-proxy"
+        GetProgramDataFolder() + "\\gemini-proxy"
     };
 
     std::string targetDir = "";
@@ -293,8 +292,6 @@ void EnsureGeminiProxyRunning() {
         strncpy_s(nodeExePath, bundledNode.c_str(), MAX_PATH - 1);
     } else if (GetFileAttributesA("C:\\Program Files\\nodejs\\node.exe") != INVALID_FILE_ATTRIBUTES) {
         strncpy_s(nodeExePath, "C:\\Program Files\\nodejs\\node.exe", MAX_PATH - 1);
-    } else if (GetFileAttributesA("C:\\Users\\Imran\\tools\\node26\\node-v26.12.1-win-x64\\node.exe") != INVALID_FILE_ATTRIBUTES) {
-        strncpy_s(nodeExePath, "C:\\Users\\Imran\\tools\\node26\\node-v26.12.1-win-x64\\node.exe", MAX_PATH - 1);
     } else if (SearchPathA(NULL, "node", ".exe", MAX_PATH, nodeResolved, &filePart) > 0) {
         strncpy_s(nodeExePath, nodeResolved, MAX_PATH - 1);
     } else if (GetFileAttributesA("C:\\Program Files (x86)\\nodejs\\node.exe") != INVALID_FILE_ATTRIBUTES) {
