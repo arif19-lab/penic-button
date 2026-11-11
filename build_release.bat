@@ -1,7 +1,21 @@
 @echo off
+setlocal EnableDelayedExpansion
+
+echo [0/3] Stopping Running Services and Background Processes...
+rem 1. Gracefully tell PanicButton.exe to exit via HTTP API using current auth key
+if exist "C:\ProgramData\PanicButton\auth.key" (
+    set /p CUR_KEY=<"C:\ProgramData\PanicButton\auth.key"
+    curl.exe -s -m 2 "http://127.0.0.1:8085/api/exit?key=!CUR_KEY!" >nul 2>&1
+)
+curl.exe -s -m 1 "http://127.0.0.1:8085/api/exit" >nul 2>&1
+
+rem 2. Stop Scheduled Task and Kill Any Remaining Instances
 schtasks /End /TN "PanicButton_Autostart" >nul 2>&1
-taskkill /F /IM PanicButton.exe >nul 2>&1
-taskkill /F /IM PanicService.exe >nul 2>&1
+taskkill /F /IM PanicButton.exe /T >nul 2>&1
+taskkill /F /IM PanicService.exe /T >nul 2>&1
+powershell -NoProfile -Command "Stop-Process -Name PanicButton, PanicService -Force -ErrorAction SilentlyContinue" >nul 2>&1
+
+rem 3. Wait for file handles to release
 ping 127.0.0.1 -n 3 >nul
 echo ===================================================
 echo   Compiling PanicButton (Commercial Modular Build)

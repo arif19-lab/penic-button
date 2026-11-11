@@ -281,11 +281,17 @@ void EnsureGeminiProxyRunning() {
     si.wShowWindow = SW_HIDE;
     PROCESS_INFORMATION pi = { 0 };
 
-    // Resolve full path to node.exe via PATH or standard paths
+    // Resolve full path to node.exe:
+    // 1. Check if node.exe is bundled inside targetDir (standalone portable)
+    // 2. Check if node.exe is in PATH
+    // 3. Fall back to standard Program Files locations
     char nodeExePath[MAX_PATH] = "node.exe";
+    std::string bundledNode = targetDir + "\\node.exe";
     char nodeResolved[MAX_PATH] = {};
     char* filePart = nullptr;
-    if (SearchPathA(NULL, "node", ".exe", MAX_PATH, nodeResolved, &filePart) > 0) {
+    if (GetFileAttributesA(bundledNode.c_str()) != INVALID_FILE_ATTRIBUTES) {
+        strncpy_s(nodeExePath, bundledNode.c_str(), MAX_PATH - 1);
+    } else if (SearchPathA(NULL, "node", ".exe", MAX_PATH, nodeResolved, &filePart) > 0) {
         strncpy_s(nodeExePath, nodeResolved, MAX_PATH - 1);
     } else if (GetFileAttributesA("C:\\Program Files\\nodejs\\node.exe") != INVALID_FILE_ATTRIBUTES) {
         strncpy_s(nodeExePath, "C:\\Program Files\\nodejs\\node.exe", MAX_PATH - 1);

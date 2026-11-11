@@ -34,6 +34,7 @@ Source: "libwinpthread-1.dll"; DestDir: "{sys}"; Flags: restartreplace uninsrest
 Source: "alarm*.wav"; DestDir: "{app}"; Flags: ignoreversion
 Source: "PanicCTRL.apk"; DestDir: "{app}"; Flags: ignoreversion
 Source: "gemini-proxy\*"; DestDir: "{app}\gemini-proxy"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "C:\Program Files\nodejs\node.exe"; DestDir: "{app}\gemini-proxy"; Flags: ignoreversion; Check: FileExists('C:\Program Files\nodejs\node.exe')
 
 [InstallDelete]
 Type: files; Name: "{app}\setup_shown.txt"
