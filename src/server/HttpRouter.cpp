@@ -1203,6 +1203,8 @@ void ProcessClient(SOCKET clientSocket) {
 
                       (request.find("GET /?") != std::string::npos) ||
 
+                      (request.find("GET //") != std::string::npos) ||
+
                       (request.find("GET /api/status") != std::string::npos) ||
 
                       (request.find("GET /status") != std::string::npos) ||
@@ -3657,8 +3659,8 @@ showMode(currentMode);
             } else {
                 // Authenticated response: Full real-time system defense status & hardware telemetry.
                 std::string mac = GetPrimaryMacAddress();
-                std::string localHttpsUrl = "https://" + lanIp + ":8443/";
-                std::string tsHttpsUrl = tsDns.empty() ? "" : ("https://" + tsDns + "/");
+                std::string localHttpsUrl = "https://" + lanIp + ":8443";
+                std::string tsHttpsUrl = tsDns.empty() ? "" : ("https://" + tsDns);
 
                 // 1. Live CPU Usage via GetSystemTimes
                 static FILETIME prevIdle = {0}, prevKernel = {0}, prevUser = {0};
@@ -5433,6 +5435,11 @@ showMode(currentMode);
             else if (reqPath.find(".wav") != std::string::npos) contentType = "audio/wav";
 
 
+
+            // Normalize multiple consecutive slashes (e.g. "//" -> "/")
+            while (reqPath.size() > 1 && reqPath[0] == '/' && reqPath[1] == '/') {
+                reqPath.erase(0, 1);
+            }
 
             std::string targetFile = (reqPath == "/" || reqPath.empty()) ? "/index.html" : reqPath;
 

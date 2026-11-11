@@ -23416,7 +23416,12 @@ function startMicrophoneCapture() {
 
       setTimeout(function() {
 
-        var target = secureUrl + (secureUrl.includes("?") ? "&" : "/?") + "key=" + (window.KEY || "");
+        var base = (secureUrl || '').replace(/\/+$/, '');
+        var k = window.KEY || localStorage.getItem('panic_key') || '';
+        var target = base;
+        if (base.indexOf('key=') === -1 && k) {
+          target = base + (base.includes('?') ? '&' : '/?') + 'key=' + encodeURIComponent(k);
+        }
 
         window.location.href = target;
 
