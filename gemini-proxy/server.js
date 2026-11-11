@@ -687,8 +687,11 @@ wss.on("connection", (clientWs, req) => {
           },
         },
         systemInstruction: effectiveInstruction,
+        // 🎙️ Enable word-by-word streaming transcriptions for both Agent and User
         outputAudioTranscription: {},
-        inputAudioTranscription: {},
+        inputAudioTranscription: {
+          mode: "smart",
+        },
         // Real-time VAD: Low false-positive sensitivity, balanced silence threshold
         realtimeInputConfig: {
           activityHandling: "START_OF_ACTIVITY_INTERRUPTS",
@@ -759,7 +762,7 @@ wss.on("connection", (clientWs, req) => {
               }
             }
 
-            // 2. Output Audio Transcription (Agent speech text)
+            // 2. Output Audio Transcription (Agent speech text - word-by-word delta streaming)
             const outputTranscription =
               serverContent?.outputTranscription ||
               serverContent?.output_transcription ||
@@ -768,49 +771,58 @@ wss.on("connection", (clientWs, req) => {
 
             let sentAgentText = false;
             if (outputTranscription && outputTranscription.text) {
-              const cleanedText = cleanAgentSpeechText(outputTranscription.text);
-              if (cleanedText) {
+              const textChunk = outputTranscription.text;
+              if (textChunk) {
                 safeSend(clientWs, {
                   type: "agent_transcript",
-                  text: cleanedText,
-                  isFinal: Boolean(outputTranscription.finished || outputTranscription.isFinal),
+                  text: textChunk,
+                  isFinal: Boolean(outputTranscription.finished || outputTranscription.isFinal || serverContent?.turnComplete),
                 });
                 sentAgentText = true;
               }
             }
 
             // Fallback: If no explicit outputTranscription object, stream parts text (STRICTLY non-thought)
-            if (parts.length > 0) {
+            if (parts.length > 0 && !sentAgentText) {
               for (const part of parts) {
                 if (part.thought) continue;
                 if (part.text) {
-                  const cleanedText = cleanAgentSpeechText(part.text);
-                  if (cleanedText && !sentAgentText) {
-                    safeSend(clientWs, {
-                      type: "agent_transcript",
-                      text: cleanedText,
-                      isFinal: false,
-                    });
-                  }
+                  safeSend(clientWs, {
+                    type: "agent_transcript",
+                    text: part.text,
+                    isFinal: Boolean(serverContent?.turnComplete),
+                  });
                 }
               }
             }
 
             // 3. Input Audio Transcription (User speech text)
-            const inputTranscription =
-              serverContent?.inputTranscription ||
-              serverContent?.input_transcription ||
+            // A) Low-latency speculative interim hypothesis (streams word-by-word dynamically while speaking)
+            const interimInput =
               serverContent?.interimInputTranscription ||
               serverContent?.interim_input_transcription ||
-              serverContent?.inputAudioTranscription ||
-              message?.inputTranscription ||
               message?.interimInputTranscription;
 
-            if (inputTranscription && inputTranscription.text) {
+            if (interimInput && interimInput.text) {
               safeSend(clientWs, {
                 type: "user_transcript",
-                text: inputTranscription.text,
-                isFinal: Boolean(inputTranscription.finished || inputTranscription.isFinal),
+                text: interimInput.text,
+                isFinal: false,
+              });
+            }
+
+            // B) Finalized authoritative transcript (committed when speaker pauses / turn completes)
+            const finalInput =
+              serverContent?.inputTranscription ||
+              serverContent?.input_transcription ||
+              serverContent?.inputAudioTranscription ||
+              message?.inputTranscription;
+
+            if (finalInput && finalInput.text) {
+              safeSend(clientWs, {
+                type: "user_transcript",
+                text: finalInput.text,
+                isFinal: true,
               });
             }
 
@@ -919,6 +931,11 @@ wss.on("connection", (clientWs, req) => {
             if (serverContent?.turnComplete) {
               safeSend(clientWs, {
                 type: "turn_complete",
+              });
+              safeSend(clientWs, {
+                type: "agent_transcript",
+                text: "",
+                isFinal: true,
               });
             }
           },

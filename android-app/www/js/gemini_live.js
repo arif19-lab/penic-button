@@ -2878,37 +2878,32 @@ function appendGeminiLog(type, text, isStreamChunk) {
 
   } else if (type === "ai") {
 
-    cleanText = cleanText.replace(/^🧠\s*/, "").trim();
+    var rawChunk = String(text || "").replace(/^🧠\s*/, "");
+    if (!rawChunk) return;
 
-    if (!cleanText) return;
-
-    
-
-    // Accumulate streamed text tokens into the same bubble (handling both delta and cumulative chunks from Live API)
-
+    // Accumulate streamed text tokens into the same bubble in real time (handling both delta and cumulative chunks)
     if (isStreamChunk && currentAiStreamRow && l.contains(currentAiStreamRow)) {
-
-      if (cleanText.startsWith(currentAiStreamText) && cleanText.length > currentAiStreamText.length) {
-
-        currentAiStreamText = cleanText;
-
-      } else if (currentAiStreamText && !currentAiStreamText.endsWith(cleanText) && !cleanText.startsWith(currentAiStreamText)) {
-
-        currentAiStreamText = (currentAiStreamText + " " + cleanText).trim();
-
+      var trimmed = rawChunk.trim();
+      if (rawChunk.startsWith(currentAiStreamText) && rawChunk.length > currentAiStreamText.length) {
+        currentAiStreamText = rawChunk;
+      } else if (trimmed.startsWith(currentAiStreamText) && trimmed.length > currentAiStreamText.length) {
+        currentAiStreamText = trimmed;
       } else if (!currentAiStreamText) {
-
-        currentAiStreamText = cleanText;
-
+        currentAiStreamText = rawChunk.trim();
+      } else {
+        // Delta word/token chunk: preserve inter-word spacing without duplication
+        var needsSpace = !currentAiStreamText.endsWith(" ") && 
+                         !rawChunk.startsWith(" ") && 
+                         !/^[.,!?;:)}\]]/.test(rawChunk);
+        currentAiStreamText += (needsSpace ? " " : "") + rawChunk;
       }
 
       var bubble = currentAiStreamRow.querySelector(".ai-bubble");
-
       if (bubble) bubble.innerHTML = formatAiText(currentAiStreamText);
 
     } else {
 
-      currentAiStreamText = cleanText;
+      currentAiStreamText = rawChunk.trim();
 
       var row = document.createElement("div");
 
@@ -5250,11 +5245,15 @@ function handleGeminiServerMessage(msg) {
 
     }
 
-    if (msg.type === "agent_transcript" && msg.text) {
+    if (msg.type === "agent_transcript") {
 
       removeAiTypingIndicator();
 
-      appendGeminiLog("ai", msg.text, !msg.isFinal);
+      if (msg.text) {
+
+        appendGeminiLog("ai", msg.text, !msg.isFinal);
+
+      }
 
       if (msg.isFinal) {
 
