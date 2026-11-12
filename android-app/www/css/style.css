@@ -3544,9 +3544,16 @@
     bottom: 0;
     left: 0;
     right: 0;
-    padding: 12px 20px 16px;
-    background: linear-gradient(to top, #ffffff 82%, rgba(255, 255, 255, 0) 100%);
+    padding: 8px 12px calc(12px + env(safe-area-inset-bottom, 0px));
+    background: transparent !important;
     z-index: 80;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    pointer-events: none;
+  }
+  .cg-footer-composer > * {
+    pointer-events: auto;
   }
 
   .cg-input-capsule {
@@ -4132,7 +4139,11 @@
       right: 0 !important;
       z-index: 80 !important;
       padding: 6px 10px calc(8px + env(safe-area-inset-bottom, 0px)) !important;
-      background: linear-gradient(to top, #ffffff 82%, rgba(255, 255, 255, 0) 100%) !important;
+      background: transparent !important;
+      display: flex !important;
+      justify-content: center !important;
+      align-items: center !important;
+      pointer-events: none !important;
     }
     .cg-bottom-row {
       display: none !important;
@@ -8502,7 +8513,7 @@ body.gemini-dark .cg-think-body {
 
 /* 🚀 Floating Bottom Composer */
 body.gemini-dark .cg-footer-composer {
-  background: linear-gradient(to top, #171717 82%, rgba(23, 23, 23, 0) 100%) !important;
+  background: transparent !important;
 }
 body.gemini-dark .cg-input-capsule {
   background: rgba(33, 33, 33, 0.94) !important;
@@ -8988,7 +8999,7 @@ body.gemini-dark .cg-persona-desc {
     border: 1px solid rgba(255, 255, 255, 0.12) !important;
   }
   body.gemini-dark .cg-footer-composer {
-    background: linear-gradient(to top, #171717 82%, rgba(23, 23, 23, 0) 100%) !important;
+    background: transparent !important;
   }
   body.gemini-dark .cg-voice-picker-panel {
     background: rgba(28, 28, 30, 0.98) !important;
@@ -9222,10 +9233,18 @@ body.gemini-dark .cg-persona-desc {
    🎙️ ANTIGRAVITY STUDIO CHAT INPUT BOX & CONTROLS (Exact Match to Antigravity Voice Assistant)
    ============================================================================================== */
 
+/* Center suggestions & title removed completely */
+#geminiHeroGreeting, .cg-hero, .cg-hero-heading, .cg-pill-grid {
+  display: none !important;
+}
+
 .cg-studio-controls {
   position: relative;
-  width: 100%;
-  max-width: 672px;
+  width: fit-content;
+  width: -webkit-fit-content;
+  width: -moz-fit-content;
+  max-width: min(560px, 95vw);
+  min-width: min(490px, 92vw);
   margin: 0 auto;
   border-radius: 12px;
   background: rgba(9, 9, 11, 0.95);
@@ -9238,6 +9257,14 @@ body.gemini-dark .cg-persona-desc {
   flex-direction: column;
   gap: 8px;
   box-sizing: border-box;
+}
+
+@media (max-width: 540px) {
+  .cg-studio-controls {
+    width: 95vw;
+    min-width: 0;
+    max-width: 95vw;
+  }
 }
 
 /* 🎙️ Custom Studio Popover Panel: Voice & Emotion */

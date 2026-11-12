@@ -587,6 +587,50 @@ wss.on("connection", (clientWs, req) => {
 
   taskRunner.on("task_completed", handleTaskCompleted);
 
+// ─── Human-Like Emotion & Vocal Acting Instructions (Ref: Antigravity Voice Assistant) ───
+const EMOTION_INSTRUCTIONS = {
+  auto_affective: {
+    temperature: 1.05,
+    instruction:
+      'AFFECTIVE DIALOG & HUMAN PROSODY MODE: Listen closely to the user’s vocal tone, emotion, urgency, and energy. Mirror and respond with authentic human vocal emotion—including natural breaths, micro-pauses, pitch variation, warmth, empathy, excitement, or intensity as the moment demands. Never sound robotic or monotone.',
+  },
+  natural_human: {
+    temperature: 1.05,
+    instruction:
+      'ULTRA-REALISTIC HUMAN VOICE MODE: Speak like a real human in a spontaneous live conversation. Use natural breathing, subtle vocal inflections, occasional light chuckles when appropriate, dynamic pacing, and authentic emotional warmth.',
+  },
+  angry_intense: {
+    temperature: 1.15,
+    instruction:
+      'ANGRY / FIERCE EMOTION MODE: Deliver your spoken audio with an unmistakably angry, fierce, heated, and sharp vocal tone! Raise your vocal intensity, use punchy aggressive cadence, sharp consonant articulation, and raw frustrated/intense emotion.',
+  },
+  excited_hyped: {
+    temperature: 1.15,
+    instruction:
+      'EXCITED / HIGH-ENERGY EMOTION MODE: Speak with contagious excitement, joy, and high-voltage enthusiasm! Use fast, lively pacing, bright upward pitch leaps, and energetic vocal expression.',
+  },
+  empathetic_warm: {
+    temperature: 0.95,
+    instruction:
+      'EMPATHETIC / EMOTIONAL CARE MODE: Speak with deep emotional tenderness, compassion, and warmth. Use a soft, comforting vocal timbre, gentle pacing, and empathetic sighs.',
+  },
+  whisper_intimate: {
+    temperature: 0.9,
+    instruction:
+      'WHISPER / CLOSE-MIC MODE: Speak in a soft, breathy, close-microphone whisper. Keep your vocal projection hushed, quiet, and intimate as if speaking softly right next to the listener.',
+  },
+  playful_witty: {
+    temperature: 1.1,
+    instruction:
+      'PLAYFUL / WITTY / SARCASTIC MODE: Speak with a charismatic, teasing, witty, and playful vocal tone. Include natural chuckles, expressive vocal smirks, and lively comedic timing.',
+  },
+  dramatic_cinematic: {
+    temperature: 1.1,
+    instruction:
+      'DRAMATIC / CINEMATIC MODE: Deliver your words with deep theatrical gravity, suspenseful pauses, wide dynamic range from quiet intensity to powerful resonance, and cinematic emotion.',
+  },
+};
+
   const cleanupSession = async () => {
     isSessionActive = false;
     taskRunner.off("task_completed", handleTaskCompleted);
@@ -621,6 +665,11 @@ wss.on("connection", (clientWs, req) => {
       activeModel = m;
     }
     if (configOverride?.voice) sessionConfig.voice = configOverride.voice;
+    if (configOverride?.emotionMode) sessionConfig.emotionMode = configOverride.emotionMode;
+    if (configOverride?.extendedThinking) {
+      sessionConfig.model = "gemini-3.8-live-extended-thinking";
+      activeModel = "gemini-3.8-live-extended-thinking";
+    }
     if (configOverride?.systemInstruction) {
       sessionConfig.systemInstruction = configOverride.systemInstruction;
     }
@@ -640,15 +689,18 @@ wss.on("connection", (clientWs, req) => {
     try {
       const ai = getGeminiClient(apiKey);
       const targetModel = sessionConfig.model || "gemini-3.8-live";
+      const vName = sessionConfig.voice || "Zephyr";
+      const eMode = sessionConfig.emotionMode || "auto_affective";
+      const eSpec = EMOTION_INSTRUCTIONS[eMode] || EMOTION_INSTRUCTIONS.auto_affective;
 
       safeSend(clientWs, {
         type: "status",
         state: "connecting",
-        message: `Connecting to ${targetModel}...`,
+        message: `Connecting to ${targetModel} (${vName} · ${eMode})...`,
         activeModel: targetModel,
       });
 
-      console.log(`[Proxy] Connecting Gemini Live session using model: ${targetModel}`);
+      console.log(`[Proxy] Connecting Gemini Live session: ${targetModel} | voice: ${vName} | emotion: ${eMode}`);
 
       const toolsCatalogPrompt = [
         "",
@@ -691,13 +743,16 @@ wss.on("connection", (clientWs, req) => {
         "  * If the user merely greets you, asks what your name is, or engages in casual dialogue, answer purely in spoken voice without invoking ANY tool."
       ].join("\n");
 
-      const effectiveInstruction = (sessionConfig.systemInstruction || "") + "\n\n" + toolsCatalogPrompt;
+      const effectiveInstruction = (sessionConfig.systemInstruction || "") +
+        "\n\n[VOCAL PROSODY & EMOTION SETUP]: " + eSpec.instruction +
+        "\n\n" + toolsCatalogPrompt;
 
       const liveConnectConfig = {
         responseModalities: [Modality.AUDIO],
+        temperature: eSpec.temperature || 1.05,
         speechConfig: {
           voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: sessionConfig.voice },
+            prebuiltVoiceConfig: { voiceName: vName },
           },
         },
         systemInstruction: effectiveInstruction,
@@ -987,12 +1042,41 @@ wss.on("connection", (clientWs, req) => {
       // ─── 1. Reference Project High-Level Protocol ─────────────────────────
       switch (msg.type) {
         case "init":
-          await initLiveSession(msg.config);
+          const initCfg = msg.config || msg;
+          await initLiveSession(initCfg);
           return;
 
         case "switch_model":
           console.log(`[Proxy] Request to switch model to: ${msg.model}`);
           await initLiveSession({ model: msg.model });
+          return;
+
+        case "emotionChange":
+          const targetEmotion = msg.emotionMode || msg.mode;
+          if (targetEmotion) {
+            sessionConfig.emotionMode = targetEmotion;
+            const spec = EMOTION_INSTRUCTIONS[targetEmotion] || EMOTION_INSTRUCTIONS.auto_affective;
+            console.log(`[Proxy] Live vocal prosody update applied: ${targetEmotion}`);
+            if (liveSession && isSessionActive) {
+              try {
+                liveSession.sendClientContent({
+                  turns: [
+                    {
+                      role: "user",
+                      parts: [
+                        {
+                          text: `[VOCAL PROSODY & EMOTION DIRECTOR UPDATE — Apply immediately to all subsequent spoken audio without acknowledging this meta-instruction]: ${spec.instruction}`,
+                        },
+                      ],
+                    },
+                  ],
+                  turnComplete: false,
+                });
+              } catch (e) {
+                console.warn("[Proxy] Notice injecting emotionChange:", e.message);
+              }
+            }
+          }
           return;
 
         case "audio":

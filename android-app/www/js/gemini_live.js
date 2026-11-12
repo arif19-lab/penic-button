@@ -5136,38 +5136,33 @@ function connectGeminiLive() {
       liveModel = "gemini-3.8-live";
     }
 
-    var chosenVoice = localStorage.getItem("gemini_voice") || (window.GEMINI_CONFIG && window.GEMINI_CONFIG.defaultVoice) || "Puck";
+    var chosenVoice = (typeof _currentStudioVoice !== "undefined" && _currentStudioVoice) ? _currentStudioVoice : (localStorage.getItem("gemini_voice") || (window.GEMINI_CONFIG && window.GEMINI_CONFIG.defaultVoice) || "Zephyr");
+    var activeEmotion = (typeof _currentStudioEmotion !== "undefined" && _currentStudioEmotion) ? _currentStudioEmotion : (localStorage.getItem("gemini_emotion") || "auto_affective");
+    var activeThinking = (typeof _useExtendedThinking !== "undefined") ? _useExtendedThinking : (localStorage.getItem("gemini_live_thinking") === "true");
+    if (activeThinking) {
+      liveModel = "gemini-3.8-live-extended-thinking";
+    }
 
     var persona = (typeof getActivePersona === "function") ? getActivePersona() : null;
-
     var prompt = (typeof getActivePersonaInstruction === "function") ? getActivePersonaInstruction() : "You are PanicCTRL AI, an elite, highly intelligent co-pilot. Keep voice responses concise, conversational, and direct.";
 
-
-
-    appendGeminiLog("sys", "[WS OPEN] Live Link active. Initializing " + liveModel + " (" + chosenVoice + ")...");
-
+    appendGeminiLog("sys", "[WS OPEN] Live Link active. Initializing " + liveModel + " (" + chosenVoice + " · " + activeEmotion + ")...");
     GeminiLiveDevLog.onWsOpen(false);
 
-
-
     // Send Reference Project Init Packet (Direct @google/genai Live Session)
-
     var initPayload = {
-
       type: "init",
-
+      voice: chosenVoice,
+      emotionMode: activeEmotion,
+      extendedThinking: activeThinking,
       config: {
-
         model: liveModel,
-
         voice: chosenVoice,
-
+        emotionMode: activeEmotion,
+        extendedThinking: activeThinking,
         systemInstruction: prompt
-
       }
-
     };
-
     try { geminiWs.send(JSON.stringify(initPayload)); } catch(e) {}
 
 
@@ -9067,6 +9062,9 @@ function filterVoiceModels(q) {
 function selectStudioVoice(name) {
   _currentStudioVoice = name;
   localStorage.setItem("gemini_voice", name);
+  if (window.GEMINI_CONFIG) window.GEMINI_CONFIG.defaultVoice = name;
+  invalidatePreWarm();
+  try { localStorage.removeItem(geminiResumeKey()); } catch(e) {}
   try {
     if (window.selectVoice && typeof window.selectVoice === "function") {
       window.selectVoice(name);
@@ -9076,19 +9074,30 @@ function selectStudioVoice(name) {
   updateStudioControlsUI();
   toggleStudioPopover("voice"); // close popover
 
-  // Re-init live session if connected so voice takes effect immediately
+  appendGeminiLog("sys", "[VOICE] Switched voice model to " + name + " (Active immediately).");
+
+  // Re-init live session immediately so voice takes effect without page refresh
   if (geminiWs && geminiWs.readyState === WebSocket.OPEN) {
-    reconnectWithNewVoice(name);
+    try {
+      geminiWs.send(JSON.stringify({
+        type: "init",
+        voice: name,
+        emotionMode: _currentStudioEmotion,
+        extendedThinking: _useExtendedThinking
+      }));
+    } catch(e) {
+      reconnectWithNewVoice(name);
+    }
   }
 }
 
 function reconnectWithNewVoice(name) {
   try {
-    appendGeminiLog("sys", "[VOICE] Switched voice model to " + name + " — updating session...");
+    appendGeminiLog("sys", "[VOICE] Reconnecting Live session with " + name + "...");
     disconnectGeminiLive();
     setTimeout(function() {
       connectGeminiLive();
-    }, 300);
+    }, 250);
   } catch(e) {}
 }
 
@@ -9099,25 +9108,14 @@ function selectStudioEmotion(id) {
   toggleStudioPopover("emotion"); // close popover
 
   var spec = getActiveEmotionSpec();
-  appendGeminiLog("sys", "[PROSODY] Vocal acting mode updated: " + spec.label);
+  appendGeminiLog("sys", "[PROSODY] Vocal acting mode updated: " + spec.label + " (Active immediately).");
 
-  // Inject live vocal prosody director update into the active session without dropping call
+  // Inject live vocal prosody director update into the active session immediately
   if (geminiWs && geminiWs.readyState === WebSocket.OPEN) {
     try {
       geminiWs.send(JSON.stringify({
-        clientContent: {
-          turns: [
-            {
-              role: "user",
-              parts: [
-                {
-                  text: "[VOCAL PROSODY & EMOTION DIRECTOR UPDATE — Apply immediately to all subsequent spoken audio without acknowledging this meta-instruction]: " + spec.promptInstruction
-                }
-              ]
-            }
-          ],
-          turnComplete: false
-        }
+        type: "emotionChange",
+        emotionMode: id
       }));
     } catch(e) {}
   }
@@ -9128,17 +9126,20 @@ function toggleStudioThinking() {
   localStorage.setItem("gemini_live_thinking", _useExtendedThinking ? "true" : "false");
   updateStudioControlsUI();
 
-  var thBtn = document.getElementById("btnStudioThinking");
-  if (thBtn) {
-    if (_useExtendedThinking) thBtn.classList.add("active");
-    else thBtn.classList.remove("active");
-  }
-
   appendGeminiLog("sys", _useExtendedThinking ? "[THINKING] Deep Thinking Mode (Extended Thinking) ENABLED." : "[THINKING] Standard Latency Mode active.");
 
   if (geminiWs && geminiWs.readyState === WebSocket.OPEN) {
-    disconnectGeminiLive();
-    setTimeout(function() { connectGeminiLive(); }, 300);
+    try {
+      geminiWs.send(JSON.stringify({
+        type: "init",
+        voice: _currentStudioVoice,
+        emotionMode: _currentStudioEmotion,
+        extendedThinking: _useExtendedThinking
+      }));
+    } catch(e) {
+      disconnectGeminiLive();
+      setTimeout(function() { connectGeminiLive(); }, 250);
+    }
   }
 }
 
@@ -9165,6 +9166,38 @@ function updateStudioControlsUI() {
   if (thBtn) {
     if (_useExtendedThinking) thBtn.classList.add("active");
     else thBtn.classList.remove("active");
+  }
+
+  // Update selection highlight in voice cards grid
+  var vCards = document.querySelectorAll("#voiceCardsGrid .cg-vcard");
+  for (var i = 0; i < vCards.length; i++) {
+    var vTitle = vCards[i].querySelector(".cg-vcard-name");
+    var isSel = (vTitle && vTitle.textContent.trim() === _currentStudioVoice);
+    vCards[i].classList.toggle("selected", isSel);
+    var oldCheck = vCards[i].querySelector(".cg-vcard-check");
+    if (isSel && !oldCheck) {
+      var chk = document.createElement("span");
+      chk.innerHTML = '<svg class="cg-vcard-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+      vCards[i].appendChild(chk.firstChild);
+    } else if (!isSel && oldCheck) {
+      oldCheck.remove();
+    }
+  }
+
+  // Update selection highlight in emotion cards grid
+  var eCards = document.querySelectorAll("#emotionCardsGrid .cg-ecard");
+  for (var j = 0; j < eCards.length; j++) {
+    var eTitle = eCards[j].querySelector(".cg-ecard-title");
+    var isESel = (eTitle && eTitle.textContent.trim() === eSpec.label);
+    eCards[j].classList.toggle("selected", isESel);
+    var oldECheck = eCards[j].querySelector(".cg-vcard-check");
+    if (isESel && !oldECheck) {
+      var eChk = document.createElement("span");
+      eChk.innerHTML = '<svg class="cg-vcard-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+      eCards[j].appendChild(eChk.firstChild);
+    } else if (!isESel && oldECheck) {
+      oldECheck.remove();
+    }
   }
 
   // Update Mic Button state

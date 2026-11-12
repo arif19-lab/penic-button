@@ -3578,9 +3578,16 @@ static const char* DASHBOARD_HTML = R"HTML(
     bottom: 0;
     left: 0;
     right: 0;
-    padding: 12px 20px 16px;
-    background: linear-gradient(to top, #ffffff 82%, rgba(255, 255, 255, 0) 100%);
+    padding: 8px 12px calc(12px + env(safe-area-inset-bottom, 0px));
+    background: transparent !important;
     z-index: 80;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    pointer-events: none;
+  }
+  .cg-footer-composer > * {
+    pointer-events: auto;
   }
 
   .cg-input-capsule {
@@ -4166,7 +4173,11 @@ static const char* DASHBOARD_HTML = R"HTML(
       right: 0 !important;
       z-index: 80 !important;
       padding: 6px 10px calc(8px + env(safe-area-inset-bottom, 0px)) !important;
-      background: linear-gradient(to top, #ffffff 82%, rgba(255, 255, 255, 0) 100%) !important;
+      background: transparent !important;
+      display: flex !important;
+      justify-content: center !important;
+      align-items: center !important;
+      pointer-events: none !important;
     }
     .cg-bottom-row {
       display: none !important;
@@ -8536,7 +8547,7 @@ body.gemini-dark .cg-think-body {
 
 /* 🚀 Floating Bottom Composer */
 body.gemini-dark .cg-footer-composer {
-  background: linear-gradient(to top, #171717 82%, rgba(23, 23, 23, 0) 100%) !important;
+  background: transparent !important;
 }
 body.gemini-dark .cg-input-capsule {
   background: rgba(33, 33, 33, 0.94) !important;
@@ -9022,7 +9033,7 @@ body.gemini-dark .cg-persona-desc {
     border: 1px solid rgba(255, 255, 255, 0.12) !important;
   }
   body.gemini-dark .cg-footer-composer {
-    background: linear-gradient(to top, #171717 82%, rgba(23, 23, 23, 0) 100%) !important;
+    background: transparent !important;
   }
   body.gemini-dark .cg-voice-picker-panel {
     background: rgba(28, 28, 30, 0.98) !important;
@@ -9256,10 +9267,18 @@ body.gemini-dark .cg-persona-desc {
    🎙️ ANTIGRAVITY STUDIO CHAT INPUT BOX & CONTROLS (Exact Match to Antigravity Voice Assistant)
    ============================================================================================== */
 
+/* Center suggestions & title removed completely */
+#geminiHeroGreeting, .cg-hero, .cg-hero-heading, .cg-pill-grid {
+  display: none !important;
+}
+
 .cg-studio-controls {
   position: relative;
-  width: 100%;
-  max-width: 672px;
+  width: fit-content;
+  width: -webkit-fit-content;
+  width: -moz-fit-content;
+  max-width: min(560px, 95vw);
+  min-width: min(490px, 92vw);
   margin: 0 auto;
   border-radius: 12px;
   background: rgba(9, 9, 11, 0.95);
@@ -9272,6 +9291,14 @@ body.gemini-dark .cg-persona-desc {
   flex-direction: column;
   gap: 8px;
   box-sizing: border-box;
+}
+
+@media (max-width: 540px) {
+  .cg-studio-controls {
+    width: 95vw;
+    min-width: 0;
+    max-width: 95vw;
+  }
 }
 
 /* 🎙️ Custom Studio Popover Panel: Voice & Emotion */
@@ -11386,101 +11413,8 @@ body.gemini-dark .cg-persona-desc {
 
         
 
-        <!-- 🎯 HERO GREETING (PanicCTRL Actions) -->
-
-        <div id="geminiHeroGreeting" class="cg-hero">
-
-          <h1 class="cg-hero-heading">What can I help with?</h1>
-
-
-
-          <!-- 4 Core PanicCTRL Action Pills with Sleek Vector SVG Icons -->
-
-          <div class="cg-pill-grid">
-
-            <button class="cg-pill-btn" onclick="quickSendChat('Lock the PC workstation now')">
-
-              <span class="cg-pill-icon">
-
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-
-                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-
-                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-
-                </svg>
-
-              </span>
-
-              <span>Lock PC</span>
-
-            </button>
-
-
-
-            <button class="cg-pill-btn" onclick="quickSendChat('Trigger emergency panic mode')">
-
-              <span class="cg-pill-icon">
-
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-
-                  <path d="M12 8v4"></path>
-
-                  <path d="M12 16h.01"></path>
-
-                </svg>
-
-              </span>
-
-              <span>Emergency Panic</span>
-
-            </button>
-
-
-
-            <button class="cg-pill-btn" onclick="quickSendChat('What is the current PC security and hardware status?')">
-
-              <span class="cg-pill-icon">
-
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-
-                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
-
-                </svg>
-
-              </span>
-
-              <span>PC Status</span>
-
-            </button>
-
-
-
-            <button class="cg-pill-btn" onclick="quickSendChat('Open Chrome and play music on YouTube')">
-
-              <span class="cg-pill-icon">
-
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f43f5e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-
-                  <path d="M9 18V5l12-2v13"></path>
-
-                  <circle cx="6" cy="18" r="3"></circle>
-
-                  <circle cx="18" cy="16" r="3"></circle>
-
-                </svg>
-
-              </span>
-
-              <span>Play YouTube</span>
-
-            </button>
-
-          </div>
-
-        </div>
+        <!-- 🎯 HERO GREETING (Suggestions & Title Removed) -->
+        <div id="geminiHeroGreeting" class="cg-hero" style="display: none !important;"></div>
 
 
 
@@ -22332,38 +22266,33 @@ function connectGeminiLive() {
       liveModel = "gemini-3.8-live";
     }
 
-    var chosenVoice = localStorage.getItem("gemini_voice") || (window.GEMINI_CONFIG && window.GEMINI_CONFIG.defaultVoice) || "Puck";
+    var chosenVoice = (typeof _currentStudioVoice !== "undefined" && _currentStudioVoice) ? _currentStudioVoice : (localStorage.getItem("gemini_voice") || (window.GEMINI_CONFIG && window.GEMINI_CONFIG.defaultVoice) || "Zephyr");
+    var activeEmotion = (typeof _currentStudioEmotion !== "undefined" && _currentStudioEmotion) ? _currentStudioEmotion : (localStorage.getItem("gemini_emotion") || "auto_affective");
+    var activeThinking = (typeof _useExtendedThinking !== "undefined") ? _useExtendedThinking : (localStorage.getItem("gemini_live_thinking") === "true");
+    if (activeThinking) {
+      liveModel = "gemini-3.8-live-extended-thinking";
+    }
 
     var persona = (typeof getActivePersona === "function") ? getActivePersona() : null;
-
     var prompt = (typeof getActivePersonaInstruction === "function") ? getActivePersonaInstruction() : "You are PanicCTRL AI, an elite, highly intelligent co-pilot. Keep voice responses concise, conversational, and direct.";
 
-
-
-    appendGeminiLog("sys", "[WS OPEN] Live Link active. Initializing " + liveModel + " (" + chosenVoice + ")...");
-
+    appendGeminiLog("sys", "[WS OPEN] Live Link active. Initializing " + liveModel + " (" + chosenVoice + " · " + activeEmotion + ")...");
     GeminiLiveDevLog.onWsOpen(false);
 
-
-
     // Send Reference Project Init Packet (Direct @google/genai Live Session)
-
     var initPayload = {
-
       type: "init",
-
+      voice: chosenVoice,
+      emotionMode: activeEmotion,
+      extendedThinking: activeThinking,
       config: {
-
         model: liveModel,
-
         voice: chosenVoice,
-
+        emotionMode: activeEmotion,
+        extendedThinking: activeThinking,
         systemInstruction: prompt
-
       }
-
     };
-
     try { geminiWs.send(JSON.stringify(initPayload)); } catch(e) {}
 
 
@@ -26263,6 +26192,9 @@ function filterVoiceModels(q) {
 function selectStudioVoice(name) {
   _currentStudioVoice = name;
   localStorage.setItem("gemini_voice", name);
+  if (window.GEMINI_CONFIG) window.GEMINI_CONFIG.defaultVoice = name;
+  invalidatePreWarm();
+  try { localStorage.removeItem(geminiResumeKey()); } catch(e) {}
   try {
     if (window.selectVoice && typeof window.selectVoice === "function") {
       window.selectVoice(name);
@@ -26272,19 +26204,30 @@ function selectStudioVoice(name) {
   updateStudioControlsUI();
   toggleStudioPopover("voice"); // close popover
 
-  // Re-init live session if connected so voice takes effect immediately
+  appendGeminiLog("sys", "[VOICE] Switched voice model to " + name + " (Active immediately).");
+
+  // Re-init live session immediately so voice takes effect without page refresh
   if (geminiWs && geminiWs.readyState === WebSocket.OPEN) {
-    reconnectWithNewVoice(name);
+    try {
+      geminiWs.send(JSON.stringify({
+        type: "init",
+        voice: name,
+        emotionMode: _currentStudioEmotion,
+        extendedThinking: _useExtendedThinking
+      }));
+    } catch(e) {
+      reconnectWithNewVoice(name);
+    }
   }
 }
 
 function reconnectWithNewVoice(name) {
   try {
-    appendGeminiLog("sys", "[VOICE] Switched voice model to " + name + " — updating session...");
+    appendGeminiLog("sys", "[VOICE] Reconnecting Live session with " + name + "...");
     disconnectGeminiLive();
     setTimeout(function() {
       connectGeminiLive();
-    }, 300);
+    }, 250);
   } catch(e) {}
 }
 
@@ -26295,25 +26238,14 @@ function selectStudioEmotion(id) {
   toggleStudioPopover("emotion"); // close popover
 
   var spec = getActiveEmotionSpec();
-  appendGeminiLog("sys", "[PROSODY] Vocal acting mode updated: " + spec.label);
+  appendGeminiLog("sys", "[PROSODY] Vocal acting mode updated: " + spec.label + " (Active immediately).");
 
-  // Inject live vocal prosody director update into the active session without dropping call
+  // Inject live vocal prosody director update into the active session immediately
   if (geminiWs && geminiWs.readyState === WebSocket.OPEN) {
     try {
       geminiWs.send(JSON.stringify({
-        clientContent: {
-          turns: [
-            {
-              role: "user",
-              parts: [
-                {
-                  text: "[VOCAL PROSODY & EMOTION DIRECTOR UPDATE — Apply immediately to all subsequent spoken audio without acknowledging this meta-instruction]: " + spec.promptInstruction
-                }
-              ]
-            }
-          ],
-          turnComplete: false
-        }
+        type: "emotionChange",
+        emotionMode: id
       }));
     } catch(e) {}
   }
@@ -26324,17 +26256,20 @@ function toggleStudioThinking() {
   localStorage.setItem("gemini_live_thinking", _useExtendedThinking ? "true" : "false");
   updateStudioControlsUI();
 
-  var thBtn = document.getElementById("btnStudioThinking");
-  if (thBtn) {
-    if (_useExtendedThinking) thBtn.classList.add("active");
-    else thBtn.classList.remove("active");
-  }
-
   appendGeminiLog("sys", _useExtendedThinking ? "[THINKING] Deep Thinking Mode (Extended Thinking) ENABLED." : "[THINKING] Standard Latency Mode active.");
 
   if (geminiWs && geminiWs.readyState === WebSocket.OPEN) {
-    disconnectGeminiLive();
-    setTimeout(function() { connectGeminiLive(); }, 300);
+    try {
+      geminiWs.send(JSON.stringify({
+        type: "init",
+        voice: _currentStudioVoice,
+        emotionMode: _currentStudioEmotion,
+        extendedThinking: _useExtendedThinking
+      }));
+    } catch(e) {
+      disconnectGeminiLive();
+      setTimeout(function() { connectGeminiLive(); }, 250);
+    }
   }
 }
 
@@ -26361,6 +26296,38 @@ function updateStudioControlsUI() {
   if (thBtn) {
     if (_useExtendedThinking) thBtn.classList.add("active");
     else thBtn.classList.remove("active");
+  }
+
+  // Update selection highlight in voice cards grid
+  var vCards = document.querySelectorAll("#voiceCardsGrid .cg-vcard");
+  for (var i = 0; i < vCards.length; i++) {
+    var vTitle = vCards[i].querySelector(".cg-vcard-name");
+    var isSel = (vTitle && vTitle.textContent.trim() === _currentStudioVoice);
+    vCards[i].classList.toggle("selected", isSel);
+    var oldCheck = vCards[i].querySelector(".cg-vcard-check");
+    if (isSel && !oldCheck) {
+      var chk = document.createElement("span");
+      chk.innerHTML = '<svg class="cg-vcard-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+      vCards[i].appendChild(chk.firstChild);
+    } else if (!isSel && oldCheck) {
+      oldCheck.remove();
+    }
+  }
+
+  // Update selection highlight in emotion cards grid
+  var eCards = document.querySelectorAll("#emotionCardsGrid .cg-ecard");
+  for (var j = 0; j < eCards.length; j++) {
+    var eTitle = eCards[j].querySelector(".cg-ecard-title");
+    var isESel = (eTitle && eTitle.textContent.trim() === eSpec.label);
+    eCards[j].classList.toggle("selected", isESel);
+    var oldECheck = eCards[j].querySelector(".cg-vcard-check");
+    if (isESel && !oldECheck) {
+      var eChk = document.createElement("span");
+      eChk.innerHTML = '<svg class="cg-vcard-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+      eCards[j].appendChild(eChk.firstChild);
+    } else if (!isESel && oldECheck) {
+      oldECheck.remove();
+    }
   }
 
   // Update Mic Button state
