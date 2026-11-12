@@ -12,6 +12,12 @@ static void PanicLog(const char* msg) {
     if (f) { fprintf(f, "%s\n", msg); fclose(f); }
 }
 
+} // namespace removed
+
+// The restricted security descriptor for \\.\pipe\PanicUnlockPipe now lives in
+// ONE place - src/security/PipeSecurity.h - so the provider and its unit test
+// cannot drift apart.  See that header for the full rationale.
+
 CPanicProvider::CPanicProvider() : _cRef(1), _pCredential(nullptr), _pcpe(nullptr), _upAdviseContext(0), _hThread(NULL), _hSecretThread(NULL), _hStopEvent(NULL), _hBlackoutWnd(NULL) {
     InterlockedIncrement(&g_cRefModule);
     PanicLog("[INIT] CPanicProvider created");
@@ -238,13 +244,19 @@ DWORD WINAPI CPanicProvider::PipeThreadProc(LPVOID lpParam) {
     CPanicProvider* pThis = (CPanicProvider*)lpParam;
     PanicLog("[PIPE] Thread started, waiting for connection...");
     
-    SECURITY_DESCRIPTOR sd;
-    InitializeSecurityDescriptor(&sd, SECURITY_DESCRIPTOR_REVISION);
-    SetSecurityDescriptorDacl(&sd, TRUE, NULL, FALSE);
-    SECURITY_ATTRIBUTES sa;
-    sa.nLength = sizeof(SECURITY_ATTRIBUTES);
-    sa.lpSecurityDescriptor = &sd;
-    sa.bInheritHandle = FALSE;
+    // A NULL DACL granted full access to every local user, which turned the
+    // pipe into a password oracle.  The restricted DACL allows only SYSTEM and
+    // Administrators (see PipeSecurityAttributes above).
+    const SECURITY_ATTRIBUTES* pSa = PipeSecurityAttributes();
+    SECURITY_ATTRIBUTES fallbackSa;
+    fallbackSa.nLength = sizeof(SECURITY_ATTRIBUTES);
+    fallbackSa.lpSecurityDescriptor = NULL;   // default (caller) DACL
+    fallbackSa.bInheritHandle = FALSE;
+    if (!pSa) {
+        PanicLog("[PIPE] restricted DACL unavailable - falling back to default DACL");
+        pSa = &fallbackSa;
+    }
+    SECURITY_ATTRIBUTES sa = *pSa;
 
     while (WaitForSingleObject(pThis->_hStopEvent, 0) != WAIT_OBJECT_0) {
         HANDLE hPipe = CreateNamedPipeA(
