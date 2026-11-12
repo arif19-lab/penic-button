@@ -73,17 +73,16 @@ namespace WebAssets {{
 with open('src/ui/WebAssets.h', 'w', encoding='utf-8') as f:
     f.write(web_assets)
 
-# 4. Sync assets & www to ProgramData
+# 4. Sync assets to ProgramData\PanicButton\assets (if not junctioned)
 prog_data_base = os.path.join(os.environ.get('ProgramData', 'C:\\ProgramData'), 'PanicButton')
 if os.path.exists(prog_data_base):
     src_assets = 'android-app/www/assets'
-    if os.path.exists(src_assets):
-        for sub in ['assets', os.path.join('www', 'assets')]:
-            dst_a = os.path.join(prog_data_base, sub)
-            if os.path.exists(dst_a):
-                shutil.rmtree(dst_a)
-            shutil.copytree(src_assets, dst_a)
-        print(f'Synchronized assets to {prog_data_base}')
+    dst_assets = os.path.join(prog_data_base, 'assets')
+    if os.path.exists(src_assets) and not os.path.islink(dst_assets):
+        if os.path.exists(dst_assets):
+            shutil.rmtree(dst_assets)
+        shutil.copytree(src_assets, dst_assets)
+        print(f'Synchronized assets to {dst_assets}')
 
 # 4. Sync gemini-proxy to C:\ProgramData\PanicButton\gemini-proxy
 prog_data_proxy = os.path.join(os.environ.get('ProgramData', 'C:\\ProgramData'), 'PanicButton', 'gemini-proxy')

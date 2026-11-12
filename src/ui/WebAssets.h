@@ -3578,16 +3578,22 @@ static const char* DASHBOARD_HTML = R"HTML(
     bottom: 0;
     left: 0;
     right: 0;
-    padding: 8px 12px calc(12px + env(safe-area-inset-bottom, 0px));
+    padding: 0 8px calc(12px + env(safe-area-inset-bottom, 0px));
     background: transparent !important;
     z-index: 80;
     display: flex;
-    justify-content: center;
+    flex-direction: column;
+    justify-content: flex-end;
     align-items: center;
     pointer-events: none;
+    width: 100%;
+    box-sizing: border-box;
   }
   .cg-footer-composer > * {
     pointer-events: auto;
+  }
+  .cg-bottom-row {
+    display: none !important;
   }
 
   .cg-input-capsule {
@@ -4172,12 +4178,15 @@ static const char* DASHBOARD_HTML = R"HTML(
       left: 0 !important;
       right: 0 !important;
       z-index: 80 !important;
-      padding: 6px 10px calc(8px + env(safe-area-inset-bottom, 0px)) !important;
+      padding: 0 8px calc(12px + env(safe-area-inset-bottom, 0px)) !important;
       background: transparent !important;
       display: flex !important;
-      justify-content: center !important;
+      flex-direction: column !important;
+      justify-content: flex-end !important;
       align-items: center !important;
       pointer-events: none !important;
+      width: 100% !important;
+      box-sizing: border-box !important;
     }
     .cg-bottom-row {
       display: none !important;
@@ -9272,32 +9281,51 @@ body.gemini-dark .cg-persona-desc {
   display: none !important;
 }
 
+.cg-footer-composer {
+  position: absolute !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  padding: 0 8px calc(12px + env(safe-area-inset-bottom, 0px)) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  pointer-events: none !important;
+  background: transparent !important;
+  z-index: 80 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.cg-footer-composer > * {
+  pointer-events: auto !important;
+}
+
 .cg-studio-controls {
-  position: relative;
-  width: fit-content;
-  width: -webkit-fit-content;
-  width: -moz-fit-content;
-  max-width: min(560px, 95vw);
-  min-width: min(490px, 92vw);
-  margin: 0 auto;
-  border-radius: 12px;
-  background: rgba(9, 9, 11, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 10px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.65);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  box-sizing: border-box;
+  position: relative !important;
+  width: fit-content !important;
+  width: -webkit-fit-content !important;
+  width: -moz-fit-content !important;
+  max-width: min(560px, 95vw) !important;
+  margin: 0 auto !important;
+  border-radius: 12px !important;
+  background: rgba(9, 9, 11, 0.95) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  padding: 10px !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.65) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  box-sizing: border-box !important;
 }
 
 @media (max-width: 540px) {
   .cg-studio-controls {
-    width: 95vw;
-    min-width: 0;
-    max-width: 95vw;
+    width: 95vw !important;
+    max-width: 95vw !important;
   }
 }
 
@@ -11529,11 +11557,6 @@ body.gemini-dark .cg-persona-desc {
             </button>
           </form>
 
-        </div>
-
-        <div class="cg-bottom-row">
-          <span>PanicCTRL AI can make mistakes. Verify critical actions.</span>
-          <button type="button" class="cg-help-btn" onclick="quickSendChat('What can you do?')">?</button>
         </div>
       </footer>
 
