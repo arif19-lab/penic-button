@@ -730,9 +730,9 @@ function initModelSelection() {
 
   var savedLive = localStorage.getItem("gemini_live_model");
 
-  if (!savedLive) {
+  if (!savedLive || savedLive.indexOf("2.5") !== -1 || savedLive.indexOf("3.1") !== -1) {
 
-    savedLive = "gemini-2.5-flash-native-audio-preview-12-2025";
+    savedLive = "gemini-3.8-live";
 
     localStorage.setItem("gemini_live_model", savedLive);
 
@@ -746,7 +746,15 @@ function initModelSelection() {
 
   var savedRest = localStorage.getItem("gemini_rest_model");
 
-  if (savedRest && window.GEMINI_CONFIG) {
+  if (!savedRest || savedRest.indexOf("2.5") !== -1) {
+
+    savedRest = "gemini-2.5-flash";
+
+    localStorage.setItem("gemini_rest_model", savedRest);
+
+  }
+
+  if (window.GEMINI_CONFIG) {
 
     window.GEMINI_CONFIG.restModel = savedRest;
 
@@ -754,9 +762,17 @@ function initModelSelection() {
 
 
 
-  var savedName = localStorage.getItem("gemini_model_display_name") || "Gemini 2.5 Native Audio";
+  var savedName = localStorage.getItem("gemini_model_display_name");
+  if (!savedName || savedName.indexOf("2.5") !== -1 || savedName.indexOf("3.1") !== -1) {
+    savedName = "Gemini 3.8 Live";
+    localStorage.setItem("gemini_model_display_name", savedName);
+  }
 
-  var savedModelId = localStorage.getItem("gemini_selected_model") || "models/gemini-2.5-flash-native-audio-latest";
+  var savedModelId = localStorage.getItem("gemini_selected_model");
+  if (!savedModelId || savedModelId.indexOf("2.5") !== -1 || savedModelId.indexOf("3.1") !== -1) {
+    savedModelId = "models/gemini-3.8-live";
+    localStorage.setItem("gemini_selected_model", savedModelId);
+  }
 
 
 
@@ -4526,7 +4542,7 @@ window.GeminiLiveDevLog = GeminiLiveDevLog;
 
 function geminiResumeKey() {
 
-  var m = (window.GEMINI_CONFIG && window.GEMINI_CONFIG.model) || "gemini-2.5-flash-native-audio-preview-12-2025";
+  var m = (window.GEMINI_CONFIG && window.GEMINI_CONFIG.model) || "gemini-3.8-live";
 
   return "gemini_session_handle::" + m;
 
@@ -4626,7 +4642,7 @@ function buildGeminiSetupMessage() {
 
     (window.GEMINI_CONFIG && window.GEMINI_CONFIG.defaultVoice) || "Puck";
 
-  var liveModel = (window.GEMINI_CONFIG && window.GEMINI_CONFIG.model) || "gemini-2.5-flash-native-audio-preview-12-2025";
+  var liveModel = (window.GEMINI_CONFIG && window.GEMINI_CONFIG.model) || "gemini-3.8-live";
 
   var activeTools = (window.GEMINI_CONFIG && window.GEMINI_CONFIG.tools) || toolsPayload;
 
@@ -5102,18 +5118,14 @@ function connectGeminiLive() {
 
   geminiWs.onopen = function() {
 
-    var liveModel = (window.GEMINI_CONFIG && window.GEMINI_CONFIG.model) || localStorage.getItem("gemini_live_model") || "gemini-2.5-flash-native-audio-preview-12-2025";
+    var liveModel = (window.GEMINI_CONFIG && window.GEMINI_CONFIG.model) || localStorage.getItem("gemini_live_model") || "gemini-3.8-live";
 
     if (liveModel.startsWith("models/")) liveModel = liveModel.replace("models/", "");
 
-    if (liveModel.indexOf("3.8-live-thinking") !== -1 || liveModel.indexOf("extended-thinking") !== -1) {
+    if (liveModel.indexOf("3.8-live-thinking") !== -1 || liveModel.indexOf("extended-thinking") !== -1 || liveModel.indexOf("thinking") !== -1) {
       liveModel = "gemini-3.8-live-extended-thinking";
-    } else if (liveModel.indexOf("3.8-live") !== -1 || liveModel.indexOf("3.8") !== -1) {
+    } else {
       liveModel = "gemini-3.8-live";
-    } else if (liveModel.indexOf("3.1-flash-live") !== -1 || liveModel.indexOf("live-preview") !== -1) {
-      liveModel = "gemini-3.1-flash-live-preview";
-    } else if (liveModel.indexOf("2.5-flash-native-audio") !== -1 || liveModel.indexOf("native-audio") !== -1) {
-      liveModel = "gemini-2.5-flash-native-audio-preview-12-2025";
     }
 
     var chosenVoice = localStorage.getItem("gemini_voice") || (window.GEMINI_CONFIG && window.GEMINI_CONFIG.defaultVoice) || "Puck";

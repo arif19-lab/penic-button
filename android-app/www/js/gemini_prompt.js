@@ -12,7 +12,7 @@
 
 window.GEMINI_CONFIG = {
   // 🚀 Active Gemini Live Model (WebSocket BiDi Realtime - Reference Default)
-  model: "models/gemini-2.5-flash-native-audio-preview-12-2025",
+  model: "models/gemini-3.8-live",
 
   // 💬 Active Gemini Text REST Model (same single voice model for text when Live OFF)
   restModel: "gemini-2.5-flash",
