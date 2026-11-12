@@ -9308,6 +9308,30 @@ window.LiveTranscriptHUD = (function() {
     render();
     bindEvents();
     startSyncLoop();
+    positionHUD();
+    // Reposition whenever window resizes
+    window.addEventListener('resize', positionHUD);
+  }
+
+  function positionHUD() {
+    var hud = document.getElementById('cgLiveTranscriptHUD');
+    if (!hud) return;
+
+    var header = document.querySelector('.cg-header');
+    var footer = document.querySelector('.cg-footer-composer');
+    var viewport = document.querySelector('.cg-main-viewport');
+
+    var headerH = header ? header.offsetHeight : 50;
+    var footerH = footer ? footer.offsetHeight : 140;
+
+    var topOffset = headerH + 10;
+    var bottomOffset = footerH + 12;
+
+    hud.style.top = topOffset + 'px';
+    if (isExpanded) {
+      hud.style.bottom = bottomOffset + 'px';
+    }
+  }
   }
 
   function startSyncLoop() {
@@ -9347,9 +9371,11 @@ window.LiveTranscriptHUD = (function() {
       hud.classList.remove("collapsed");
       hud.classList.add("expanded");
       if (btn) btn.title = "Collapse Live Transcript HUD";
+      positionHUD();
     } else {
       hud.classList.remove("expanded");
       hud.classList.add("collapsed");
+      hud.style.bottom = "auto";
       if (btn) btn.title = "Expand Live Transcript HUD";
     }
   }
@@ -9765,6 +9791,7 @@ window.LiveTranscriptHUD = (function() {
 
   return {
     init: init,
+    positionHUD: positionHUD,
     toggleExpand: toggleExpand,
     toggleRevealMode: toggleRevealMode,
     copyTranscript: copyTranscript,

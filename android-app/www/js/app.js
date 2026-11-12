@@ -420,7 +420,11 @@ function switchTab(tabId) {
       if (typeof scrollGeminiToBottom === 'function') {
         scrollGeminiToBottom(false);
       }
-    }, 60);
+      // Reposition HUD after tab becomes visible and layout stabilizes
+      if (window.LiveTranscriptHUD && window.LiveTranscriptHUD.positionHUD) {
+        window.LiveTranscriptHUD.positionHUD();
+      }
+    }, 80);
   } else {
     // 🖥️ Monitor / Other Tabs: Show Cyber Header on Mobile, Restore Dark Background
     if (window.innerWidth >= 860) {
