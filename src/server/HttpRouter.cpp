@@ -776,7 +776,12 @@ void RequestDisplayWake() {
 
     std::thread([]() {
 
-        ExecSilentCommand("curl.exe -s --max-time 1 http://127.0.0.1:8086/wake");
+        // The 24/7 wake gateway on :8086 now requires the access key like
+        // every other route, so this notification carries it.
+
+        std::string wakeUrl = "http://127.0.0.1:8086/wake?key=" + AuthKey::CurrentKeyForEmbedding();
+
+        ExecSilentCommand(("curl.exe -s --max-time 1 \"" + wakeUrl + "\"").c_str());
 
     }).detach();
 

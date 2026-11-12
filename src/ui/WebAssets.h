@@ -16009,7 +16009,9 @@ function wakePC() {
       _setActionPending(false);
       _lastKnownSleeping = false;
       try {
-        var svcUrl = "http://" + window.location.hostname + ":8086/wake";
+        // The 24/7 wake gateway on :8086 requires the access key like every
+        // other route - it used to accept anonymous requests from any host.
+        var svcUrl = "http://" + window.location.hostname + ":8086/wake?key=" + encodeURIComponent(k);
         fetch(svcUrl, { mode: 'no-cors' }).catch(function(){});
       } catch(e){}
       fetch("/wake?key=" + encodeURIComponent(k), { keepalive: true }).catch(function(){});

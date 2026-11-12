@@ -223,6 +223,38 @@ void WakeSystemAndDisplay() {
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Shared credential helpers.  The agent writes the per-install key; this
+// service shares it so a single pairing works against both ports.  The rule
+// (path, trimming, length check and reload window) lives in ONE place -
+// src/core/AuthKey.h - so the service and the agent can never drift apart.
+// The service stays a pure reader: only the agent creates the key, so the
+// Session-0 watchdog can never race the agent into a different key.
+// ─────────────────────────────────────────────────────────────────────────────
+static std::string SvcAuthKey() {
+    return AuthKey::CurrentKey();
+}
+
+static bool SvcLegacyKeyAllowed() {
+    return false;
+}
+
+static bool SvcHasKey(const std::string& req) {
+    return AuthKey::RequestHasValidKey(req);
+}
+
+// Extract the request target path from a raw HTTP request line:
+// "GET /wake?key=... HTTP/1.1" -> "/wake"
+static std::string SvcRequestPath(const std::string& req) {
+    size_t sp1 = req.find(' ');
+    if (sp1 == std::string::npos) return "";
+    size_t sp2 = req.find(' ', sp1 + 1);
+    std::string target = req.substr(sp1 + 1, (sp2 == std::string::npos ? req.size() : sp2) - (sp1 + 1));
+    size_t q = target.find('?');
+    if (q != std::string::npos) target.erase(q);
+    return target;
+}
+
 DWORD WINAPI WakeGatewayThread(LPVOID lpParam) {
     WSADATA wsa;
     WSAStartup(MAKEWORD(2, 2), &wsa);
@@ -267,10 +299,27 @@ DWORD WINAPI WakeGatewayThread(LPVOID lpParam) {
                     int r = recv(client, buf, sizeof(buf) - 1, 0);
                     if (r > 0) {
                         std::string req(buf, r);
-                        if (req.find("GET /wake") != std::string::npos || req.find("GET /api/wake") != std::string::npos) {
-                            WakeSystemAndDisplay();
-                            std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\nConnection: close\r\n\r\n{\"status\":\"woken\"}";
-                            send(client, res.c_str(), (int)res.size(), 0);
+
+                        // The wake gateway used to accept ANY request from ANY
+                        // host with no credential at all.  It now requires the
+                        // same per-install access key as every other route, so
+                        // an unauthenticated peer on the LAN or the Tailscale
+                        // mesh can no longer wake the machine.
+                        std::string reqPath = SvcRequestPath(req);
+                        bool isWakeRoute = (reqPath == "/wake" || reqPath == "/api/wake");
+
+                        if (isWakeRoute) {
+                            if (!SvcHasKey(req)) {
+                                std::string deny = "HTTP/1.1 403 Forbidden\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\nConnection: close\r\n\r\n{\"ok\":false,\"status\":403,\"error\":\"unauthorized\"}";
+                                send(client, deny.c_str(), (int)deny.size(), 0);
+                            } else {
+                                WakeSystemAndDisplay();
+                                std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\nConnection: close\r\n\r\n{\"status\":\"woken\"}";
+                                send(client, res.c_str(), (int)res.size(), 0);
+                            }
+                        } else {
+                            std::string nf = "HTTP/1.1 404 Not Found\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\nConnection: close\r\n\r\n{\"ok\":false,\"status\":404,\"error\":\"not_found\"}";
+                            send(client, nf.c_str(), (int)nf.size(), 0);
                         }
                     }
                     closesocket(client);
@@ -371,24 +420,6 @@ static bool IsAgentAlive() {
     HANDLE h = OpenMutexA(SYNCHRONIZE, FALSE, "Global\\PanicButtonAgentAlive");
     if (h) { CloseHandle(h); return true; }
     return IsProcessRunning("PanicButton.exe");
-}
-
-// The agent writes the per-install key here; this service shares it so a
-// single pairing works against both ports.  The rule (path, trimming, length
-// check and reload window) now lives in ONE place - src/core/AuthKey.h - so
-// the service and the agent can never drift apart again.  The service stays a
-// pure reader: only the agent creates the key, so the Session-0 watchdog can
-// never race the agent into a different key.
-static std::string SvcAuthKey() {
-    return AuthKey::CurrentKey();
-}
-
-static bool SvcLegacyKeyAllowed() {
-    return false;
-}
-
-static bool SvcHasKey(const std::string& req) {
-    return AuthKey::RequestHasValidKey(req);
 }
 
 static std::string SvcUrlDecode(const std::string& s) {
