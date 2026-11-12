@@ -1,6 +1,7 @@
 #include "PanicProvider.h"
 #include "PanicCredential.h"
 #include "guid.h"
+#include "src/security/PipeSecurity.h"
 #include <shlwapi.h>
 #include <stdio.h>
 
@@ -11,8 +12,6 @@ static void PanicLog(const char* msg) {
     FILE* f = fopen("C:\\Users\\Public\\panic_debug.txt", "a");
     if (f) { fprintf(f, "%s\n", msg); fclose(f); }
 }
-
-} // namespace removed
 
 // The restricted security descriptor for \\.\pipe\PanicUnlockPipe now lives in
 // ONE place - src/security/PipeSecurity.h - so the provider and its unit test
@@ -246,8 +245,8 @@ DWORD WINAPI CPanicProvider::PipeThreadProc(LPVOID lpParam) {
     
     // A NULL DACL granted full access to every local user, which turned the
     // pipe into a password oracle.  The restricted DACL allows only SYSTEM and
-    // Administrators (see PipeSecurityAttributes above).
-    const SECURITY_ATTRIBUTES* pSa = PipeSecurityAttributes();
+    // Administrators (see PipeSecurity::Pipe().Attributes()).
+    const SECURITY_ATTRIBUTES* pSa = PipeSecurity::Pipe().Attributes();
     SECURITY_ATTRIBUTES fallbackSa;
     fallbackSa.nLength = sizeof(SECURITY_ATTRIBUTES);
     fallbackSa.lpSecurityDescriptor = NULL;   // default (caller) DACL

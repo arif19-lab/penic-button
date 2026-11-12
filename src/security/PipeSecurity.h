@@ -99,7 +99,7 @@ inline std::string RestrictedDescriptor::Sddl() const {
     if (!m_ok) return "<none>";
     LPSTR s = NULL;
     if (!ConvertSecurityDescriptorToStringSecurityDescriptorA(
-            &m_sd, SDDL_REVISION_1,
+            (PSECURITY_DESCRIPTOR)&m_sd, SDDL_REVISION_1,
             OWNER_SECURITY_INFORMATION | GROUP_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION,
             &s, NULL)) {
         return "<error>";
