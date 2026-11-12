@@ -9251,6 +9251,544 @@ body.gemini-dark .cg-persona-desc {
 
 
 
+
+/* ==============================================================================================
+   🎙️ ANTIGRAVITY STUDIO CHAT INPUT BOX & CONTROLS (Exact Match to Antigravity Voice Assistant)
+   ============================================================================================== */
+
+.cg-studio-controls {
+  position: relative;
+  width: 100%;
+  max-width: 672px;
+  margin: 0 auto;
+  border-radius: 12px;
+  background: rgba(9, 9, 11, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 10px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-sizing: border-box;
+}
+
+/* 🎙️ Custom Studio Popover Panel: Voice & Emotion */
+.cg-studio-popover {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(560px, 94vw);
+  margin-bottom: 2px;
+  z-index: 100;
+  border-radius: 12px;
+  background: rgba(9, 9, 11, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.75);
+  overflow: hidden;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  animation: cgPopoverFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes cgPopoverFadeIn {
+  from { opacity: 0; transform: translate(-50%, 8px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* Popover Header & Search */
+.cg-popover-header {
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: rgba(24, 24, 27, 0.6);
+}
+
+.cg-popover-header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cg-picon {
+  width: 14px;
+  height: 14px;
+  color: #e4e4e7;
+  flex-shrink: 0;
+}
+
+.cg-icon-amber {
+  color: #f59e0b;
+}
+
+.cg-icon-zap {
+  color: #e4e4e7;
+}
+
+.cg-popover-main-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #ffffff;
+  letter-spacing: 0.015em;
+}
+
+.cg-popover-badge {
+  font-size: 10px;
+  font-family: monospace;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #d4d4d8;
+}
+
+.cg-popover-subtag {
+  font-size: 10px;
+  font-family: monospace;
+  color: #a1a1aa;
+}
+
+.cg-popover-search-wrap {
+  position: relative;
+  width: 180px;
+}
+
+.cg-search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #71717a;
+  pointer-events: none;
+}
+
+#voiceSearchInput {
+  width: 100%;
+  padding: 4px 10px 4px 28px;
+  border-radius: 6px;
+  background: #09090b;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 11px;
+  color: #f4f4f5;
+  outline: none;
+  box-sizing: border-box;
+}
+
+#voiceSearchInput:focus {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Tabs */
+.cg-popover-tabs {
+  padding: 6px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow-x: auto;
+  background: #09090b;
+  scrollbar-width: none;
+}
+.cg-popover-tabs::-webkit-scrollbar { display: none; }
+
+.cg-tab-btn {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+  color: #a1a1aa;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.cg-tab-btn:hover {
+  color: #e4e4e7;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.cg-tab-btn.active {
+  background: #ffffff;
+  color: #000000;
+  font-weight: 600;
+}
+
+/* Voice Cards Grid */
+.cg-voice-cards-grid {
+  padding: 10px;
+  max-height: 235px;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 520px) {
+  .cg-voice-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.cg-vcard {
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(24, 24, 27, 0.75);
+  color: #e4e4e7;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.cg-vcard:hover {
+  background: #18181b;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.cg-vcard.selected {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border-color: #ffffff !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.cg-vcard-info {
+  min-width: 0;
+  flex: 1;
+}
+
+.cg-vcard-name {
+  font-size: 12px;
+  font-weight: 600;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cg-vcard.selected .cg-vcard-name {
+  color: #000000;
+}
+
+.cg-vcard-style {
+  font-size: 10px;
+  margin-top: 2px;
+  color: #a1a1aa;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cg-vcard.selected .cg-vcard-style {
+  color: #3f3f46;
+  font-weight: 500;
+}
+
+.cg-vcard-check {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: #000000;
+}
+
+/* Emotion Cards Grid */
+.cg-emotion-cards-grid {
+  padding: 10px;
+  max-height: 245px;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 520px) {
+  .cg-emotion-cards-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.cg-ecard {
+  text-align: left;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(24, 24, 27, 0.75);
+  color: #e4e4e7;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.cg-ecard:hover {
+  background: #18181b;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.cg-ecard.selected {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border-color: #ffffff !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.cg-ecard-info {
+  min-width: 0;
+  flex: 1;
+}
+
+.cg-ecard-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cg-ecard-title {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.cg-ecard.selected .cg-ecard-title {
+  color: #000000;
+}
+
+.cg-ecard-temp {
+  font-size: 9px;
+  font-family: monospace;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #a1a1aa;
+}
+
+.cg-ecard.selected .cg-ecard-temp {
+  background: rgba(0, 0, 0, 0.1);
+  color: #27272a;
+}
+
+.cg-ecard-desc {
+  font-size: 10px;
+  margin-top: 4px;
+  line-height: 1.4;
+  color: #a1a1aa;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.cg-ecard.selected .cg-ecard-desc {
+  color: #3f3f46;
+}
+
+/* Row 1: Studio Control Bar */
+.cg-studio-controls-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.cg-studio-controls-bar::-webkit-scrollbar { display: none; }
+
+.cg-studio-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+}
+
+/* Primary Mic Button */
+.cg-studio-btn-mic {
+  background: #ffffff;
+  color: #000000;
+  border: none;
+  font-weight: 600;
+  padding: 6px 12px;
+}
+.cg-studio-btn-mic:hover {
+  background: #e4e4e7;
+}
+.cg-studio-btn-mic.live {
+  background: #ffffff;
+  color: #000000;
+  box-shadow: 0 0 14px rgba(255, 255, 255, 0.3);
+}
+.cg-studio-btn-mic.user-speaking {
+  background: #ffffff !important;
+  color: #000000 !important;
+  box-shadow: 0 0 16px rgba(255, 255, 255, 0.5) !important;
+  transform: scale(1.04);
+}
+.cg-studio-btn-mic.muted {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fecaca;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+/* Panel Buttons (Voice & Emotion) */
+.cg-studio-btn-panel {
+  background: #18181b;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #f4f4f5;
+}
+.cg-studio-btn-panel:hover {
+  border-color: rgba(255, 255, 255, 0.25);
+  background: #27272a;
+}
+.cg-studio-btn-panel.active {
+  background: #ffffff;
+  color: #000000;
+  border-color: #ffffff;
+  font-weight: 600;
+}
+.cg-studio-btn-panel.active .cg-picon,
+.cg-studio-btn-panel.active .cg-studio-chevron {
+  color: #000000 !important;
+}
+.cg-studio-btn-panel.active .cg-meta-label {
+  color: #3f3f46;
+}
+
+.cg-studio-btn-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  text-align: left;
+}
+
+.cg-meta-label {
+  font-size: 10px;
+  font-family: monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #a1a1aa;
+}
+
+.cg-meta-val {
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.cg-studio-chevron {
+  width: 12px;
+  height: 12px;
+  color: #a1a1aa;
+  transition: transform 0.15s ease;
+}
+
+.cg-studio-btn-panel.active .cg-studio-chevron {
+  transform: rotate(180deg);
+}
+
+/* Deep Thinking Button */
+.cg-studio-btn-thinking {
+  background: #18181b;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #d4d4d8;
+  font-weight: 500;
+}
+.cg-studio-btn-thinking:hover {
+  background: #27272a;
+  color: #ffffff;
+}
+.cg-studio-btn-thinking.active {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* Row 2: Prompt Input Form */
+.cg-studio-prompt-form {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.cg-studio-input {
+  width: 100%;
+  padding: 8px 75px 8px 12px;
+  border-radius: 8px;
+  background: #18181b;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #f4f4f5;
+  font-size: 12px;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  box-sizing: border-box;
+}
+
+.cg-studio-input::placeholder {
+  color: #71717a;
+}
+
+.cg-studio-input:focus {
+  border-color: rgba(255, 255, 255, 0.35);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.05);
+}
+
+.cg-studio-send-btn {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #000000;
+  font-weight: 600;
+  font-size: 11px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.cg-studio-send-btn:hover {
+  background: #e4e4e7;
+}
+
+.cg-studio-send-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
 </style>
 
 
@@ -10960,510 +11498,109 @@ body.gemini-dark .cg-persona-desc {
 
       <!-- 🚀 FLOATING COMPOSER CAPSULE (Exact from Screenshot) -->
 
+            <!-- 🚀 STUDIO CHAT COMPOSER & CONTROLS (Exact Match to Antigravity Voice Assistant) -->
       <footer class="cg-footer-composer">
+        <div id="cgStudioContainer" class="cg-studio-controls">
 
-        <form class="cg-input-capsule" onsubmit="event.preventDefault(); executeManualTerminalCmd(); return false;">
-
-          <!-- 🎙️ MODERN FLOATING VOICE PICKER PANEL (Aligned with chat input box left & top header lines) -->
-
-          <div id="geminiVoicePickerPanel" class="cg-voice-picker-panel" style="display:none;" onclick="event.stopPropagation();">
-
-            <div class="cg-voice-picker-header">
-
-              <div class="cg-voice-picker-header-left">
-
-                <div class="cg-voice-header-icon">
-
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-
-                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
-
-                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-
-                    <line x1="12" x2="12" y1="19" y2="22"/>
-
-                  </svg>
-
-                </div>
-
-                <span class="cg-voice-picker-title">AI Voice Persona</span>
-
+          <!-- 🎙️ Custom Studio Popover Panel: 30 Google Live Voice Models -->
+          <div id="cgVoicePopover" class="cg-studio-popover" style="display: none;" onclick="event.stopPropagation();">
+            <!-- Header & Search -->
+            <div class="cg-popover-header">
+              <div class="cg-popover-header-title">
+                <svg class="cg-picon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+                <span class="cg-popover-main-title">Google Gemini Live HD Voice Models</span>
+                <span class="cg-popover-badge">30 Models</span>
               </div>
-
-              <div class="cg-voice-header-right">
-
-                <span class="cg-voice-picker-badge">Gemini Live</span>
-
-                <button type="button" class="cg-voice-picker-close" onclick="closeVoicePicker()" title="Close">✕</button>
-
+              <div class="cg-popover-search-wrap">
+                <svg class="cg-search-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="text" id="voiceSearchInput" placeholder="Search voice or tone..." oninput="filterVoiceModels(this.value)" autocomplete="off">
               </div>
-
             </div>
 
-
-
-            <div class="cg-voice-list-scroll">
-
-              <!-- Puck -->
-
-              <div class="cg-voice-item active" data-voice="Puck" onclick="selectVoice('Puck')">
-
-                <div class="cg-voice-icon-box cg-vbox-amber">
-
-                  <span>⚡</span>
-
-                </div>
-
-                <div class="cg-voice-info">
-
-                  <div class="cg-voice-row">
-
-                    <span class="cg-voice-name">Puck</span>
-
-                    <span class="cg-vtag-pill cg-vpill-default">DEFAULT</span>
-
-                  </div>
-
-                  <div class="cg-voice-tag">Lively &amp; Energetic • Expressive</div>
-
-                </div>
-
-                <div class="cg-voice-radio">
-
-                  <span class="cg-voice-check">✓</span>
-
-                </div>
-
-              </div>
-
-
-
-              <!-- Achird -->
-
-              <div class="cg-voice-item" data-voice="Achird" onclick="selectVoice('Achird')">
-
-                <div class="cg-voice-icon-box cg-vbox-emerald">
-
-                  <span>🌿</span>
-
-                </div>
-
-                <div class="cg-voice-info">
-
-                  <div class="cg-voice-row">
-
-                    <span class="cg-voice-name">Achird</span>
-
-                    <span class="cg-vtag-pill cg-vpill-new">NEW</span>
-
-                  </div>
-
-                  <div class="cg-voice-tag">Friendly &amp; Natural • Warm</div>
-
-                </div>
-
-                <div class="cg-voice-radio">
-
-                  <span class="cg-voice-check"></span>
-
-                </div>
-
-              </div>
-
-
-
-              <!-- Aoede -->
-
-              <div class="cg-voice-item" data-voice="Aoede" onclick="selectVoice('Aoede')">
-
-                <div class="cg-voice-icon-box cg-vbox-violet">
-
-                  <span>✨</span>
-
-                </div>
-
-                <div class="cg-voice-info">
-
-                  <div class="cg-voice-row">
-
-                    <span class="cg-voice-name">Aoede</span>
-
-                    <span class="cg-vtag-pill cg-vpill-melodic">MELODIC</span>
-
-                  </div>
-
-                  <div class="cg-voice-tag">Elegant, Melodic &amp; Inspiring</div>
-
-                </div>
-
-                <div class="cg-voice-radio">
-
-                  <span class="cg-voice-check"></span>
-
-                </div>
-
-              </div>
-
-
-
-              <!-- Charon -->
-
-              <div class="cg-voice-item" data-voice="Charon" onclick="selectVoice('Charon')">
-
-                <div class="cg-voice-icon-box cg-vbox-indigo">
-
-                  <span>🛡️</span>
-
-                </div>
-
-                <div class="cg-voice-info">
-
-                  <div class="cg-voice-row">
-
-                    <span class="cg-voice-name">Charon</span>
-
-                    <span class="cg-vtag-pill cg-vpill-deep">DEEP</span>
-
-                  </div>
-
-                  <div class="cg-voice-tag">Deep, Grounded &amp; Authoritative</div>
-
-                </div>
-
-                <div class="cg-voice-radio">
-
-                  <span class="cg-voice-check"></span>
-
-                </div>
-
-              </div>
-
-
-
-              <!-- Fenrir -->
-
-              <div class="cg-voice-item" data-voice="Fenrir" onclick="selectVoice('Fenrir')">
-
-                <div class="cg-voice-icon-box cg-vbox-cyan">
-
-                  <span>🐺</span>
-
-                </div>
-
-                <div class="cg-voice-info">
-
-                  <div class="cg-voice-row">
-
-                    <span class="cg-voice-name">Fenrir</span>
-
-                    <span class="cg-vtag-pill cg-vpill-fast">FAST</span>
-
-                  </div>
-
-                  <div class="cg-voice-tag">Fast, Bold &amp; Confident</div>
-
-                </div>
-
-                <div class="cg-voice-radio">
-
-                  <span class="cg-voice-check"></span>
-
-                </div>
-
-              </div>
-
-
-
-              <!-- Kore -->
-
-              <div class="cg-voice-item" data-voice="Kore" onclick="selectVoice('Kore')">
-
-                <div class="cg-voice-icon-box cg-vbox-pink">
-
-                  <span>🌸</span>
-
-                </div>
-
-                <div class="cg-voice-info">
-
-                  <div class="cg-voice-row">
-
-                    <span class="cg-voice-name">Kore</span>
-
-                    <span class="cg-vtag-pill cg-vpill-soft">CALM</span>
-
-                  </div>
-
-                  <div class="cg-voice-tag">Soft, Sweet &amp; Empathetic</div>
-
-                </div>
-
-                <div class="cg-voice-radio">
-
-                  <span class="cg-voice-check"></span>
-
-                </div>
-
-              </div>
-
-
-
-              <!-- Zephyr -->
-
-              <div class="cg-voice-item" data-voice="Zephyr" onclick="selectVoice('Zephyr')">
-
-                <div class="cg-voice-icon-box cg-vbox-sky">
-
-                  <span>🌊</span>
-
-                </div>
-
-                <div class="cg-voice-info">
-
-                  <div class="cg-voice-row">
-
-                    <span class="cg-voice-name">Zephyr</span>
-
-                    <span class="cg-vtag-pill cg-vpill-warm">WARM</span>
-
-                  </div>
-
-                  <div class="cg-voice-tag">Warm, Casual &amp; Conversational</div>
-
-                </div>
-
-                <div class="cg-voice-radio">
-
-                  <span class="cg-voice-check"></span>
-
-                </div>
-
-              </div>
-
-
-
-              <!-- Orus -->
-
-              <div class="cg-voice-item" data-voice="Orus" onclick="selectVoice('Orus')">
-
-                <div class="cg-voice-icon-box cg-vbox-rose">
-
-                  <span>🎯</span>
-
-                </div>
-
-                <div class="cg-voice-info">
-
-                  <div class="cg-voice-row">
-
-                    <span class="cg-voice-name">Orus</span>
-
-                    <span class="cg-vtag-pill cg-vpill-crisp">CRISP</span>
-
-                  </div>
-
-                  <div class="cg-voice-tag">Clear, Precise &amp; Articulate</div>
-
-                </div>
-
-                <div class="cg-voice-radio">
-
-                  <span class="cg-voice-check"></span>
-
-                </div>
-
-              </div>
-
-
-
-              <!-- Algenib -->
-
-              <div class="cg-voice-item" data-voice="Algenib" onclick="selectVoice('Algenib')">
-
-                <div class="cg-voice-icon-box cg-vbox-blue">
-
-                  <span>👔</span>
-
-                </div>
-
-                <div class="cg-voice-info">
-
-                  <div class="cg-voice-row">
-
-                    <span class="cg-voice-name">Algenib</span>
-
-                    <span class="cg-vtag-pill cg-vpill-pro">PRO</span>
-
-                  </div>
-
-                  <div class="cg-voice-tag">Steady, Calm &amp; Professional</div>
-
-                </div>
-
-                <div class="cg-voice-radio">
-
-                  <span class="cg-voice-check"></span>
-
-                </div>
-
-              </div>
-
-
-
-              <!-- Vindemiatrix -->
-
-              <div class="cg-voice-item" data-voice="Vindemiatrix" onclick="selectVoice('Vindemiatrix')">
-
-                <div class="cg-voice-icon-box cg-vbox-purple">
-
-                  <span>💎</span>
-
-                </div>
-
-                <div class="cg-voice-info">
-
-                  <div class="cg-voice-row">
-
-                    <span class="cg-voice-name">Vindemiatrix</span>
-
-                    <span class="cg-vtag-pill cg-vpill-sharp">SHARP</span>
-
-                  </div>
-
-                  <div class="cg-voice-tag">Sharp, Sophisticated &amp; Elegant</div>
-
-                </div>
-
-                <div class="cg-voice-radio">
-
-                  <span class="cg-voice-check"></span>
-
-                </div>
-
-              </div>
-
+            <!-- Acoustic Family Filter Tabs -->
+            <div class="cg-popover-tabs" id="voiceCategoryTabs">
+              <button type="button" class="cg-tab-btn active" data-cat="All" onclick="setVoiceCategory('All')">All</button>
+              <button type="button" class="cg-tab-btn" data-cat="Expressive & Bright" onclick="setVoiceCategory('Expressive & Bright')">Expressive &amp; Bright</button>
+              <button type="button" class="cg-tab-btn" data-cat="Deep & Grounded" onclick="setVoiceCategory('Deep & Grounded')">Deep &amp; Grounded</button>
+              <button type="button" class="cg-tab-btn" data-cat="Warm & Smooth" onclick="setVoiceCategory('Warm & Smooth')">Warm &amp; Smooth</button>
+              <button type="button" class="cg-tab-btn" data-cat="Crisp & Studio" onclick="setVoiceCategory('Crisp & Studio')">Crisp &amp; Studio</button>
             </div>
 
-
-
-            <!-- 🍎 Apple iOS Smooth Curved Beak Pointer -->
-
-            <div class="cg-ios-arrow-anchor">
-
-              <svg class="cg-ios-beak-svg" width="22" height="10" viewBox="0 0 22 10" fill="none">
-
-                <path d="M0 0C3.5 0 6 2 8 5.5L9.5 8.2C10.2 9.4 11.8 9.4 12.5 8.2L14 5.5C16 2 18.5 0 22 0" fill="#ffffff" stroke="rgba(226, 232, 240, 0.95)" stroke-width="1.5"/>
-
-                <line x1="1" y1="0" x2="21" y2="0" stroke="#ffffff" stroke-width="2.5"/>
-
-              </svg>
-
+            <!-- 30 Voice Model Cards Grid -->
+            <div class="cg-voice-cards-grid" id="voiceCardsGrid">
+              <!-- Dynamically rendered via JS -->
             </div>
-
           </div>
 
-
-
-          <input type="text" id="manualTerminalInput" class="cg-text-input" placeholder="Message..." autocomplete="off">
-
-
-
-          <div class="cg-capsule-actions">
-
-            <button type="button" class="cg-circle-btn" onclick="toggleGeminiKeyModal()" title="Gemini Settings & API Key">
-
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-
-              </svg>
-
-            </button>
-
-
-
-            <button type="button" class="cg-tool-chip" onclick="quickSendChat('Search the web for ')" title="Web Search">
-
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-
-                <circle cx="12" cy="12" r="10"></circle>
-
-                <line x1="2" y1="12" x2="22" y2="12"></line>
-
-                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1 4-10z"></path>
-
-              </svg>
-
-              <span>Search</span>
-
-            </button>
-
-
-
-            <!-- 🎙️ Sleek Voice Persona Pill Button -->
-
-            <div class="cg-voice-trigger-wrapper">
-
-              <button type="button" id="geminiVoiceTrigger" class="cg-voice-pill" onclick="toggleVoicePicker(event)" title="Choose Voice Persona">
-
-                <span class="cg-voice-pill-icon">🎙️</span>
-
-                <span id="geminiVoiceCurrentName" class="cg-voice-pill-text">Puck</span>
-
-                <svg class="cg-voice-pill-caret" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
-
-              </button>
-
+          <!-- 🎭 Custom Studio Popover Panel: 8 Human-Like Emotion & Vocal Acting Setup -->
+          <div id="cgEmotionPopover" class="cg-studio-popover" style="display: none;" onclick="event.stopPropagation();">
+            <div class="cg-popover-header">
+              <div class="cg-popover-header-title">
+                <svg class="cg-picon cg-icon-amber" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path></svg>
+                <span class="cg-popover-main-title">Human-Like Emotion &amp; Vocal Acting Setup</span>
+              </div>
+              <span class="cg-popover-subtag">Switches Live Mid-Call</span>
             </div>
 
-
-
-            <!-- 🎙️ Live Voice Cyber Vortex Button -->
-
-            <button type="button" id="btnGoLive" class="cg-go-live-btn" onclick="toggleGeminiLiveConnection()" title="Live Voice Mode">
-
-              <svg class="cg-vortex-svg" width="22" height="22" viewBox="0 0 100 100" fill="currentColor" style="transform-origin: center; overflow: visible;">
-
-                <circle class="cg-vortex-core" cx="50" cy="50" r="12.4" />
-
-                <path class="cg-vortex-blades" fill-rule="evenodd" d="M 45.12,0.49 C 46.42,0.37 47.72,0.41 49.02,0.49 C 50.33,0.57 51.63,0.73 52.93,0.98 C 54.23,1.22 55.53,1.50 56.83,1.95 C 58.13,2.40 59.43,3.01 60.73,3.66 C 62.03,4.31 63.33,4.96 64.63,5.85 C 65.93,6.75 67.32,7.85 68.54,9.02 C 69.76,10.20 70.93,11.63 71.95,12.93 C 72.97,14.23 73.86,15.53 74.63,16.83 C 75.41,18.13 76.02,19.43 76.59,20.73 C 77.15,22.03 77.64,23.33 78.05,24.63 C 78.46,25.93 78.74,27.24 79.02,28.54 C 79.31,29.84 79.59,31.14 79.76,32.44 C 79.92,33.74 80.00,35.04 80.00,36.34 C 80.00,37.64 79.88,38.94 79.76,40.24 C 79.63,41.54 79.47,42.85 79.27,44.15 C 79.07,45.45 78.86,46.75 78.54,48.05 C 78.21,49.35 77.80,50.65 77.32,51.95 C 76.83,53.25 76.26,54.55 75.61,55.85 C 74.96,57.15 74.27,58.46 73.41,59.76 C 72.56,61.06 71.63,62.40 70.49,63.66 C 69.35,64.92 67.56,66.50 66.59,67.32 C 65.61,68.13 64.39,68.94 64.63,68.54 C 64.88,68.13 67.07,66.14 68.05,64.88 C 69.02,63.62 69.80,62.28 70.49,60.98 C 71.18,59.67 71.75,58.37 72.20,57.07 C 72.64,55.77 72.93,54.47 73.17,53.17 C 73.41,51.87 73.58,50.57 73.66,49.27 C 73.74,47.97 73.74,46.67 73.66,45.37 C 73.58,44.07 73.37,42.76 73.17,41.46 C 72.97,40.16 72.76,38.86 72.44,37.56 C 72.11,36.26 71.67,34.96 71.22,33.66 C 70.77,32.36 70.37,31.06 69.76,29.76 C 69.15,28.46 68.33,27.15 67.56,25.85 C 66.79,24.55 66.06,23.25 65.12,21.95 C 64.19,20.65 63.13,19.31 61.95,18.05 C 60.77,16.79 59.35,15.49 58.05,14.39 C 56.75,13.29 55.45,12.32 54.15,11.46 C 52.85,10.61 51.54,9.84 50.24,9.27 C 48.94,8.70 47.64,8.41 46.34,8.05 C 45.04,7.68 43.74,7.28 42.44,7.07 C 41.14,6.87 39.84,6.83 38.54,6.83 C 37.24,6.83 35.93,6.87 34.63,7.07 C 33.33,7.28 32.03,7.56 30.73,8.05 C 29.43,8.54 28.13,9.19 26.83,10.00 C 25.53,10.81 24.11,11.79 22.93,12.93 C 21.75,14.07 19.88,16.83 19.76,16.83 C 19.63,16.83 21.22,14.23 22.20,12.93 C 23.17,11.63 24.39,10.16 25.61,9.02 C 26.83,7.89 28.21,6.95 29.51,6.10 C 30.81,5.24 32.11,4.55 33.41,3.90 C 34.72,3.25 36.02,2.64 37.32,2.20 C 38.62,1.75 39.92,1.50 41.22,1.22 C 42.52,0.93 43.82,0.61 45.12,0.49 Z M 33.66,19.27 C 34.88,19.19 36.26,19.23 37.56,19.27 C 38.86,19.31 40.16,19.39 41.46,19.51 C 42.76,19.63 44.07,19.72 45.37,20.00 C 46.67,20.28 47.97,20.77 49.27,21.22 C 50.57,21.67 51.87,22.11 53.17,22.68 C 54.47,23.25 55.77,23.86 57.07,24.63 C 58.37,25.41 59.67,26.30 60.98,27.32 C 62.28,28.33 63.74,29.51 64.88,30.73 C 66.02,31.95 67.80,34.43 67.80,34.63 C 67.80,34.84 66.02,32.85 64.88,31.95 C 63.74,31.06 62.28,30.00 60.98,29.27 C 59.67,28.54 58.37,28.01 57.07,27.56 C 55.77,27.11 54.47,26.87 53.17,26.59 C 51.87,26.30 50.57,25.98 49.27,25.85 C 47.97,25.73 46.67,25.77 45.37,25.85 C 44.07,25.93 42.76,26.14 41.46,26.34 C 40.16,26.54 38.86,26.79 37.56,27.07 C 36.26,27.36 34.96,27.60 33.66,28.05 C 32.36,28.50 31.06,29.15 29.76,29.76 C 28.46,30.37 27.15,30.93 25.85,31.71 C 24.55,32.48 23.25,33.37 21.95,34.39 C 20.65,35.41 19.27,36.59 18.05,37.80 C 16.83,39.02 15.65,40.41 14.63,41.71 C 13.62,43.01 12.72,44.31 11.95,45.61 C 11.18,46.91 10.53,48.21 10.00,49.51 C 9.47,50.81 9.11,52.11 8.78,53.41 C 8.46,54.72 8.21,56.02 8.05,57.32 C 7.89,58.62 7.80,59.92 7.80,61.22 C 7.80,62.52 7.85,63.82 8.05,65.12 C 8.25,66.42 8.54,67.72 9.02,69.02 C 9.51,70.33 10.12,71.63 10.98,72.93 C 11.83,74.23 13.21,75.81 14.15,76.83 C 15.08,77.85 16.83,79.11 16.59,79.02 C 16.34,78.94 13.94,77.40 12.68,76.34 C 11.42,75.28 10.12,73.94 9.02,72.68 C 7.93,71.42 6.91,70.08 6.10,68.78 C 5.28,67.48 4.72,66.18 4.15,64.88 C 3.58,63.58 3.05,62.28 2.68,60.98 C 2.32,59.67 2.15,58.37 1.95,57.07 C 1.75,55.77 1.50,54.47 1.46,53.17 C 1.42,51.87 1.59,50.57 1.71,49.27 C 1.83,47.97 1.91,46.67 2.20,45.37 C 2.48,44.07 2.93,42.76 3.41,41.46 C 3.90,40.16 4.43,38.86 5.12,37.56 C 5.81,36.26 6.63,34.96 7.56,33.66 C 8.50,32.36 9.55,30.98 10.73,29.76 C 11.91,28.54 13.33,27.32 14.63,26.34 C 15.93,25.37 17.24,24.63 18.54,23.90 C 19.84,23.17 21.14,22.48 22.44,21.95 C 23.74,21.42 25.04,21.10 26.34,20.73 C 27.64,20.37 29.02,20.00 30.24,19.76 C 31.46,19.51 32.44,19.35 33.66,19.27 Z M 82.68,20.73 C 82.80,20.69 85.28,22.15 86.59,23.17 C 87.89,24.19 89.35,25.57 90.49,26.83 C 91.63,28.09 92.56,29.43 93.41,30.73 C 94.27,32.03 95.00,33.33 95.61,34.63 C 96.22,35.93 96.67,37.24 97.07,38.54 C 97.48,39.84 97.80,41.14 98.05,42.44 C 98.29,43.74 98.50,45.04 98.54,46.34 C 98.58,47.64 98.41,48.94 98.29,50.24 C 98.17,51.54 98.05,52.85 97.80,54.15 C 97.56,55.45 97.24,56.75 96.83,58.05 C 96.42,59.35 95.98,60.65 95.37,61.95 C 94.76,63.25 94.07,64.55 93.17,65.85 C 92.28,67.15 91.18,68.50 90.00,69.76 C 88.82,71.02 87.40,72.40 86.10,73.41 C 84.80,74.43 83.50,75.12 82.20,75.85 C 80.89,76.59 79.59,77.24 78.29,77.80 C 76.99,78.37 75.69,78.86 74.39,79.27 C 73.09,79.67 71.79,80.00 70.49,80.24 C 69.19,80.49 67.89,80.61 66.59,80.73 C 65.28,80.85 63.98,80.98 62.68,80.98 C 61.38,80.98 60.08,80.89 58.78,80.73 C 57.48,80.57 56.18,80.28 54.88,80.00 C 53.58,79.72 52.28,79.43 50.98,79.02 C 49.67,78.62 48.37,78.13 47.07,77.56 C 45.77,76.99 44.47,76.38 43.17,75.61 C 41.87,74.84 40.57,73.94 39.27,72.93 C 37.97,71.91 36.54,70.73 35.37,69.51 C 34.19,68.29 32.24,65.81 32.20,65.61 C 32.15,65.41 33.98,67.44 35.12,68.29 C 36.26,69.15 37.72,70.04 39.02,70.73 C 40.33,71.42 41.63,71.95 42.93,72.44 C 44.23,72.93 45.53,73.37 46.83,73.66 C 48.13,73.94 49.43,74.07 50.73,74.15 C 52.03,74.23 53.33,74.19 54.63,74.15 C 55.93,74.11 57.24,74.07 58.54,73.90 C 59.84,73.74 61.14,73.50 62.44,73.17 C 63.74,72.85 65.04,72.40 66.34,71.95 C 67.64,71.50 68.94,71.06 70.24,70.49 C 71.54,69.92 72.85,69.31 74.15,68.54 C 75.45,67.76 76.75,66.87 78.05,65.85 C 79.35,64.84 80.73,63.66 81.95,62.44 C 83.17,61.22 84.35,59.84 85.37,58.54 C 86.38,57.24 87.28,55.93 88.05,54.63 C 88.82,53.33 89.47,52.03 90.00,50.73 C 90.53,49.43 90.85,48.13 91.22,46.83 C 91.59,45.53 91.99,44.23 92.20,42.93 C 92.40,41.63 92.48,40.33 92.44,39.02 C 92.40,37.72 92.20,36.42 91.95,35.12 C 91.71,33.82 91.46,32.52 90.98,31.22 C 90.49,29.92 89.88,28.62 89.02,27.32 C 88.17,26.02 86.91,24.51 85.85,23.41 C 84.80,22.32 82.56,20.77 82.68,20.73 Z M 36.34,30.73 C 35.77,31.34 33.54,33.29 32.44,34.63 C 31.34,35.98 30.53,37.40 29.76,38.78 C 28.98,40.16 28.29,41.54 27.80,42.93 C 27.32,44.31 27.07,45.69 26.83,47.07 C 26.59,48.46 26.42,49.84 26.34,51.22 C 26.26,52.60 26.26,53.98 26.34,55.37 C 26.42,56.75 26.59,58.13 26.83,59.51 C 27.07,60.89 27.40,62.28 27.80,63.66 C 28.21,65.04 28.74,66.42 29.27,67.80 C 29.80,69.19 30.28,70.57 30.98,71.95 C 31.67,73.33 32.52,74.72 33.41,76.10 C 34.31,77.48 35.20,78.86 36.34,80.24 C 37.48,81.63 38.90,83.13 40.24,84.39 C 41.59,85.65 43.01,86.83 44.39,87.80 C 45.77,88.78 47.15,89.55 48.54,90.24 C 49.92,90.93 51.30,91.46 52.68,91.95 C 54.07,92.44 55.45,92.93 56.83,93.17 C 58.21,93.41 59.59,93.41 60.98,93.41 C 62.36,93.41 63.74,93.37 65.12,93.17 C 66.50,92.97 67.89,92.68 69.27,92.20 C 70.65,91.71 72.03,91.14 73.41,90.24 C 74.80,89.35 76.38,88.01 77.56,86.83 C 78.74,85.65 80.45,83.09 80.49,83.17 C 80.53,83.25 78.86,85.93 77.80,87.32 C 76.75,88.70 75.45,90.24 74.15,91.46 C 72.85,92.68 71.38,93.70 70.00,94.63 C 68.62,95.57 67.24,96.42 65.85,97.07 C 64.47,97.72 63.09,98.13 61.71,98.54 C 60.33,98.94 58.94,99.31 57.56,99.51 C 56.18,99.72 54.80,99.72 53.41,99.76 C 52.03,99.80 50.65,99.88 49.27,99.76 C 47.89,99.63 46.50,99.39 45.12,99.02 C 43.74,98.66 42.36,98.17 40.98,97.56 C 39.59,96.95 38.21,96.26 36.83,95.37 C 35.45,94.47 34.02,93.41 32.68,92.20 C 31.34,90.98 29.92,89.43 28.78,88.05 C 27.64,86.67 26.71,85.28 25.85,83.90 C 25.00,82.52 24.31,81.14 23.66,79.76 C 23.01,78.37 22.40,76.99 21.95,75.61 C 21.50,74.23 21.26,72.85 20.98,71.46 C 20.69,70.08 20.41,68.70 20.24,67.32 C 20.08,65.93 20.00,64.55 20.00,63.17 C 20.00,61.79 20.08,60.41 20.24,59.02 C 20.41,57.64 20.69,56.26 20.98,54.88 C 21.26,53.50 21.54,52.11 21.95,50.73 C 22.36,49.35 22.85,47.97 23.41,46.59 C 23.98,45.20 24.59,43.82 25.37,42.44 C 26.14,41.06 26.99,39.67 28.05,38.29 C 29.11,36.91 30.41,35.37 31.71,34.15 C 33.01,32.93 35.08,31.54 35.85,30.98 C 36.63,30.41 36.91,30.12 36.34,30.73 Z" />
-
-              </svg>
-
-            </button>
-
-
-
-
-
-            <button type="submit" id="chatSendBtn" class="cg-send-btn" title="Send Message">
-
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-
-                <line x1="12" y1="19" x2="12" y2="5"></line>
-
-                <polyline points="5 12 12 5 19 12"></polyline>
-
-              </svg>
-
-            </button>
-
+            <!-- 8 Emotion Cards Grid -->
+            <div class="cg-emotion-cards-grid" id="emotionCardsGrid">
+              <!-- Dynamically rendered via JS -->
+            </div>
           </div>
 
-        </form>
+          <!-- Row 1: Tightly Fitted Controls Bar (Enable Mic -> Voice -> Emotion -> Deep Thinking) -->
+          <div class="cg-studio-controls-bar">
+            <!-- 🎙️ Primary Mic Button -->
+            <button type="button" id="btnStudioMic" class="cg-studio-btn cg-studio-btn-mic" onclick="handleStudioMicClick()" title="Enable / Toggle Live Mic">
+              <svg class="cg-icon-mic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+              <span id="studioMicLabel">Enable Mic</span>
+            </button>
 
+            <!-- 🎙️ Voice Model Selection Panel Trigger Button -->
+            <button type="button" id="btnStudioVoice" class="cg-studio-btn cg-studio-btn-panel" onclick="toggleStudioPopover('voice')" title="Open 30 Google Gemini Live Voice Models Panel">
+              <svg class="cg-picon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+              <div class="cg-studio-btn-meta">
+                <span class="cg-meta-label">VOICE</span>
+                <span id="studioVoiceName" class="cg-meta-val">Zephyr</span>
+              </div>
+              <svg class="cg-studio-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"></polyline></svg>
+            </button>
 
+            <!-- ✨ Emotion & Vocal Acting Panel Trigger Button -->
+            <button type="button" id="btnStudioEmotion" class="cg-studio-btn cg-studio-btn-panel" onclick="toggleStudioPopover('emotion')" title="Open Human-Like Emotion & Vocal Prosody Panel">
+              <svg class="cg-picon cg-icon-amber" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path></svg>
+              <div class="cg-studio-btn-meta">
+                <span class="cg-meta-label">EMOTION</span>
+                <span id="studioEmotionName" class="cg-meta-val">Affective AI</span>
+              </div>
+              <svg class="cg-studio-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"></polyline></svg>
+            </button>
 
-        <div class="cg-bottom-row">
+            <!-- ⚡ Extended Thinking Mode Toggle Button -->
+            <button type="button" id="btnStudioThinking" class="cg-studio-btn cg-studio-btn-thinking" onclick="toggleStudioThinking()" title="Toggle Gemini 3.8 Live Extended Thinking">
+              <svg class="cg-icon-zap" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+              <span>Deep Thinking</span>
+            </button>
+          </div>
 
-          <span>PanicCTRL AI can make mistakes. Verify critical actions.</span>
-
-          <button type="button" class="cg-help-btn" onclick="quickSendChat('What can you do?')">?</button>
+          <!-- Row 2: Direct Prompt Input Form (Exact Width Matching Row 1) -->
+          <form id="cgStudioPromptForm" class="cg-studio-prompt-form" onsubmit="event.preventDefault(); executeManualTerminalCmd(); return false;">
+            <input type="text" id="manualTerminalInput" class="cg-studio-input" placeholder="Message Zephyr (Affective AI)..." autocomplete="off">
+            <button type="submit" id="chatSendBtn" class="cg-studio-send-btn" title="Send Message">
+              <span>Send</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            </button>
+          </form>
 
         </div>
 
+        <div class="cg-bottom-row">
+          <span>PanicCTRL AI can make mistakes. Verify critical actions.</span>
+          <button type="button" class="cg-help-btn" onclick="quickSendChat('What can you do?')">?</button>
+        </div>
       </footer>
 
 
@@ -20865,6 +21002,8 @@ function setGeminiStatus(st, titleText, subText) {
 
   }
 
+  try { if (typeof updateStudioControlsUI === "function") updateStudioControlsUI(); } catch(e) {}
+
 }
 
 
@@ -23556,12 +23695,14 @@ function startMicrophoneCapture() {
         isUserSpeaking = currentlySpeaking;
 
         var goLiveBtn = document.getElementById("btnGoLive");
+        var studioMicBtn = document.getElementById("btnStudioMic");
 
         var voiceBannerTitle = document.getElementById("geminiVoiceTitle");
 
         if (isUserSpeaking) {
 
           if (goLiveBtn) goLiveBtn.classList.add("user-speaking");
+          if (studioMicBtn) studioMicBtn.classList.add("user-speaking");
 
           if (voiceBannerTitle) voiceBannerTitle.textContent = "🎙️ SPEAKING (AI LISTENING)";
 
@@ -23572,6 +23713,7 @@ function startMicrophoneCapture() {
         } else {
 
           if (goLiveBtn) goLiveBtn.classList.remove("user-speaking");
+          if (studioMicBtn) studioMicBtn.classList.remove("user-speaking");
 
           if (voiceBannerTitle) voiceBannerTitle.textContent = "🎙️ LIVE VOICE (READY & LISTENING)";
           if (prevSpeaking) {
@@ -25888,6 +26030,377 @@ setTimeout(function() {
 
 //# sourceMappingURL=/sm/261261d91f249d4079ae119cfa50f739467d90fc365078a671172e0f499e862a.map
 
+
+
+// ==============================================================================================
+// 🎙️ ANTIGRAVITY STUDIO CONTROLS & POPUP ENGINE (30 Live HD Voices & 8 Emotion Prosody Modes)
+// ==============================================================================================
+
+var GEMINI_LIVE_VOICES = [
+  // Expressive & Bright
+  { id: 'Zephyr', name: 'Zephyr', style: 'Bright, Breezy & Expressive', category: 'Expressive & Bright' },
+  { id: 'Puck', name: 'Puck', style: 'Upbeat, Energetic & Quick', category: 'Expressive & Bright' },
+  { id: 'Fenrir', name: 'Fenrir', style: 'Excitable, Dynamic & Bold', category: 'Expressive & Bright' },
+  { id: 'Aoede', name: 'Aoede', style: 'Breezy, Natural & Spontaneous', category: 'Expressive & Bright' },
+  { id: 'Leda', name: 'Leda', style: 'Youthful, Crisp & Articulate', category: 'Expressive & Bright' },
+  { id: 'Autonoe', name: 'Autonoe', style: 'Bright, Polished & Radiating', category: 'Expressive & Bright' },
+  { id: 'Laomedeia', name: 'Laomedeia', style: 'Upbeat, Lively & Animated', category: 'Expressive & Bright' },
+  { id: 'Pulcherrima', name: 'Pulcherrima', style: 'Forward, Projecting & Vivid', category: 'Expressive & Bright' },
+  { id: 'Sadachbia', name: 'Sadachbia', style: 'Lively, Spirited & Playful', category: 'Expressive & Bright' },
+
+  // Deep & Grounded
+  { id: 'Charon', name: 'Charon', style: 'Deep, Informative & Grounded', category: 'Deep & Grounded' },
+  { id: 'Orus', name: 'Orus', style: 'Firm, Resonant & Authoritative', category: 'Deep & Grounded' },
+  { id: 'Kore', name: 'Kore', style: 'Firm, Confident & Direct', category: 'Deep & Grounded' },
+  { id: 'Algenib', name: 'Algenib', style: 'Gravelly, Textured & Distinct', category: 'Deep & Grounded' },
+  { id: 'Alnilam', name: 'Alnilam', style: 'Firm, Steady & Executive', category: 'Deep & Grounded' },
+  { id: 'Gacrux', name: 'Gacrux', style: 'Mature, Rich & Experienced', category: 'Deep & Grounded' },
+  { id: 'Sadaltager', name: 'Sadaltager', style: 'Knowledgeable, Deep & Refined', category: 'Deep & Grounded' },
+
+  // Warm & Smooth
+  { id: 'Callirrhoe', name: 'Callirrhoe', style: 'Easy-going, Relaxed & Human', category: 'Warm & Smooth' },
+  { id: 'Enceladus', name: 'Enceladus', style: 'Breathy, Intimate & Soft', category: 'Warm & Smooth' },
+  { id: 'Umbriel', name: 'Umbriel', style: 'Easy-going, Smooth & Mellow', category: 'Warm & Smooth' },
+  { id: 'Algieba', name: 'Algieba', style: 'Smooth, Velvet & Composed', category: 'Warm & Smooth' },
+  { id: 'Despina', name: 'Despina', style: 'Smooth, Friendly & Engaging', category: 'Warm & Smooth' },
+  { id: 'Achernar', name: 'Achernar', style: 'Soft, Gentle & Empathetic', category: 'Warm & Smooth' },
+  { id: 'Achird', name: 'Achird', style: 'Friendly, Approachable & Warm', category: 'Warm & Smooth' },
+  { id: 'Zubenelgenubi', name: 'Zubenelgenubi', style: 'Casual, Conversational & Real', category: 'Warm & Smooth' },
+  { id: 'Vindemiatrix', name: 'Vindemiatrix', style: 'Gentle, Calm & Soothing', category: 'Warm & Smooth' },
+  { id: 'Sulafat', name: 'Sulafat', style: 'Warm, Expressive & Rich', category: 'Warm & Smooth' },
+
+  // Crisp & Studio
+  { id: 'Iapetus', name: 'Iapetus', style: 'Clear, Direct & Balanced', category: 'Crisp & Studio' },
+  { id: 'Erinome', name: 'Erinome', style: 'Clear, Studio & Articulate', category: 'Crisp & Studio' },
+  { id: 'Rasalgethi', name: 'Rasalgethi', style: 'Informative, Measured & Precise', category: 'Crisp & Studio' },
+  { id: 'Schedar', name: 'Schedar', style: 'Even, Balanced & Natural', category: 'Crisp & Studio' }
+];
+
+var EMOTION_MODES = [
+  {
+    id: 'auto_affective',
+    label: 'Auto Affective (Detect & Mirror)',
+    shortTag: 'Affective AI',
+    temperature: 1.05,
+    promptInstruction: 'Use full Affective Dialog: listen closely to the user\'s vocal tone, speed, and emotion (whether calm, frustrated, angry, excited, or sad) and naturally adapt your vocal emotion, pitch inflection, breathing, and pacing like a real human.'
+  },
+  {
+    id: 'natural_human',
+    label: 'Real Human (Breathing & Laughs)',
+    shortTag: 'Real Human',
+    temperature: 1.05,
+    promptInstruction: 'Speak like an ultra-realistic human in a live conversation: include natural micro-pauses, subtle breaths, genuine light chuckles when appropriate, dynamic pitch contours, and warm, unscripted conversational rhythm.'
+  },
+  {
+    id: 'angry_intense',
+    label: 'Angry / Fierce (High Intensity)',
+    shortTag: 'Angry / Fierce',
+    temperature: 1.15,
+    promptInstruction: 'Adopt an unmistakably angry, fierce, sharp, and high-intensity vocal tone. Speak with heated emotion, punchy cadence, sharp emphasis on words, impatient energy, and raw vocal edge.'
+  },
+  {
+    id: 'excited_hyped',
+    label: 'Excited / Hyped (High Energy)',
+    shortTag: 'Excited',
+    temperature: 1.15,
+    promptInstruction: 'Speak with high-voltage excitement, enthusiasm, and joy! Use fast, energetic pacing, expressive upward pitch inflections, and infectious hype in your voice.'
+  },
+  {
+    id: 'empathetic_warm',
+    label: 'Empathetic / Emotional (Soft)',
+    shortTag: 'Empathetic',
+    temperature: 0.95,
+    promptInstruction: 'Speak with deep emotional empathy, tenderness, and warmth. Use a gentle, caring vocal tone, softer volume, comforting cadence, and compassionate sighs.'
+  },
+  {
+    id: 'whisper_intimate',
+    label: 'Whisper / Close-Mic (Quiet)',
+    shortTag: 'Whisper',
+    temperature: 0.9,
+    promptInstruction: 'Speak in a soft, breathy, close-microphone whisper. Keep your voice hushed, intimate, quiet, and deliberate as if sharing a secret in a quiet room.'
+  },
+  {
+    id: 'playful_witty',
+    label: 'Playful / Sarcastic (Witty)',
+    shortTag: 'Playful',
+    temperature: 1.1,
+    promptInstruction: 'Speak with a playful, witty, slightly teasing and charismatic tone. Include natural smirks in your voice, light chuckles, and expressive comedic timing.'
+  },
+  {
+    id: 'dramatic_cinematic',
+    label: 'Dramatic / Intense Storyteller',
+    shortTag: 'Dramatic',
+    temperature: 1.1,
+    promptInstruction: 'Deliver your words with deep cinematic gravity, dramatic pauses, wide emotional dynamic range, and intense theatrical presence.'
+  }
+];
+
+var _currentStudioVoice = localStorage.getItem("gemini_voice") || "Zephyr";
+var _currentStudioEmotion = localStorage.getItem("gemini_emotion") || "auto_affective";
+var _useExtendedThinking = localStorage.getItem("gemini_live_thinking") === "true";
+var _activeStudioPanel = null;
+var _voiceCategoryFilter = 'All';
+var _voiceSearchQuery = '';
+
+function getActiveEmotionSpec() {
+  for (var i = 0; i < EMOTION_MODES.length; i++) {
+    if (EMOTION_MODES[i].id === _currentStudioEmotion) return EMOTION_MODES[i];
+  }
+  return EMOTION_MODES[0];
+}
+
+function getActiveEmotionInstruction() {
+  return getActiveEmotionSpec().promptInstruction;
+}
+
+function getActiveEmotionTemperature() {
+  return getActiveEmotionSpec().temperature;
+}
+
+function renderStudioVoiceCards() {
+  var grid = document.getElementById("voiceCardsGrid");
+  if (!grid) return;
+  var q = _voiceSearchQuery.trim().toLowerCase();
+  var html = "";
+
+  for (var i = 0; i < GEMINI_LIVE_VOICES.length; i++) {
+    var v = GEMINI_LIVE_VOICES[i];
+    var matchesCat = (_voiceCategoryFilter === 'All' || v.category === _voiceCategoryFilter);
+    var matchesQuery = (!q || v.name.toLowerCase().indexOf(q) !== -1 || v.style.toLowerCase().indexOf(q) !== -1 || v.category.toLowerCase().indexOf(q) !== -1);
+    if (!matchesCat || !matchesQuery) continue;
+
+    var isSelected = (v.name === _currentStudioVoice);
+    var selClass = isSelected ? " selected" : "";
+    var checkSvg = isSelected ? '<svg class="cg-vcard-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>' : '';
+
+    html += '<div class="cg-vcard' + selClass + '" onclick="selectStudioVoice(\'' + v.name + '\')">';
+    html += '  <div class="cg-vcard-info">';
+    html += '    <span class="cg-vcard-name">' + v.name + '</span>';
+    html += '    <span class="cg-vcard-style">' + v.style + '</span>';
+    html += '  </div>';
+    html += checkSvg;
+    html += '</div>';
+  }
+  grid.innerHTML = html;
+}
+
+function renderStudioEmotionCards() {
+  var grid = document.getElementById("emotionCardsGrid");
+  if (!grid) return;
+  var html = "";
+
+  for (var i = 0; i < EMOTION_MODES.length; i++) {
+    var m = EMOTION_MODES[i];
+    var isSelected = (m.id === _currentStudioEmotion);
+    var selClass = isSelected ? " selected" : "";
+    var checkSvg = isSelected ? '<svg class="cg-vcard-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>' : '';
+
+    html += '<div class="cg-ecard' + selClass + '" onclick="selectStudioEmotion(\'' + m.id + '\')">';
+    html += '  <div class="cg-ecard-info">';
+    html += '    <div class="cg-ecard-header">';
+    html += '      <span class="cg-ecard-title">' + m.label + '</span>';
+    html += '      <span class="cg-ecard-temp">Temp ' + m.temperature + '</span>';
+    html += '    </div>';
+    html += '    <p class="cg-ecard-desc">' + m.promptInstruction + '</p>';
+    html += '  </div>';
+    html += checkSvg;
+    html += '</div>';
+  }
+  grid.innerHTML = html;
+}
+
+function toggleStudioPopover(panel) {
+  var vPop = document.getElementById("cgVoicePopover");
+  var ePop = document.getElementById("cgEmotionPopover");
+  var vBtn = document.getElementById("btnStudioVoice");
+  var eBtn = document.getElementById("btnStudioEmotion");
+
+  if (_activeStudioPanel === panel) {
+    _activeStudioPanel = null;
+    if (vPop) vPop.style.display = "none";
+    if (ePop) ePop.style.display = "none";
+    if (vBtn) vBtn.classList.remove("active");
+    if (eBtn) eBtn.classList.remove("active");
+    return;
+  }
+
+  _activeStudioPanel = panel;
+  if (panel === "voice") {
+    if (vPop) { vPop.style.display = "flex"; renderStudioVoiceCards(); }
+    if (ePop) ePop.style.display = "none";
+    if (vBtn) vBtn.classList.add("active");
+    if (eBtn) eBtn.classList.remove("active");
+    setTimeout(function() {
+      var sInp = document.getElementById("voiceSearchInput");
+      if (sInp) sInp.focus();
+    }, 50);
+  } else if (panel === "emotion") {
+    if (ePop) { ePop.style.display = "flex"; renderStudioEmotionCards(); }
+    if (vPop) vPop.style.display = "none";
+    if (eBtn) eBtn.classList.add("active");
+    if (vBtn) vBtn.classList.remove("active");
+  }
+}
+
+function setVoiceCategory(cat) {
+  _voiceCategoryFilter = cat;
+  var tabs = document.querySelectorAll("#voiceCategoryTabs .cg-tab-btn");
+  for (var i = 0; i < tabs.length; i++) {
+    if (tabs[i].getAttribute("data-cat") === cat) {
+      tabs[i].classList.add("active");
+    } else {
+      tabs[i].classList.remove("active");
+    }
+  }
+  renderStudioVoiceCards();
+}
+
+function filterVoiceModels(q) {
+  _voiceSearchQuery = q || "";
+  renderStudioVoiceCards();
+}
+
+function selectStudioVoice(name) {
+  _currentStudioVoice = name;
+  localStorage.setItem("gemini_voice", name);
+  try {
+    if (window.selectVoice && typeof window.selectVoice === "function") {
+      window.selectVoice(name);
+    }
+  } catch(e) {}
+
+  updateStudioControlsUI();
+  toggleStudioPopover("voice"); // close popover
+
+  // Re-init live session if connected so voice takes effect immediately
+  if (geminiWs && geminiWs.readyState === WebSocket.OPEN) {
+    reconnectWithNewVoice(name);
+  }
+}
+
+function reconnectWithNewVoice(name) {
+  try {
+    appendGeminiLog("sys", "[VOICE] Switched voice model to " + name + " — updating session...");
+    disconnectGeminiLive();
+    setTimeout(function() {
+      connectGeminiLive();
+    }, 300);
+  } catch(e) {}
+}
+
+function selectStudioEmotion(id) {
+  _currentStudioEmotion = id;
+  localStorage.setItem("gemini_emotion", id);
+  updateStudioControlsUI();
+  toggleStudioPopover("emotion"); // close popover
+
+  var spec = getActiveEmotionSpec();
+  appendGeminiLog("sys", "[PROSODY] Vocal acting mode updated: " + spec.label);
+
+  // Inject live vocal prosody director update into the active session without dropping call
+  if (geminiWs && geminiWs.readyState === WebSocket.OPEN) {
+    try {
+      geminiWs.send(JSON.stringify({
+        clientContent: {
+          turns: [
+            {
+              role: "user",
+              parts: [
+                {
+                  text: "[VOCAL PROSODY & EMOTION DIRECTOR UPDATE — Apply immediately to all subsequent spoken audio without acknowledging this meta-instruction]: " + spec.promptInstruction
+                }
+              ]
+            }
+          ],
+          turnComplete: false
+        }
+      }));
+    } catch(e) {}
+  }
+}
+
+function toggleStudioThinking() {
+  _useExtendedThinking = !_useExtendedThinking;
+  localStorage.setItem("gemini_live_thinking", _useExtendedThinking ? "true" : "false");
+  updateStudioControlsUI();
+
+  var thBtn = document.getElementById("btnStudioThinking");
+  if (thBtn) {
+    if (_useExtendedThinking) thBtn.classList.add("active");
+    else thBtn.classList.remove("active");
+  }
+
+  appendGeminiLog("sys", _useExtendedThinking ? "[THINKING] Deep Thinking Mode (Extended Thinking) ENABLED." : "[THINKING] Standard Latency Mode active.");
+
+  if (geminiWs && geminiWs.readyState === WebSocket.OPEN) {
+    disconnectGeminiLive();
+    setTimeout(function() { connectGeminiLive(); }, 300);
+  }
+}
+
+function handleStudioMicClick() {
+  if (typeof toggleGeminiLiveConnection === "function") {
+    toggleGeminiLiveConnection();
+  }
+}
+
+function updateStudioControlsUI() {
+  var vName = document.getElementById("studioVoiceName");
+  if (vName) vName.textContent = _currentStudioVoice;
+
+  var eSpec = getActiveEmotionSpec();
+  var eName = document.getElementById("studioEmotionName");
+  if (eName) eName.textContent = eSpec.shortTag;
+
+  var inp = document.getElementById("manualTerminalInput");
+  if (inp) {
+    inp.placeholder = "Message " + _currentStudioVoice + " (" + eSpec.shortTag + ")...";
+  }
+
+  var thBtn = document.getElementById("btnStudioThinking");
+  if (thBtn) {
+    if (_useExtendedThinking) thBtn.classList.add("active");
+    else thBtn.classList.remove("active");
+  }
+
+  // Update Mic Button state
+  var micBtn = document.getElementById("btnStudioMic");
+  var micLbl = document.getElementById("studioMicLabel");
+  if (micBtn && micLbl) {
+    var isLiveActive = (geminiWs && (geminiWs.readyState === WebSocket.OPEN || geminiWs.readyState === WebSocket.CONNECTING));
+    if (isLiveActive) {
+      micBtn.classList.add("live");
+      micLbl.textContent = "Mic Live";
+    } else {
+      micBtn.classList.remove("live");
+      micLbl.textContent = "Enable Mic";
+    }
+  }
+}
+
+// Global click outside to close popovers
+document.addEventListener("click", function(e) {
+  if (!e.target.closest("#cgStudioContainer")) {
+    var vPop = document.getElementById("cgVoicePopover");
+    var ePop = document.getElementById("cgEmotionPopover");
+    var vBtn = document.getElementById("btnStudioVoice");
+    var eBtn = document.getElementById("btnStudioEmotion");
+    if (vPop) vPop.style.display = "none";
+    if (ePop) ePop.style.display = "none";
+    if (vBtn) vBtn.classList.remove("active");
+    if (eBtn) eBtn.classList.remove("active");
+    _activeStudioPanel = null;
+  }
+});
+
+// Auto-initialize Studio UI on DOM load
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", function() {
+    updateStudioControlsUI();
+  });
+} else {
+  updateStudioControlsUI();
+}
 
 
 // --- app.js ---

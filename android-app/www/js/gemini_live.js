@@ -3806,6 +3806,8 @@ function setGeminiStatus(st, titleText, subText) {
 
   }
 
+  try { if (typeof updateStudioControlsUI === "function") updateStudioControlsUI(); } catch(e) {}
+
 }
 
 
@@ -6497,12 +6499,14 @@ function startMicrophoneCapture() {
         isUserSpeaking = currentlySpeaking;
 
         var goLiveBtn = document.getElementById("btnGoLive");
+        var studioMicBtn = document.getElementById("btnStudioMic");
 
         var voiceBannerTitle = document.getElementById("geminiVoiceTitle");
 
         if (isUserSpeaking) {
 
           if (goLiveBtn) goLiveBtn.classList.add("user-speaking");
+          if (studioMicBtn) studioMicBtn.classList.add("user-speaking");
 
           if (voiceBannerTitle) voiceBannerTitle.textContent = "🎙️ SPEAKING (AI LISTENING)";
 
@@ -6513,6 +6517,7 @@ function startMicrophoneCapture() {
         } else {
 
           if (goLiveBtn) goLiveBtn.classList.remove("user-speaking");
+          if (studioMicBtn) studioMicBtn.classList.remove("user-speaking");
 
           if (voiceBannerTitle) voiceBannerTitle.textContent = "🎙️ LIVE VOICE (READY & LISTENING)";
           if (prevSpeaking) {
@@ -8829,3 +8834,374 @@ setTimeout(function() {
 
 //# sourceMappingURL=/sm/261261d91f249d4079ae119cfa50f739467d90fc365078a671172e0f499e862a.map
 
+
+
+// ==============================================================================================
+// 🎙️ ANTIGRAVITY STUDIO CONTROLS & POPUP ENGINE (30 Live HD Voices & 8 Emotion Prosody Modes)
+// ==============================================================================================
+
+var GEMINI_LIVE_VOICES = [
+  // Expressive & Bright
+  { id: 'Zephyr', name: 'Zephyr', style: 'Bright, Breezy & Expressive', category: 'Expressive & Bright' },
+  { id: 'Puck', name: 'Puck', style: 'Upbeat, Energetic & Quick', category: 'Expressive & Bright' },
+  { id: 'Fenrir', name: 'Fenrir', style: 'Excitable, Dynamic & Bold', category: 'Expressive & Bright' },
+  { id: 'Aoede', name: 'Aoede', style: 'Breezy, Natural & Spontaneous', category: 'Expressive & Bright' },
+  { id: 'Leda', name: 'Leda', style: 'Youthful, Crisp & Articulate', category: 'Expressive & Bright' },
+  { id: 'Autonoe', name: 'Autonoe', style: 'Bright, Polished & Radiating', category: 'Expressive & Bright' },
+  { id: 'Laomedeia', name: 'Laomedeia', style: 'Upbeat, Lively & Animated', category: 'Expressive & Bright' },
+  { id: 'Pulcherrima', name: 'Pulcherrima', style: 'Forward, Projecting & Vivid', category: 'Expressive & Bright' },
+  { id: 'Sadachbia', name: 'Sadachbia', style: 'Lively, Spirited & Playful', category: 'Expressive & Bright' },
+
+  // Deep & Grounded
+  { id: 'Charon', name: 'Charon', style: 'Deep, Informative & Grounded', category: 'Deep & Grounded' },
+  { id: 'Orus', name: 'Orus', style: 'Firm, Resonant & Authoritative', category: 'Deep & Grounded' },
+  { id: 'Kore', name: 'Kore', style: 'Firm, Confident & Direct', category: 'Deep & Grounded' },
+  { id: 'Algenib', name: 'Algenib', style: 'Gravelly, Textured & Distinct', category: 'Deep & Grounded' },
+  { id: 'Alnilam', name: 'Alnilam', style: 'Firm, Steady & Executive', category: 'Deep & Grounded' },
+  { id: 'Gacrux', name: 'Gacrux', style: 'Mature, Rich & Experienced', category: 'Deep & Grounded' },
+  { id: 'Sadaltager', name: 'Sadaltager', style: 'Knowledgeable, Deep & Refined', category: 'Deep & Grounded' },
+
+  // Warm & Smooth
+  { id: 'Callirrhoe', name: 'Callirrhoe', style: 'Easy-going, Relaxed & Human', category: 'Warm & Smooth' },
+  { id: 'Enceladus', name: 'Enceladus', style: 'Breathy, Intimate & Soft', category: 'Warm & Smooth' },
+  { id: 'Umbriel', name: 'Umbriel', style: 'Easy-going, Smooth & Mellow', category: 'Warm & Smooth' },
+  { id: 'Algieba', name: 'Algieba', style: 'Smooth, Velvet & Composed', category: 'Warm & Smooth' },
+  { id: 'Despina', name: 'Despina', style: 'Smooth, Friendly & Engaging', category: 'Warm & Smooth' },
+  { id: 'Achernar', name: 'Achernar', style: 'Soft, Gentle & Empathetic', category: 'Warm & Smooth' },
+  { id: 'Achird', name: 'Achird', style: 'Friendly, Approachable & Warm', category: 'Warm & Smooth' },
+  { id: 'Zubenelgenubi', name: 'Zubenelgenubi', style: 'Casual, Conversational & Real', category: 'Warm & Smooth' },
+  { id: 'Vindemiatrix', name: 'Vindemiatrix', style: 'Gentle, Calm & Soothing', category: 'Warm & Smooth' },
+  { id: 'Sulafat', name: 'Sulafat', style: 'Warm, Expressive & Rich', category: 'Warm & Smooth' },
+
+  // Crisp & Studio
+  { id: 'Iapetus', name: 'Iapetus', style: 'Clear, Direct & Balanced', category: 'Crisp & Studio' },
+  { id: 'Erinome', name: 'Erinome', style: 'Clear, Studio & Articulate', category: 'Crisp & Studio' },
+  { id: 'Rasalgethi', name: 'Rasalgethi', style: 'Informative, Measured & Precise', category: 'Crisp & Studio' },
+  { id: 'Schedar', name: 'Schedar', style: 'Even, Balanced & Natural', category: 'Crisp & Studio' }
+];
+
+var EMOTION_MODES = [
+  {
+    id: 'auto_affective',
+    label: 'Auto Affective (Detect & Mirror)',
+    shortTag: 'Affective AI',
+    temperature: 1.05,
+    promptInstruction: 'Use full Affective Dialog: listen closely to the user\'s vocal tone, speed, and emotion (whether calm, frustrated, angry, excited, or sad) and naturally adapt your vocal emotion, pitch inflection, breathing, and pacing like a real human.'
+  },
+  {
+    id: 'natural_human',
+    label: 'Real Human (Breathing & Laughs)',
+    shortTag: 'Real Human',
+    temperature: 1.05,
+    promptInstruction: 'Speak like an ultra-realistic human in a live conversation: include natural micro-pauses, subtle breaths, genuine light chuckles when appropriate, dynamic pitch contours, and warm, unscripted conversational rhythm.'
+  },
+  {
+    id: 'angry_intense',
+    label: 'Angry / Fierce (High Intensity)',
+    shortTag: 'Angry / Fierce',
+    temperature: 1.15,
+    promptInstruction: 'Adopt an unmistakably angry, fierce, sharp, and high-intensity vocal tone. Speak with heated emotion, punchy cadence, sharp emphasis on words, impatient energy, and raw vocal edge.'
+  },
+  {
+    id: 'excited_hyped',
+    label: 'Excited / Hyped (High Energy)',
+    shortTag: 'Excited',
+    temperature: 1.15,
+    promptInstruction: 'Speak with high-voltage excitement, enthusiasm, and joy! Use fast, energetic pacing, expressive upward pitch inflections, and infectious hype in your voice.'
+  },
+  {
+    id: 'empathetic_warm',
+    label: 'Empathetic / Emotional (Soft)',
+    shortTag: 'Empathetic',
+    temperature: 0.95,
+    promptInstruction: 'Speak with deep emotional empathy, tenderness, and warmth. Use a gentle, caring vocal tone, softer volume, comforting cadence, and compassionate sighs.'
+  },
+  {
+    id: 'whisper_intimate',
+    label: 'Whisper / Close-Mic (Quiet)',
+    shortTag: 'Whisper',
+    temperature: 0.9,
+    promptInstruction: 'Speak in a soft, breathy, close-microphone whisper. Keep your voice hushed, intimate, quiet, and deliberate as if sharing a secret in a quiet room.'
+  },
+  {
+    id: 'playful_witty',
+    label: 'Playful / Sarcastic (Witty)',
+    shortTag: 'Playful',
+    temperature: 1.1,
+    promptInstruction: 'Speak with a playful, witty, slightly teasing and charismatic tone. Include natural smirks in your voice, light chuckles, and expressive comedic timing.'
+  },
+  {
+    id: 'dramatic_cinematic',
+    label: 'Dramatic / Intense Storyteller',
+    shortTag: 'Dramatic',
+    temperature: 1.1,
+    promptInstruction: 'Deliver your words with deep cinematic gravity, dramatic pauses, wide emotional dynamic range, and intense theatrical presence.'
+  }
+];
+
+var _currentStudioVoice = localStorage.getItem("gemini_voice") || "Zephyr";
+var _currentStudioEmotion = localStorage.getItem("gemini_emotion") || "auto_affective";
+var _useExtendedThinking = localStorage.getItem("gemini_live_thinking") === "true";
+var _activeStudioPanel = null;
+var _voiceCategoryFilter = 'All';
+var _voiceSearchQuery = '';
+
+function getActiveEmotionSpec() {
+  for (var i = 0; i < EMOTION_MODES.length; i++) {
+    if (EMOTION_MODES[i].id === _currentStudioEmotion) return EMOTION_MODES[i];
+  }
+  return EMOTION_MODES[0];
+}
+
+function getActiveEmotionInstruction() {
+  return getActiveEmotionSpec().promptInstruction;
+}
+
+function getActiveEmotionTemperature() {
+  return getActiveEmotionSpec().temperature;
+}
+
+function renderStudioVoiceCards() {
+  var grid = document.getElementById("voiceCardsGrid");
+  if (!grid) return;
+  var q = _voiceSearchQuery.trim().toLowerCase();
+  var html = "";
+
+  for (var i = 0; i < GEMINI_LIVE_VOICES.length; i++) {
+    var v = GEMINI_LIVE_VOICES[i];
+    var matchesCat = (_voiceCategoryFilter === 'All' || v.category === _voiceCategoryFilter);
+    var matchesQuery = (!q || v.name.toLowerCase().indexOf(q) !== -1 || v.style.toLowerCase().indexOf(q) !== -1 || v.category.toLowerCase().indexOf(q) !== -1);
+    if (!matchesCat || !matchesQuery) continue;
+
+    var isSelected = (v.name === _currentStudioVoice);
+    var selClass = isSelected ? " selected" : "";
+    var checkSvg = isSelected ? '<svg class="cg-vcard-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>' : '';
+
+    html += '<div class="cg-vcard' + selClass + '" onclick="selectStudioVoice(\'' + v.name + '\')">';
+    html += '  <div class="cg-vcard-info">';
+    html += '    <span class="cg-vcard-name">' + v.name + '</span>';
+    html += '    <span class="cg-vcard-style">' + v.style + '</span>';
+    html += '  </div>';
+    html += checkSvg;
+    html += '</div>';
+  }
+  grid.innerHTML = html;
+}
+
+function renderStudioEmotionCards() {
+  var grid = document.getElementById("emotionCardsGrid");
+  if (!grid) return;
+  var html = "";
+
+  for (var i = 0; i < EMOTION_MODES.length; i++) {
+    var m = EMOTION_MODES[i];
+    var isSelected = (m.id === _currentStudioEmotion);
+    var selClass = isSelected ? " selected" : "";
+    var checkSvg = isSelected ? '<svg class="cg-vcard-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>' : '';
+
+    html += '<div class="cg-ecard' + selClass + '" onclick="selectStudioEmotion(\'' + m.id + '\')">';
+    html += '  <div class="cg-ecard-info">';
+    html += '    <div class="cg-ecard-header">';
+    html += '      <span class="cg-ecard-title">' + m.label + '</span>';
+    html += '      <span class="cg-ecard-temp">Temp ' + m.temperature + '</span>';
+    html += '    </div>';
+    html += '    <p class="cg-ecard-desc">' + m.promptInstruction + '</p>';
+    html += '  </div>';
+    html += checkSvg;
+    html += '</div>';
+  }
+  grid.innerHTML = html;
+}
+
+function toggleStudioPopover(panel) {
+  var vPop = document.getElementById("cgVoicePopover");
+  var ePop = document.getElementById("cgEmotionPopover");
+  var vBtn = document.getElementById("btnStudioVoice");
+  var eBtn = document.getElementById("btnStudioEmotion");
+
+  if (_activeStudioPanel === panel) {
+    _activeStudioPanel = null;
+    if (vPop) vPop.style.display = "none";
+    if (ePop) ePop.style.display = "none";
+    if (vBtn) vBtn.classList.remove("active");
+    if (eBtn) eBtn.classList.remove("active");
+    return;
+  }
+
+  _activeStudioPanel = panel;
+  if (panel === "voice") {
+    if (vPop) { vPop.style.display = "flex"; renderStudioVoiceCards(); }
+    if (ePop) ePop.style.display = "none";
+    if (vBtn) vBtn.classList.add("active");
+    if (eBtn) eBtn.classList.remove("active");
+    setTimeout(function() {
+      var sInp = document.getElementById("voiceSearchInput");
+      if (sInp) sInp.focus();
+    }, 50);
+  } else if (panel === "emotion") {
+    if (ePop) { ePop.style.display = "flex"; renderStudioEmotionCards(); }
+    if (vPop) vPop.style.display = "none";
+    if (eBtn) eBtn.classList.add("active");
+    if (vBtn) vBtn.classList.remove("active");
+  }
+}
+
+function setVoiceCategory(cat) {
+  _voiceCategoryFilter = cat;
+  var tabs = document.querySelectorAll("#voiceCategoryTabs .cg-tab-btn");
+  for (var i = 0; i < tabs.length; i++) {
+    if (tabs[i].getAttribute("data-cat") === cat) {
+      tabs[i].classList.add("active");
+    } else {
+      tabs[i].classList.remove("active");
+    }
+  }
+  renderStudioVoiceCards();
+}
+
+function filterVoiceModels(q) {
+  _voiceSearchQuery = q || "";
+  renderStudioVoiceCards();
+}
+
+function selectStudioVoice(name) {
+  _currentStudioVoice = name;
+  localStorage.setItem("gemini_voice", name);
+  try {
+    if (window.selectVoice && typeof window.selectVoice === "function") {
+      window.selectVoice(name);
+    }
+  } catch(e) {}
+
+  updateStudioControlsUI();
+  toggleStudioPopover("voice"); // close popover
+
+  // Re-init live session if connected so voice takes effect immediately
+  if (geminiWs && geminiWs.readyState === WebSocket.OPEN) {
+    reconnectWithNewVoice(name);
+  }
+}
+
+function reconnectWithNewVoice(name) {
+  try {
+    appendGeminiLog("sys", "[VOICE] Switched voice model to " + name + " — updating session...");
+    disconnectGeminiLive();
+    setTimeout(function() {
+      connectGeminiLive();
+    }, 300);
+  } catch(e) {}
+}
+
+function selectStudioEmotion(id) {
+  _currentStudioEmotion = id;
+  localStorage.setItem("gemini_emotion", id);
+  updateStudioControlsUI();
+  toggleStudioPopover("emotion"); // close popover
+
+  var spec = getActiveEmotionSpec();
+  appendGeminiLog("sys", "[PROSODY] Vocal acting mode updated: " + spec.label);
+
+  // Inject live vocal prosody director update into the active session without dropping call
+  if (geminiWs && geminiWs.readyState === WebSocket.OPEN) {
+    try {
+      geminiWs.send(JSON.stringify({
+        clientContent: {
+          turns: [
+            {
+              role: "user",
+              parts: [
+                {
+                  text: "[VOCAL PROSODY & EMOTION DIRECTOR UPDATE — Apply immediately to all subsequent spoken audio without acknowledging this meta-instruction]: " + spec.promptInstruction
+                }
+              ]
+            }
+          ],
+          turnComplete: false
+        }
+      }));
+    } catch(e) {}
+  }
+}
+
+function toggleStudioThinking() {
+  _useExtendedThinking = !_useExtendedThinking;
+  localStorage.setItem("gemini_live_thinking", _useExtendedThinking ? "true" : "false");
+  updateStudioControlsUI();
+
+  var thBtn = document.getElementById("btnStudioThinking");
+  if (thBtn) {
+    if (_useExtendedThinking) thBtn.classList.add("active");
+    else thBtn.classList.remove("active");
+  }
+
+  appendGeminiLog("sys", _useExtendedThinking ? "[THINKING] Deep Thinking Mode (Extended Thinking) ENABLED." : "[THINKING] Standard Latency Mode active.");
+
+  if (geminiWs && geminiWs.readyState === WebSocket.OPEN) {
+    disconnectGeminiLive();
+    setTimeout(function() { connectGeminiLive(); }, 300);
+  }
+}
+
+function handleStudioMicClick() {
+  if (typeof toggleGeminiLiveConnection === "function") {
+    toggleGeminiLiveConnection();
+  }
+}
+
+function updateStudioControlsUI() {
+  var vName = document.getElementById("studioVoiceName");
+  if (vName) vName.textContent = _currentStudioVoice;
+
+  var eSpec = getActiveEmotionSpec();
+  var eName = document.getElementById("studioEmotionName");
+  if (eName) eName.textContent = eSpec.shortTag;
+
+  var inp = document.getElementById("manualTerminalInput");
+  if (inp) {
+    inp.placeholder = "Message " + _currentStudioVoice + " (" + eSpec.shortTag + ")...";
+  }
+
+  var thBtn = document.getElementById("btnStudioThinking");
+  if (thBtn) {
+    if (_useExtendedThinking) thBtn.classList.add("active");
+    else thBtn.classList.remove("active");
+  }
+
+  // Update Mic Button state
+  var micBtn = document.getElementById("btnStudioMic");
+  var micLbl = document.getElementById("studioMicLabel");
+  if (micBtn && micLbl) {
+    var isLiveActive = (geminiWs && (geminiWs.readyState === WebSocket.OPEN || geminiWs.readyState === WebSocket.CONNECTING));
+    if (isLiveActive) {
+      micBtn.classList.add("live");
+      micLbl.textContent = "Mic Live";
+    } else {
+      micBtn.classList.remove("live");
+      micLbl.textContent = "Enable Mic";
+    }
+  }
+}
+
+// Global click outside to close popovers
+document.addEventListener("click", function(e) {
+  if (!e.target.closest("#cgStudioContainer")) {
+    var vPop = document.getElementById("cgVoicePopover");
+    var ePop = document.getElementById("cgEmotionPopover");
+    var vBtn = document.getElementById("btnStudioVoice");
+    var eBtn = document.getElementById("btnStudioEmotion");
+    if (vPop) vPop.style.display = "none";
+    if (ePop) ePop.style.display = "none";
+    if (vBtn) vBtn.classList.remove("active");
+    if (eBtn) eBtn.classList.remove("active");
+    _activeStudioPanel = null;
+  }
+});
+
+// Auto-initialize Studio UI on DOM load
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", function() {
+    updateStudioControlsUI();
+  });
+} else {
+  updateStudioControlsUI();
+}
