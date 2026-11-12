@@ -9307,7 +9307,7 @@ body.gemini-dark .cg-persona-desc {
   width: fit-content !important;
   width: -webkit-fit-content !important;
   width: -moz-fit-content !important;
-  max-width: min(560px, 95vw) !important;
+  max-width: 95vw !important;
   margin: 0 auto !important;
   border-radius: 12px !important;
   background: rgba(9, 9, 11, 0.95) !important;
@@ -9322,10 +9322,11 @@ body.gemini-dark .cg-persona-desc {
   box-sizing: border-box !important;
 }
 
-@media (max-width: 540px) {
+@media (max-width: 600px) {
   .cg-studio-controls {
     width: 95vw !important;
     max-width: 95vw !important;
+    padding: 8px !important;
   }
 }
 
@@ -9664,10 +9665,16 @@ body.gemini-dark .cg-persona-desc {
   justify-content: center;
   gap: 6px;
   flex-wrap: nowrap;
-  overflow-x: auto;
-  scrollbar-width: none;
+  width: 100%;
+  box-sizing: border-box;
 }
-.cg-studio-controls-bar::-webkit-scrollbar { display: none; }
+
+@media (max-width: 600px) {
+  .cg-studio-controls-bar {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+}
 
 .cg-studio-btn {
   display: flex;
