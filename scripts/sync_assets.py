@@ -34,6 +34,16 @@ if os.path.exists(jsqr_path):
         jsqr_content = f.read()
 
 import re
+
+# Read listening.gif bytes for embedded C++ fallback
+listening_gif_path = 'android-app/www/assets/listening.gif'
+listening_gif_bytes = b''
+if os.path.exists(listening_gif_path):
+    with open(listening_gif_path, 'rb') as f:
+        listening_gif_bytes = f.read()
+
+gif_byte_array = ', '.join(f'0x{b:02x}' for b in listening_gif_bytes)
+
 # Inlined fallback HTML for C++ single binary
 inlined_html = re.sub(r'<link\s+rel=["\']stylesheet["\']\s+href=["\']css/style\.css(?:\?[^"\']*)?["\']\s*>', f'<style>\n{css_content}\n</style>', html)
 inlined_html = re.sub(r'<script\s+src=["\'](?:js/)?jsqr\.min\.js(?:\?[^"\']*)?["\']\s*></script>', f'<script>\n{jsqr_content}\n</script>', inlined_html)
@@ -48,10 +58,32 @@ web_assets = f'''#pragma once
 static const char* DASHBOARD_HTML = R"HTML(
 {inlined_html}
 )HTML";
+
+namespace WebAssets {{
+    static const unsigned char LISTENING_GIF_BYTES[] = {{
+        {gif_byte_array}
+    }};
+
+    inline std::string GetListeningGif() {{
+        return std::string((const char*)LISTENING_GIF_BYTES, sizeof(LISTENING_GIF_BYTES));
+    }}
+}}
 '''
 
 with open('src/ui/WebAssets.h', 'w', encoding='utf-8') as f:
     f.write(web_assets)
+
+# 4. Sync assets & www to ProgramData
+prog_data_base = os.path.join(os.environ.get('ProgramData', 'C:\\ProgramData'), 'PanicButton')
+if os.path.exists(prog_data_base):
+    src_assets = 'android-app/www/assets'
+    if os.path.exists(src_assets):
+        for sub in ['assets', os.path.join('www', 'assets')]:
+            dst_a = os.path.join(prog_data_base, sub)
+            if os.path.exists(dst_a):
+                shutil.rmtree(dst_a)
+            shutil.copytree(src_assets, dst_a)
+        print(f'Synchronized assets to {prog_data_base}')
 
 # 4. Sync gemini-proxy to C:\ProgramData\PanicButton\gemini-proxy
 prog_data_proxy = os.path.join(os.environ.get('ProgramData', 'C:\\ProgramData'), 'PanicButton', 'gemini-proxy')

@@ -5315,6 +5315,8 @@ showMode(currentMode);
 
             else if (reqPath.find(".png") != std::string::npos) contentType = "image/png";
 
+            else if (reqPath.find(".gif") != std::string::npos) contentType = "image/gif";
+
             else if (reqPath.find(".svg") != std::string::npos) contentType = "image/svg+xml";
 
             else if (reqPath.find(".ico") != std::string::npos) contentType = "image/x-icon";
@@ -5381,6 +5383,10 @@ showMode(currentMode);
                 if (targetFile == "/index.html") {
 
                     responseBody = DASHBOARD_HTML;
+
+                } else if (targetFile == "/assets/listening.gif") {
+
+                    responseBody = WebAssets::GetListeningGif();
 
                 } else {
 
