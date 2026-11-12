@@ -3204,14 +3204,27 @@ static const char* DASHBOARD_HTML = R"HTML(
     transition: all 0.2s ease;
   }
   .cg-msg-bubble.user-bubble.interim-speech {
-    opacity: 0.85;
+    opacity: 0.95;
     border: 1px dashed rgba(59, 130, 246, 0.7) !important;
     box-shadow: 0 0 12px rgba(59, 130, 246, 0.25) !important;
     animation: cgInterimPulse 1.6s infinite ease-in-out;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .cg-listening-wave-anim {
+    height: 24px;
+    width: auto;
+    max-width: 68px;
+    object-fit: contain;
+    display: inline-block;
+    vertical-align: middle;
+    filter: drop-shadow(0 0 4px rgba(59, 130, 246, 0.6));
+    pointer-events: none;
   }
   @keyframes cgInterimPulse {
     0%, 100% { opacity: 0.85; transform: scale(1); }
-    50% { opacity: 0.98; transform: scale(1.005); }
+    50% { opacity: 1; transform: scale(1.02); }
   }
 
   .cg-msg-row.ai {
@@ -19847,10 +19860,17 @@ function updateUserSpeechBubble(text, isFinal) {
 
   currentUserStreamText = cleanText;
 
+  var isListeningPlaceholder = (cleanText === "🎙️ Listening..." || cleanText.indexOf("Listening...") !== -1);
+  var listeningHtml = '<img src="assets/listening.gif" alt="Listening..." class="cg-listening-wave-anim" />';
+
   if (currentUserStreamRow && l.contains(currentUserStreamRow)) {
     var bubble = currentUserStreamRow.querySelector(".user-bubble");
     if (bubble) {
-      bubble.textContent = cleanText;
+      if (isListeningPlaceholder) {
+        bubble.innerHTML = listeningHtml;
+      } else {
+        bubble.textContent = cleanText;
+      }
       if (isFinal) {
         bubble.classList.remove("interim-speech");
       } else {
@@ -19861,7 +19881,8 @@ function updateUserSpeechBubble(text, isFinal) {
     var row = document.createElement("div");
     row.className = "cg-msg-row user";
     var interimClass = isFinal ? "" : " interim-speech";
-    row.innerHTML = '<div class="cg-msg-bubble user-bubble' + interimClass + '">' + escapeHtml(cleanText) + '</div>';
+    var contentHtml = isListeningPlaceholder ? listeningHtml : escapeHtml(cleanText);
+    row.innerHTML = '<div class="cg-msg-bubble user-bubble' + interimClass + '">' + contentHtml + '</div>';
     l.appendChild(row);
     currentUserStreamRow = row;
   }

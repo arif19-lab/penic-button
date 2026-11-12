@@ -2803,10 +2803,17 @@ function updateUserSpeechBubble(text, isFinal) {
 
   currentUserStreamText = cleanText;
 
+  var isListeningPlaceholder = (cleanText === "🎙️ Listening..." || cleanText.indexOf("Listening...") !== -1);
+  var listeningHtml = '<img src="assets/listening.gif" alt="Listening..." class="cg-listening-wave-anim" />';
+
   if (currentUserStreamRow && l.contains(currentUserStreamRow)) {
     var bubble = currentUserStreamRow.querySelector(".user-bubble");
     if (bubble) {
-      bubble.textContent = cleanText;
+      if (isListeningPlaceholder) {
+        bubble.innerHTML = listeningHtml;
+      } else {
+        bubble.textContent = cleanText;
+      }
       if (isFinal) {
         bubble.classList.remove("interim-speech");
       } else {
@@ -2817,7 +2824,8 @@ function updateUserSpeechBubble(text, isFinal) {
     var row = document.createElement("div");
     row.className = "cg-msg-row user";
     var interimClass = isFinal ? "" : " interim-speech";
-    row.innerHTML = '<div class="cg-msg-bubble user-bubble' + interimClass + '">' + escapeHtml(cleanText) + '</div>';
+    var contentHtml = isListeningPlaceholder ? listeningHtml : escapeHtml(cleanText);
+    row.innerHTML = '<div class="cg-msg-bubble user-bubble' + interimClass + '">' + contentHtml + '</div>';
     l.appendChild(row);
     currentUserStreamRow = row;
   }
