@@ -2814,17 +2814,22 @@ function updateUserSpeechBubble(text, isFinal) {
   var cleanText = String(text || "").replace(/^👤 User:\s*/, "").replace(/^PS >\s*/, "").trim();
   if (!cleanText) return;
 
-  var hero = document.getElementById("geminiHeroGreeting");
-  if (hero) hero.style.display = "none";
-
-  currentUserStreamText = cleanText;
-
   var isListeningPlaceholder = (
     cleanText === "🎙️ Listening..." ||
     cleanText === "Listening..." ||
     cleanText.indexOf("Listening") !== -1 ||
     cleanText.toLowerCase().indexOf("listening") !== -1
   );
+
+  // 🎙️ Stream User turn into Live Transcript HUD
+  if (window.LiveTranscriptHUD && !isListeningPlaceholder) {
+    window.LiveTranscriptHUD.onUserTranscript(cleanText, Boolean(isFinal));
+  }
+
+  var hero = document.getElementById("geminiHeroGreeting");
+  if (hero) hero.style.display = "none";
+
+  currentUserStreamText = cleanText;
   var LISTENING_GIF_DATA_URI = "data:image/gif;base64,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";
   var listeningHtml = '<img src="' + LISTENING_GIF_DATA_URI + '" alt="Listening..." class="cg-listening-wave-anim" />';
 
@@ -2868,6 +2873,11 @@ var _aiWordTimer = null;
 
 function enqueueAiSpokenText(newChunk, isFinal) {
   if (!newChunk && !isFinal) return;
+
+  // 🎙️ Stream Agent turn into Live Transcript HUD
+  if (window.LiveTranscriptHUD) {
+    window.LiveTranscriptHUD.onAgentTranscript(newChunk, Boolean(isFinal));
+  }
 
   if (newChunk) {
     var words = String(newChunk).split(/(\s+)/).filter(Boolean);
@@ -3705,6 +3715,14 @@ function runLocalCmdFallback(cmd) {
 function setGeminiStatus(st, titleText, subText) {
 
   blobState.status = st;
+
+  if (window.LiveTranscriptHUD) {
+    var mappedSt = (st === "speak") ? "speaking" :
+                   (st === "listen") ? "listening" :
+                   (st === "think") ? "thinking" :
+                   (st === "interrupted") ? "interrupted" : "idle";
+    window.LiveTranscriptHUD.setState(mappedSt);
+  }
 
   var dot = document.getElementById("chatStatusDot");
 
@@ -5375,6 +5393,10 @@ function handleGeminiServerMessage(msg) {
 
     if (msg.type === "interrupted") {
 
+      if (window.LiveTranscriptHUD) {
+        window.LiveTranscriptHUD.onInterrupted();
+      }
+
       appendGeminiLog("sys", "[INTERRUPT] User spoke. Cutting off playback.");
 
       stopAllAudioPlayback();
@@ -6919,6 +6941,11 @@ function playPcm24kBase64Chunk(base64Data) {
 
   activeAudioSources.push(source);
 
+  if (window.LiveTranscriptHUD) {
+    window.LiveTranscriptHUD.onAudioChunk(audioBuf.duration, startTime);
+    window.LiveTranscriptHUD.setState("speaking");
+  }
+
 
 
   source.onended = function() {
@@ -6930,6 +6957,10 @@ function playPcm24kBase64Chunk(base64Data) {
     if (activeAudioSources.length === 0 && (!audioPlaybackCtx || audioPlaybackCtx.currentTime >= nextPlayTime - 0.03)) {
 
       blobState.geminiLevel = 0;
+
+      if (window.LiveTranscriptHUD) {
+        window.LiveTranscriptHUD.finalizeAgentAudio();
+      }
 
     }
 
@@ -9234,7 +9265,516 @@ document.addEventListener("click", function(e) {
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", function() {
     updateStudioControlsUI();
+    if (window.LiveTranscriptHUD && window.LiveTranscriptHUD.init) {
+      window.LiveTranscriptHUD.init();
+    }
   });
 } else {
   updateStudioControlsUI();
+  if (window.LiveTranscriptHUD && window.LiveTranscriptHUD.init) {
+    window.LiveTranscriptHUD.init();
+  }
 }
+
+/* ==========================================================================
+   🎙️ REAL-TIME LIVE TRANSCRIPT HUD CONTROLLER
+   Exact Match to Antigravity Voice Assistant Reference Implementation
+   Features:
+   - Word-by-Word Streaming for both User & Agent
+   - Pop-In vs Karaoke Reveal Mode Toggle
+   - 60fps Audio Word Sync Waveform & Progress Sub-bar
+   - Copy Full Transcript with Animated Checkmark Feedback
+   - Clear Transcript History
+   - Expand / Collapse Floating Studio HUD
+   - Dual-Engine Dark & Light Theme Pixel-Perfect Support
+   ========================================================================== */
+
+window.LiveTranscriptHUD = (function() {
+  var conversation = []; // Array of turns: { id, role: 'user'|'agent', text, words: [{ id, text, isSpoken, isCurrent }], spokenWordIndex, timestamp, isComplete, isInterrupted }
+  var isExpanded = true;
+  var revealMode = 'progressive'; // 'progressive' (Pop-In) or 'karaoke'
+  var state = 'idle'; // 'idle' | 'listening' | 'thinking' | 'speaking' | 'interrupted'
+  var activeAgentWords = [];
+  var activeAgentWordIndex = -1;
+  var audioPlaybackProgress = 0;
+  var currentAgentTurnId = null;
+  var currentAgentRawText = "";
+  var currentUserTurnId = null;
+  var agentAudioStartTime = 0;
+  var agentAudioTotalDuration = 0;
+  var syncInterval = null;
+
+  function init() {
+    render();
+    bindEvents();
+    startSyncLoop();
+  }
+
+  function startSyncLoop() {
+    if (syncInterval) clearInterval(syncInterval);
+    syncInterval = setInterval(function() {
+      if (state === 'speaking' && currentAgentTurnId && audioPlaybackCtx && agentAudioTotalDuration > 0) {
+        var now = audioPlaybackCtx.currentTime;
+        var elapsed = Math.max(0, now - agentAudioStartTime);
+        var progress = Math.min(1.0, elapsed / agentAudioTotalDuration);
+        audioPlaybackProgress = progress;
+
+        var turn = findTurn(currentAgentTurnId);
+        if (turn && turn.words && turn.words.length > 0) {
+          var syncedIdx = Math.min(turn.words.length - 1, Math.max(0, Math.floor(progress * turn.words.length)));
+          activeAgentWordIndex = syncedIdx;
+          if (turn.spokenWordIndex !== syncedIdx) {
+            turn.spokenWordIndex = syncedIdx;
+            turn.words.forEach(function(w, wIdx) {
+              w.isSpoken = (wIdx <= syncedIdx);
+              w.isCurrent = (wIdx === syncedIdx);
+            });
+            renderWordsForTurn(turn);
+          }
+        }
+        updateSyncBar();
+      }
+    }, 45);
+  }
+
+  function toggleExpand() {
+    isExpanded = !isExpanded;
+    var hud = document.getElementById("cgLiveTranscriptHUD");
+    var btn = document.getElementById("btnToggleHudExpand");
+    if (!hud) return;
+
+    if (isExpanded) {
+      hud.classList.remove("collapsed");
+      hud.classList.add("expanded");
+      if (btn) btn.title = "Collapse Live Transcript HUD";
+    } else {
+      hud.classList.remove("expanded");
+      hud.classList.add("collapsed");
+      if (btn) btn.title = "Expand Live Transcript HUD";
+    }
+  }
+
+  function toggleRevealMode() {
+    revealMode = (revealMode === 'progressive') ? 'karaoke' : 'progressive';
+    var txt = document.getElementById("cgHudRevealModeText");
+    if (txt) {
+      txt.textContent = (revealMode === 'progressive') ? "Pop-In" : "Karaoke";
+    }
+    renderFeed();
+  }
+
+  function copyTranscript() {
+    if (!conversation.length) return;
+    var fullText = conversation.map(function(t) {
+      return "[" + (t.role === 'agent' ? "AGENT" : "YOU") + "]: " + t.text;
+    }).join("\n\n");
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(fullText).catch(function(){});
+    }
+
+    var copyIcon = document.getElementById("cgHudCopyIcon");
+    var checkIcon = document.getElementById("cgHudCheckIcon");
+    if (copyIcon && checkIcon) {
+      copyIcon.style.display = "none";
+      checkIcon.style.display = "inline-block";
+      setTimeout(function() {
+        copyIcon.style.display = "inline-block";
+        checkIcon.style.display = "none";
+      }, 2000);
+    }
+  }
+
+  function clearTranscript() {
+    conversation = [];
+    currentAgentTurnId = null;
+    currentAgentRawText = "";
+    currentUserTurnId = null;
+    activeAgentWords = [];
+    activeAgentWordIndex = -1;
+    audioPlaybackProgress = 0;
+    render();
+  }
+
+  function onUserTranscript(text, isFinal) {
+    if (!text) return;
+    var clean = String(text).replace(/^👤 User:\s*/, "").replace(/^PS >\s*/, "").trim();
+    if (!clean || clean.indexOf("Listening") !== -1) return;
+
+    var turn = null;
+    if (currentUserTurnId) {
+      turn = findTurn(currentUserTurnId);
+    }
+
+    var wordsArray = clean.split(/\s+/).filter(Boolean);
+    var wordsObj = wordsArray.map(function(w, idx) {
+      return {
+        id: 'u-' + Date.now() + '-' + idx,
+        text: w,
+        isSpoken: true,
+        isCurrent: (idx === wordsArray.length - 1)
+      };
+    });
+
+    if (turn) {
+      turn.text = clean;
+      turn.words = wordsObj;
+      turn.spokenWordIndex = wordsObj.length - 1;
+      if (isFinal) {
+        turn.isComplete = true;
+        currentUserTurnId = null;
+      }
+    } else {
+      turn = {
+        id: 'turn-u-' + Date.now(),
+        role: 'user',
+        text: clean,
+        words: wordsObj,
+        spokenWordIndex: wordsObj.length - 1,
+        timestamp: Date.now(),
+        isComplete: Boolean(isFinal),
+        isInterrupted: false
+      };
+      conversation.push(turn);
+      if (!isFinal) {
+        currentUserTurnId = turn.id;
+      }
+    }
+
+    render();
+  }
+
+  function onAgentTranscript(chunk, isFinal) {
+    if (chunk) {
+      currentAgentRawText = appendFragment(currentAgentRawText, chunk);
+      var wordsArray = currentAgentRawText.split(/\s+/).filter(Boolean);
+      activeAgentWords = wordsArray;
+
+      var turn = null;
+      if (currentAgentTurnId) {
+        turn = findTurn(currentAgentTurnId);
+      } else {
+        turn = {
+          id: 'turn-a-' + Date.now(),
+          role: 'agent',
+          text: currentAgentRawText,
+          words: [],
+          spokenWordIndex: -1,
+          timestamp: Date.now(),
+          isComplete: false,
+          isInterrupted: false
+        };
+        conversation.push(turn);
+        currentAgentTurnId = turn.id;
+      }
+
+      turn.text = currentAgentRawText;
+      var curIdx = (turn.spokenWordIndex >= 0) ? turn.spokenWordIndex : 0;
+      turn.words = wordsArray.map(function(w, idx) {
+        return {
+          id: turn.id + '-w-' + idx,
+          text: w,
+          isSpoken: (idx <= curIdx),
+          isCurrent: (idx === curIdx)
+        };
+      });
+      turn.spokenWordIndex = curIdx;
+    }
+
+    if (isFinal) {
+      if (currentAgentTurnId) {
+        var finTurn = findTurn(currentAgentTurnId);
+        if (finTurn) {
+          finTurn.isComplete = true;
+          finTurn.spokenWordIndex = Math.max(0, finTurn.words.length - 1);
+          finTurn.words.forEach(function(w) {
+            w.isSpoken = true;
+            w.isCurrent = false;
+          });
+        }
+        currentAgentTurnId = null;
+        currentAgentRawText = "";
+      }
+      activeAgentWordIndex = -1;
+      audioPlaybackProgress = 0;
+    }
+
+    render();
+  }
+
+  function onInterrupted() {
+    if (currentAgentTurnId) {
+      var turn = findTurn(currentAgentTurnId);
+      if (turn) {
+        turn.isInterrupted = true;
+        turn.isComplete = true;
+      }
+      currentAgentTurnId = null;
+      currentAgentRawText = "";
+    }
+    state = 'interrupted';
+    activeAgentWordIndex = -1;
+    audioPlaybackProgress = 0;
+    render();
+  }
+
+  function onAudioChunk(duration, startTime) {
+    if (!agentAudioStartTime || agentAudioStartTime === 0) {
+      agentAudioStartTime = startTime;
+      agentAudioTotalDuration = duration;
+    } else {
+      agentAudioTotalDuration += duration;
+    }
+  }
+
+  function finalizeAgentAudio() {
+    if (currentAgentTurnId) {
+      var turn = findTurn(currentAgentTurnId);
+      if (turn) {
+        turn.isComplete = true;
+        turn.spokenWordIndex = Math.max(0, turn.words.length - 1);
+        turn.words.forEach(function(w) {
+          w.isSpoken = true;
+          w.isCurrent = false;
+        });
+      }
+      currentAgentTurnId = null;
+      currentAgentRawText = "";
+    }
+    agentAudioStartTime = 0;
+    agentAudioTotalDuration = 0;
+    activeAgentWordIndex = -1;
+    audioPlaybackProgress = 0;
+    state = 'idle';
+    render();
+  }
+
+  function setState(newState) {
+    if (state !== newState) {
+      state = newState;
+      render();
+    }
+  }
+
+  function findTurn(id) {
+    for (var i = 0; i < conversation.length; i++) {
+      if (conversation[i].id === id) return conversation[i];
+    }
+    return null;
+  }
+
+  function appendFragment(existing, fragment) {
+    if (!fragment) return existing;
+    if (!existing) return String(fragment).replace(/^\s+/, '');
+    return existing + fragment;
+  }
+
+  function updateSyncBar() {
+    var syncBar = document.getElementById("cgHudSyncBar");
+    var statsEl = document.getElementById("cgHudSyncStats");
+    if (!syncBar || !statsEl) return;
+
+    var isSpeaking = (state === 'speaking');
+    var turn = currentAgentTurnId ? findTurn(currentAgentTurnId) : null;
+    var totalWords = (turn && turn.words) ? turn.words.length : activeAgentWords.length;
+
+    if (isSpeaking && totalWords > 0 && isExpanded) {
+      syncBar.style.display = "flex";
+      var cur = Math.min(totalWords, (activeAgentWordIndex >= 0 ? activeAgentWordIndex + 1 : 1));
+      var pct = Math.round(audioPlaybackProgress * 100);
+      statsEl.textContent = cur + "/" + totalWords + " · " + pct + "%";
+    } else {
+      syncBar.style.display = "none";
+    }
+  }
+
+  function render() {
+    updateHeaderStats();
+    updateSyncBar();
+    renderFeed();
+  }
+
+  function updateHeaderStats() {
+    var badge = document.getElementById("cgHudTurnCountBadge");
+    var copyBtn = document.getElementById("btnCopyHudTranscript");
+    var clearBtn = document.getElementById("btnClearHudTranscript");
+
+    var count = conversation.length;
+    if (badge) {
+      if (count > 0) {
+        badge.textContent = String(count);
+        badge.style.display = "inline-block";
+      } else {
+        badge.style.display = "none";
+      }
+    }
+
+    if (copyBtn) {
+      copyBtn.style.display = (count > 0) ? "inline-flex" : "none";
+    }
+    if (clearBtn) {
+      clearBtn.style.display = (count > 0) ? "inline-flex" : "none";
+    }
+  }
+
+  function renderFeed() {
+    var scrollContainer = document.getElementById("cgHudFeedScroll");
+    var emptyState = document.getElementById("cgHudEmptyState");
+    if (!scrollContainer) return;
+
+    if (conversation.length === 0) {
+      if (emptyState) emptyState.style.display = "flex";
+      var cards = scrollContainer.querySelectorAll(".cg-hud-turn-card");
+      for (var c = 0; c < cards.length; c++) cards[c].remove();
+      return;
+    }
+
+    if (emptyState) emptyState.style.display = "none";
+
+    var existingCards = scrollContainer.querySelectorAll(".cg-hud-turn-card");
+    var existingMap = {};
+    for (var i = 0; i < existingCards.length; i++) {
+      var card = existingCards[i];
+      existingMap[card.getAttribute("data-turn-id")] = card;
+    }
+
+    conversation.forEach(function(turn, turnIdx) {
+      var isLatestTurn = (turnIdx === conversation.length - 1);
+      var isAgent = (turn.role === 'agent');
+      var isActivelySpeaking = isAgent && isLatestTurn && (state === 'speaking');
+      var isActivelyListening = !isAgent && isLatestTurn && (!turn.isComplete || state === 'listening');
+      var isTurnStreaming = isActivelySpeaking || isActivelyListening;
+
+      var cardEl = existingMap[turn.id];
+      if (!cardEl) {
+        cardEl = document.createElement("div");
+        cardEl.className = "cg-hud-turn-card";
+        cardEl.setAttribute("data-turn-id", turn.id);
+        scrollContainer.appendChild(cardEl);
+      }
+
+      cardEl.className = "cg-hud-turn-card " + (isAgent ? "role-agent" : "role-user") + (isTurnStreaming ? " active-stream" : "");
+
+      var timeStr = "";
+      try {
+        timeStr = new Date(turn.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      } catch(e) {
+        timeStr = "";
+      }
+
+      var speakingHtml = "";
+      if (isActivelySpeaking || isActivelyListening) {
+        speakingHtml = '<span class="cg-hud-speaking-badge"><span class="cg-hud-speaking-dot"></span>Speaking</span>';
+      }
+
+      var interruptedHtml = turn.isInterrupted ? '<span class="cg-hud-interrupted-badge">· Interrupted</span>' : '';
+
+      var headerHtml =
+        '<div class="cg-hud-card-header">' +
+          '<div class="cg-hud-header-left">' +
+            '<span class="cg-hud-role-badge">' + (isAgent ? "Agent" : "You") + '</span>' +
+            speakingHtml +
+            interruptedHtml +
+          '</div>' +
+          '<span class="cg-hud-timestamp">' + timeStr + '</span>' +
+        '</div>';
+
+      var maxWordIdx = isTurnStreaming ? turn.spokenWordIndex : Math.max(0, turn.words.length - 1);
+      var wordsToRender = (isTurnStreaming && revealMode === 'progressive')
+        ? turn.words.slice(0, maxWordIdx + 1)
+        : turn.words;
+
+      var wordsHtml = "";
+      if (wordsToRender.length > 0) {
+        wordsHtml = wordsToRender.map(function(w, wIdx) {
+          var isCurrentWord = isTurnStreaming && (wIdx === maxWordIdx);
+          var isSpoken = !isTurnStreaming || (wIdx <= maxWordIdx);
+          var wordClass = isCurrentWord ? "current" : (isSpoken ? "spoken" : "dimmed");
+          return '<span class="cg-hud-word ' + wordClass + '">' + escapeHtml(w.text) + '</span>';
+        }).join(" ");
+      } else {
+        wordsHtml = '<span class="cg-hud-word spoken">' + escapeHtml(turn.text) + '</span>';
+      }
+
+      cardEl.innerHTML = headerHtml + '<div class="cg-hud-words-wrap">' + wordsHtml + '</div>';
+    });
+
+    var validIds = conversation.map(function(t) { return t.id; });
+    for (var k in existingMap) {
+      if (validIds.indexOf(k) === -1) {
+        existingMap[k].remove();
+      }
+    }
+
+    var activeWord = scrollContainer.querySelector(".cg-hud-word.current");
+    if (activeWord) {
+      activeWord.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } else {
+      scrollContainer.scrollTop = scrollContainer.scrollHeight;
+    }
+  }
+
+  function renderWordsForTurn(turn) {
+    var card = document.querySelector('.cg-hud-turn-card[data-turn-id="' + turn.id + '"]');
+    if (!card) return;
+    var wordsWrap = card.querySelector(".cg-hud-words-wrap");
+    if (!wordsWrap) return;
+
+    var maxWordIdx = turn.spokenWordIndex;
+    var wordsToRender = (revealMode === 'progressive')
+      ? turn.words.slice(0, maxWordIdx + 1)
+      : turn.words;
+
+    if (wordsToRender.length > 0) {
+      wordsWrap.innerHTML = wordsToRender.map(function(w, wIdx) {
+        var isCurrentWord = (wIdx === maxWordIdx);
+        var isSpoken = (wIdx <= maxWordIdx);
+        var wordClass = isCurrentWord ? "current" : (isSpoken ? "spoken" : "dimmed");
+        return '<span class="cg-hud-word ' + wordClass + '">' + escapeHtml(w.text) + '</span>';
+      }).join(" ");
+    }
+
+    var activeWord = wordsWrap.querySelector(".cg-hud-word.current");
+    if (activeWord) {
+      activeWord.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }
+
+  function bindEvents() {
+    var expandBtn = document.getElementById("btnToggleHudExpand");
+    if (expandBtn) expandBtn.onclick = toggleExpand;
+
+    var revealBtn = document.getElementById("btnToggleHudReveal");
+    if (revealBtn) revealBtn.onclick = toggleRevealMode;
+
+    var copyBtn = document.getElementById("btnCopyHudTranscript");
+    if (copyBtn) copyBtn.onclick = copyTranscript;
+
+    var clearBtn = document.getElementById("btnClearHudTranscript");
+    if (clearBtn) clearBtn.onclick = clearTranscript;
+  }
+
+  function escapeHtml(str) {
+    return String(str || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  return {
+    init: init,
+    toggleExpand: toggleExpand,
+    toggleRevealMode: toggleRevealMode,
+    copyTranscript: copyTranscript,
+    clearTranscript: clearTranscript,
+    onUserTranscript: onUserTranscript,
+    onAgentTranscript: onAgentTranscript,
+    onInterrupted: onInterrupted,
+    onAudioChunk: onAudioChunk,
+    finalizeAgentAudio: finalizeAgentAudio,
+    setState: setState,
+    render: render
+  };
+})();
