@@ -34,6 +34,14 @@ static const char* DASHBOARD_HTML = R"HTML(
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
+  <!-- 🌑 PURE BLACK THEME LOCK (Antigravity Voice Assistant Match) -->
+  <script>
+    try {
+      localStorage.setItem('gemini_theme', 'dark');
+    } catch(e) {}
+    document.documentElement.classList.add('dark');
+  </script>
+
   <!-- 🎨 1. MODULAR CYBERPUNK STYLESHEET -->
   <style>
 @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;600;800;900&family=Inter:wght@400;600;700&display=swap');
@@ -1511,7 +1519,7 @@ static const char* DASHBOARD_HTML = R"HTML(
      ✨ PIXEL-PERFECT CHATGPT APP REPLICATION (Full Depth & Responsive)
      ============================================================ */
   body.gemini-mode {
-    background: #ffffff !important;
+    background: #000000 !important;
     overflow: hidden !important;
     margin: 0 !important;
     padding: 0 !important;
@@ -1568,6 +1576,7 @@ static const char* DASHBOARD_HTML = R"HTML(
     right: 0 !important;
     bottom: 0 !important;
     z-index: 900;
+    background: #000000 !important;
   }
   #tab-gemini.tab-content.active {
     display: flex !important;
@@ -1583,12 +1592,12 @@ static const char* DASHBOARD_HTML = R"HTML(
     max-width: 100%;
     margin: 0;
     padding: 0;
-    background: #ffffff;
+    background: #000000;
     border-radius: 0 !important;
     box-shadow: none;
     overflow: hidden;
     position: relative;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   }
 
   .cg-main-viewport {
@@ -1599,7 +1608,7 @@ static const char* DASHBOARD_HTML = R"HTML(
     height: 100%;
     position: relative;
     overflow: hidden;
-    background: #ffffff;
+    background: #000000;
     border-radius: 0 !important;
   }
 
@@ -2489,7 +2498,7 @@ static const char* DASHBOARD_HTML = R"HTML(
       height: 100% !important;
       height: 100dvh !important;
       max-height: 100dvh !important;
-      background: #ffffff !important;
+      background: #000000 !important;
     }
     .cg-main-viewport {
       position: relative !important;
@@ -2500,7 +2509,7 @@ static const char* DASHBOARD_HTML = R"HTML(
       display: flex !important;
       flex-direction: column !important;
       z-index: 1 !important;
-      background: #ffffff !important;
+      background: #000000 !important;
       transform: none !important;
       overflow: hidden !important;
     }
@@ -2508,7 +2517,7 @@ static const char* DASHBOARD_HTML = R"HTML(
       display: none;
       position: fixed !important;
       top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
-      background: rgba(15, 23, 42, 0.45) !important;
+      background: rgba(0, 0, 0, 0.75) !important;
       z-index: 998 !important;
       opacity: 0;
       pointer-events: none !important;
@@ -2531,10 +2540,12 @@ static const char* DASHBOARD_HTML = R"HTML(
       z-index: 999 !important;
       transform: translate3d(-100%, 0, 0);
       -webkit-transform: translate3d(-100%, 0, 0);
-      box-shadow: 14px 0 45px rgba(0, 0, 0, 0.28) !important;
+      box-shadow: 14px 0 45px rgba(0, 0, 0, 0.6) !important;
       border-radius: 0 !important;
       box-sizing: border-box !important;
-      background: #ffffff !important;
+      background: #09090b !important;
+      border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+      color: #f4f4f5 !important;
       will-change: transform !important;
       backface-visibility: hidden !important;
       -webkit-backface-visibility: hidden !important;
@@ -3912,8 +3923,9 @@ static const char* DASHBOARD_HTML = R"HTML(
       min-width: 60px;
       max-width: 650px;
       height: 100% !important;
-      background: #ffffff !important;
-      border-right: 1px solid #94a3b8 !important;
+      background: #09090b !important;
+      border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+      color: #f4f4f5 !important;
       border-radius: 0 !important;
       box-shadow: none !important;
       z-index: 10 !important;
@@ -4091,7 +4103,7 @@ static const char* DASHBOARD_HTML = R"HTML(
       height: 100% !important;
       position: relative !important;
       overflow: hidden !important;
-      background: #ffffff !important;
+      background: #000000 !important;
     }
     .cg-hero {
       max-width: 600px;
@@ -4105,6 +4117,7 @@ static const char* DASHBOARD_HTML = R"HTML(
   @media (max-width: 859px) {
     .cg-app-container {
       flex-direction: column !important;
+      background: #000000 !important;
     }
     .cg-sidebar-drawer {
       position: fixed !important;
@@ -4113,10 +4126,11 @@ static const char* DASHBOARD_HTML = R"HTML(
       bottom: 0 !important;
       width: 280px !important;
       max-width: 85vw !important;
-      background: #ffffff !important;
-      border-right: 1px solid #e2e8f0 !important;
+      background: #09090b !important;
+      border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+      color: #f4f4f5 !important;
       border-radius: 0 !important;
-      box-shadow: 4px 0 30px rgba(0, 0, 0, 0.15) !important;
+      box-shadow: 4px 0 30px rgba(0, 0, 0, 0.6) !important;
       z-index: 999 !important;
       transform: translateX(-100%) !important;
       transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
@@ -4133,6 +4147,7 @@ static const char* DASHBOARD_HTML = R"HTML(
       flex-direction: column !important;
       position: relative !important;
       overflow: hidden !important;
+      background: #000000 !important;
     }
     .cg-header {
       height: calc(52px + env(safe-area-inset-top, 0px)) !important;
@@ -4144,9 +4159,10 @@ static const char* DASHBOARD_HTML = R"HTML(
       right: 0 !important;
       flex-shrink: 0 !important;
       z-index: 100 !important;
-      background: #ffffff !important;
-      border-bottom: 1px solid rgba(226, 232, 240, 0.8) !important;
-      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03) !important;
+      background: rgba(0, 0, 0, 0.8) !important;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6) !important;
+      color: #f4f4f5 !important;
     }
     .cg-main-body {
       flex: 1 1 0% !important;
