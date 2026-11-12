@@ -29,8 +29,12 @@ static const char* DASHBOARD_HTML = R"HTML(
 
 
 
-  <!-- 🎨 1. MODULAR CYBERPUNK STYLESHEET -->
+  <!-- 🔤 GOOGLE FONTS (Exact Match to Antigravity Voice Assistant) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
+  <!-- 🎨 1. MODULAR CYBERPUNK STYLESHEET -->
   <style>
 @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;600;800;900&family=Inter:wght@400;600;700&display=swap');
   
@@ -8311,25 +8315,28 @@ body.native-app #sidebarApkBtn {
    🌑 GEMINI OBSIDIAN FROSTED GLASS THEME (Complete 100% Dark System)
    ========================================================================== */
 body.gemini-dark {
-  background: #171717 !important;
-  color: #ececec !important;
+  background: #000000 !important;
+  color: #f4f4f5 !important;
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
 }
 
-/* 🖥️ Viewport & Scroll Container */
+/* 🖥️ Viewport & Scroll Container (Full Deep Black OLED matching Antigravity Voice Assistant) */
+body.gemini-dark #tab-gemini,
 body.gemini-dark .cg-app-container,
 body.gemini-dark .cg-main-viewport,
-body.gemini-dark .cg-main-body {
-  background: #171717 !important;
-  color: #ececec !important;
+body.gemini-dark .cg-main-body,
+body.gemini-dark .cg-messages-stream {
+  background: #000000 !important;
+  color: #f4f4f5 !important;
 }
 
 /* 🌟 Header & Navbar */
 body.gemini-dark .cg-header {
-  background: rgba(23, 23, 23, 0.88) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
-  backdrop-filter: blur(20px) saturate(180%) !important;
+  background: rgba(0, 0, 0, 0.8) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
-  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.4) !important;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.7) !important;
 }
 
 body.gemini-dark .cg-model-title {
@@ -8717,16 +8724,16 @@ body.gemini-dark .cg-voice-tag {
   color: #94a3b8 !important;
 }
 
-/* 🗂️ Sidebar Drawer & ALL Internal Cards & Buttons */
+/* 🗂️ Sidebar Drawer & ALL Internal Cards & Buttons (Zinc-950 / Zinc-900 pure dark) */
 body.gemini-dark .cg-sidebar-drawer {
-  background: #171717 !important;
+  background: #09090b !important;
   border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
-  color: #ffffff !important;
+  color: #f4f4f5 !important;
 }
 body.gemini-dark .cg-drawer-top-hud-card {
-  background: #212121 !important;
-  border: 1.5px solid rgba(255, 255, 255, 0.1) !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
+  background: #18181b !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6) !important;
 }
 body.gemini-dark .cg-drawer-close-circle {
   background: rgba(255, 255, 255, 0.1) !important;
@@ -8747,8 +8754,8 @@ body.gemini-dark .cg-drawer-avatar-left:hover {
   background: rgba(255, 255, 255, 0.1) !important;
 }
 body.gemini-dark .cg-drawer-title-inner-card {
-  background: #171717 !important;
-  border: 1.5px solid rgba(255, 255, 255, 0.1) !important;
+  background: #09090b !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
 }
 body.gemini-dark .cg-drawer-title-inner-card span {
   color: #ffffff !important;
@@ -8757,9 +8764,9 @@ body.gemini-dark .cg-menu-group-label {
   color: #2dd4bf !important;
 }
 body.gemini-dark .cg-menu-card-group {
-  background: #212121 !important;
-  border: 1.5px solid rgba(255, 255, 255, 0.1) !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
+  background: #18181b !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6) !important;
 }
 body.gemini-dark .cg-menu-card-row {
   color: #e2e8f0 !important;
@@ -9744,22 +9751,27 @@ body.gemini-dark .cg-persona-desc {
 
 .cg-studio-btn-meta {
   display: flex;
-  align-items: center;
-  gap: 4px;
+  align-items: baseline;
+  gap: 5px;
   text-align: left;
 }
 
 .cg-meta-label {
   font-size: 10px;
-  font-family: monospace;
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   color: #a1a1aa;
+  position: relative;
+  top: -1px;
+  line-height: 1;
 }
 
 .cg-meta-val {
   font-weight: 600;
   font-size: 12px;
+  color: #f4f4f5;
+  line-height: 1;
 }
 
 .cg-studio-chevron {
@@ -9876,7 +9888,7 @@ body.gemini-dark .cg-persona-desc {
 
 </head>
 
-<body>
+<body class="gemini-dark">
 
 
 
@@ -11505,7 +11517,12 @@ body.gemini-dark .cg-persona-desc {
           <div id="cgEmotionPopover" class="cg-studio-popover" style="display: none;" onclick="event.stopPropagation();">
             <div class="cg-popover-header">
               <div class="cg-popover-header-title">
-                <svg class="cg-picon cg-icon-amber" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path></svg>
+                <svg class="cg-picon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/>
+                  <path d="M20 2v4"/>
+                  <path d="M22 4h-4"/>
+                  <circle cx="4" cy="20" r="2"/>
+                </svg>
                 <span class="cg-popover-main-title">Human-Like Emotion &amp; Vocal Acting Setup</span>
               </div>
               <span class="cg-popover-subtag">Switches Live Mid-Call</span>
@@ -11527,22 +11544,31 @@ body.gemini-dark .cg-persona-desc {
 
             <!-- 🎙️ Voice Model Selection Panel Trigger Button -->
             <button type="button" id="btnStudioVoice" class="cg-studio-btn cg-studio-btn-panel" onclick="toggleStudioPopover('voice')" title="Open 30 Google Gemini Live Voice Models Panel">
-              <svg class="cg-picon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+              <svg class="cg-picon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/>
+                <path d="M16 9a5 5 0 0 1 0 6"/>
+                <path d="M19.364 18.364a9 9 0 0 0 0-12.728"/>
+              </svg>
               <div class="cg-studio-btn-meta">
                 <span class="cg-meta-label">VOICE</span>
                 <span id="studioVoiceName" class="cg-meta-val">Zephyr</span>
               </div>
-              <svg class="cg-studio-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"></polyline></svg>
+              <svg class="cg-studio-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
             </button>
 
             <!-- ✨ Emotion & Vocal Acting Panel Trigger Button -->
             <button type="button" id="btnStudioEmotion" class="cg-studio-btn cg-studio-btn-panel" onclick="toggleStudioPopover('emotion')" title="Open Human-Like Emotion & Vocal Prosody Panel">
-              <svg class="cg-picon cg-icon-amber" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path></svg>
+              <svg class="cg-picon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/>
+                <path d="M20 2v4"/>
+                <path d="M22 4h-4"/>
+                <circle cx="4" cy="20" r="2"/>
+              </svg>
               <div class="cg-studio-btn-meta">
                 <span class="cg-meta-label">EMOTION</span>
                 <span id="studioEmotionName" class="cg-meta-val">Affective AI</span>
               </div>
-              <svg class="cg-studio-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"></polyline></svg>
+              <svg class="cg-studio-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
             </button>
 
             <!-- ⚡ Extended Thinking Mode Toggle Button -->
@@ -26723,11 +26749,11 @@ function applySystemBarColor(colorHex, isLightIcons) {
 
 // 🌓 GEMINI THEME CONTROLLER (Light Acrylic / Dark Obsidian Glass)
 function getGeminiTheme() {
-  return localStorage.getItem('gemini_theme') || 'light';
+  return localStorage.getItem('gemini_theme') || 'dark';
 }
 
 function setGeminiTheme(theme) {
-  var isDark = (theme === 'dark');
+  var isDark = (theme !== 'light');
   try {
     localStorage.setItem('gemini_theme', theme);
   } catch(e) {}
@@ -26736,8 +26762,8 @@ function setGeminiTheme(theme) {
   if (body) {
     body.classList.toggle('gemini-dark', isDark);
     if (body.classList.contains('gemini-mode')) {
-      body.style.background = isDark ? '#171717' : '#ffffff';
-      applySystemBarColor(isDark ? '#171717' : '#ffffff', isDark);
+      body.style.background = isDark ? '#000000' : '#ffffff';
+      applySystemBarColor(isDark ? '#000000' : '#ffffff', isDark);
     }
   }
   updateGeminiThemeUI(isDark);
@@ -26800,13 +26826,13 @@ function switchTab(tabId) {
     // 🎨 Gemini AI Tab: Honor Theme (Frosted Acrylic Light vs Obsidian Dark Glass)
     if (mainHeader) mainHeader.style.setProperty('display', 'none', 'important');
     if (bottomNav) bottomNav.style.setProperty('display', 'none', 'important');
-    var isDark = (getGeminiTheme() === 'dark');
+    var isDark = (getGeminiTheme() !== 'light');
     if (body) {
       body.classList.add('gemini-mode');
       body.classList.toggle('gemini-dark', isDark);
-      body.style.background = isDark ? '#171717' : '#ffffff';
+      body.style.background = isDark ? '#000000' : '#ffffff';
     }
-    applySystemBarColor(isDark ? '#171717' : '#ffffff', isDark);
+    applySystemBarColor(isDark ? '#000000' : '#ffffff', isDark);
     updateGeminiThemeUI(isDark);
     window.scrollTo(0, 0);
     if (document.documentElement) document.documentElement.scrollTop = 0;

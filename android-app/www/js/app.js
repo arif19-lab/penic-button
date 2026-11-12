@@ -320,11 +320,11 @@ function applySystemBarColor(colorHex, isLightIcons) {
 
 // 🌓 GEMINI THEME CONTROLLER (Light Acrylic / Dark Obsidian Glass)
 function getGeminiTheme() {
-  return localStorage.getItem('gemini_theme') || 'light';
+  return localStorage.getItem('gemini_theme') || 'dark';
 }
 
 function setGeminiTheme(theme) {
-  var isDark = (theme === 'dark');
+  var isDark = (theme !== 'light');
   try {
     localStorage.setItem('gemini_theme', theme);
   } catch(e) {}
@@ -333,8 +333,8 @@ function setGeminiTheme(theme) {
   if (body) {
     body.classList.toggle('gemini-dark', isDark);
     if (body.classList.contains('gemini-mode')) {
-      body.style.background = isDark ? '#171717' : '#ffffff';
-      applySystemBarColor(isDark ? '#171717' : '#ffffff', isDark);
+      body.style.background = isDark ? '#000000' : '#ffffff';
+      applySystemBarColor(isDark ? '#000000' : '#ffffff', isDark);
     }
   }
   updateGeminiThemeUI(isDark);
@@ -397,13 +397,13 @@ function switchTab(tabId) {
     // 🎨 Gemini AI Tab: Honor Theme (Frosted Acrylic Light vs Obsidian Dark Glass)
     if (mainHeader) mainHeader.style.setProperty('display', 'none', 'important');
     if (bottomNav) bottomNav.style.setProperty('display', 'none', 'important');
-    var isDark = (getGeminiTheme() === 'dark');
+    var isDark = (getGeminiTheme() !== 'light');
     if (body) {
       body.classList.add('gemini-mode');
       body.classList.toggle('gemini-dark', isDark);
-      body.style.background = isDark ? '#171717' : '#ffffff';
+      body.style.background = isDark ? '#000000' : '#ffffff';
     }
-    applySystemBarColor(isDark ? '#171717' : '#ffffff', isDark);
+    applySystemBarColor(isDark ? '#000000' : '#ffffff', isDark);
     updateGeminiThemeUI(isDark);
     window.scrollTo(0, 0);
     if (document.documentElement) document.documentElement.scrollTop = 0;
