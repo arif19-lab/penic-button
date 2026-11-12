@@ -9332,7 +9332,6 @@ window.LiveTranscriptHUD = (function() {
       hud.style.bottom = bottomOffset + 'px';
     }
   }
-  }
 
   function startSyncLoop() {
     if (syncInterval) clearInterval(syncInterval);
