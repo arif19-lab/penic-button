@@ -9318,18 +9318,22 @@ window.LiveTranscriptHUD = (function() {
     if (!hud) return;
 
     var header = document.querySelector('.cg-header');
+    var studioCapsule = document.querySelector('.cg-studio-controls');
     var footer = document.querySelector('.cg-footer-composer');
-    var viewport = document.querySelector('.cg-main-viewport');
 
     var headerH = header ? header.offsetHeight : 50;
-    var footerH = footer ? footer.offsetHeight : 140;
+
+    // Use actual studio capsule height + small gap, NOT full footer height
+    // Footer has lots of transparent padding; capsule is the visible pill
+    var capsuleH = studioCapsule ? studioCapsule.offsetHeight : 80;
+    var bottomOffset = capsuleH + 20; // 20px: footer padding-bottom(12) + 8px gap
 
     var topOffset = headerH + 10;
-    var bottomOffset = footerH + 12;
 
     hud.style.top = topOffset + 'px';
     if (isExpanded) {
       hud.style.bottom = bottomOffset + 'px';
+      hud.style.height = '';
     }
   }
 

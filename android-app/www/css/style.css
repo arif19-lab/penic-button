@@ -11281,7 +11281,7 @@ body.gemini-dark .cg-studio-send-btn:hover {
 }
 
 .cg-transcript-hud.expanded {
-  bottom: 152px; /* ~footer height+gap fallback */
+  bottom: 100px; /* tighter fallback — JS positionHUD() overrides at runtime */
 }
 
 .cg-transcript-hud.collapsed {
