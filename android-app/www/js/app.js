@@ -332,6 +332,7 @@ function setGeminiTheme(theme) {
   var body = document.body;
   if (body) {
     body.classList.toggle('gemini-dark', isDark);
+    body.classList.toggle('gemini-light', !isDark);
     if (body.classList.contains('gemini-mode')) {
       body.style.background = isDark ? '#000000' : '#ffffff';
       applySystemBarColor(isDark ? '#000000' : '#ffffff', isDark);
@@ -401,6 +402,7 @@ function switchTab(tabId) {
     if (body) {
       body.classList.add('gemini-mode');
       body.classList.toggle('gemini-dark', isDark);
+      body.classList.toggle('gemini-light', !isDark);
       body.style.background = isDark ? '#000000' : '#ffffff';
     }
     applySystemBarColor(isDark ? '#000000' : '#ffffff', isDark);
@@ -429,7 +431,7 @@ function switchTab(tabId) {
       if (bottomNav) bottomNav.style.setProperty('display', 'flex', 'important');
     }
     if (body) {
-      body.classList.remove('gemini-mode');
+      body.classList.remove('gemini-mode', 'gemini-dark', 'gemini-light');
       body.style.background = '#080b11';
     }
     applySystemBarColor('#07090e', true); // Dark bar + white icons
