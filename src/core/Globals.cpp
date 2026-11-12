@@ -10,7 +10,6 @@
 #include <vector>
 #include <string>
 
-std::string g_dynamicKey = "";
 std::atomic<time_t> g_lastClientActivity{0};
 std::atomic<int> g_tailscaleState{0}; // TS_SCANNING
 std::atomic<bool> g_tailscaleInstalled{false};
@@ -279,15 +278,6 @@ std::string GetTailscaleDNS() {
     return res;
 }
 
-void GenerateDynamicKey() {
-    const char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    g_dynamicKey = "";
-    srand((unsigned int)time(NULL));
-    for (int i = 0; i < 8; ++i) {
-        g_dynamicKey += charset[rand() % (sizeof(charset) - 1)];
-    }
-}
-
 bool IsWorkstationLocked() {
     HDESK hDesktop = OpenInputDesktop(0, FALSE, DESKTOP_SWITCHDESKTOP);
     if (hDesktop == NULL) {
@@ -297,15 +287,6 @@ bool IsWorkstationLocked() {
     return false;
 }
 
-std::string GetProgramDataFolder() {
-    char buf[MAX_PATH] = {0};
-    DWORD len = GetEnvironmentVariableA("ProgramData", buf, MAX_PATH);
-    if (len > 0 && len < MAX_PATH) {
-        return std::string(buf) + "\\PanicButton";
-    }
-    return "C:\\ProgramData\\PanicButton";
-}
-
 // ─── Per-install authentication key ───────────────────────────────────────
 // The access key used to be the compile-time SECRET_KEY, which ships inside
 // the web client and is therefore public knowledge.  Each install now gets
@@ -313,75 +294,12 @@ std::string GetProgramDataFolder() {
 // ProgramData.  Phones still holding the old key keep working until one of
 // them proves it adopted the new key (MarkPairedWithCurrentKey), so the
 // migration happens on its own without a re-pair.
-static std::string AuthKeyFilePath() {
-    return GetProgramDataFolder() + "\\auth.key";
-}
-
+//
+// The key itself now lives in ONE place - src/core/AuthKey.h - so the agent,
+// the Windows service and the Node proxy all read it with identical rules.
+// See AuthKey.h for the authoritative description.
 static std::string PairedFlagFilePath() {
-    return GetProgramDataFolder() + "\\paired_with_new_key.flag";
-}
-
-static bool SecureRandomKey(char* out, int count) {
-    typedef BOOLEAN (WINAPI *RtlGenRandomFn)(PVOID, ULONG);
-    HMODULE adv = LoadLibraryA("advapi32.dll");
-    if (!adv) return false;
-    RtlGenRandomFn gen = (RtlGenRandomFn)GetProcAddress(adv, "SystemFunction036");
-    if (!gen) return false;
-    const char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    const int charsetLen = (int)(sizeof(charset) - 1);
-    unsigned char buf[64];
-    int made = 0;
-    while (made < count) {
-        if (!gen(buf, (ULONG)sizeof(buf))) return false;
-        for (size_t i = 0; i < sizeof(buf) && made < count; ++i) {
-            // 248 is a multiple of the 62-char alphabet, so this rejection
-            // step keeps the key characters uniformly distributed.
-            if (buf[i] < 248) out[made++] = charset[buf[i] % charsetLen];
-        }
-    }
-    return true;
-}
-
-void LoadOrCreateAuthKey() {
-    std::string path = AuthKeyFilePath();
-    FILE* in = fopen(path.c_str(), "rb");
-    if (in) {
-        char buf[128] = {0};
-        size_t n = fread(buf, 1, sizeof(buf) - 1, in);
-        fclose(in);
-        std::string stored(buf, n);
-        while (!stored.empty() && (stored.back() == '\r' || stored.back() == '\n' ||
-                                   stored.back() == ' ' || stored.back() == '\t')) {
-            stored.pop_back();
-        }
-        // A valid key file must be at least 16 characters.
-        if (stored.size() >= 16) {
-            g_dynamicKey = stored;
-            return;
-        }
-    }
-
-    char fresh[25] = {0};
-    if (!SecureRandomKey(fresh, 24)) {
-        // Fallback emergency generation using high-resolution clock if CSPRNG is unavailable
-        srand((unsigned int)time(NULL));
-        const char charset[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-        for (int i = 0; i < 24; i++) {
-            fresh[i] = charset[rand() % (sizeof(charset) - 1)];
-        }
-        fresh[24] = '\0';
-    }
-    g_dynamicKey = fresh;
-    FILE* out = fopen(path.c_str(), "wb");
-    if (out) { fprintf(out, "%s\n", fresh); fclose(out); }
-    AppLog("[auth] Generated per-install access key");
-}
-
-void EnsureAuthKeyLoaded() {
-    static std::atomic<bool> loaded{false};
-    if (loaded.load()) return;
-    LoadOrCreateAuthKey();
-    loaded.store(true);
+    return AuthKey::GetProgramDataFolder() + "\\paired_with_new_key.flag";
 }
 
 bool IsLegacyKeyAllowed() {

@@ -82,11 +82,11 @@ DWORD WINAPI UdpAutoDiscoveryThread(LPVOID lpParam) {
                 std::string localIp = GetLocalIP();
                 // ⚡ Prioritize Tailscale IP for worldwide connectivity, fallback to local LAN
                 std::string primaryIp = (!tsIp.empty()) ? tsIp : localIp;
-                std::string resp = "PANIC_DISCOVER_RESP:http://" + primaryIp + ":8085/?key=" + g_dynamicKey;
+                std::string resp = "PANIC_DISCOVER_RESP:http://" + primaryIp + ":8085/?key=" + AuthKey::CurrentKeyForEmbedding();
                 if (!tsIp.empty()) {
-                    resp += ";TAILSCALE=http://" + tsIp + ":8085/?key=" + g_dynamicKey;
+                    resp += ";TAILSCALE=http://" + tsIp + ":8085/?key=" + AuthKey::CurrentKeyForEmbedding();
                 }
-                resp += ";LOCAL=http://" + localIp + ":8085/?key=" + g_dynamicKey;
+                resp += ";LOCAL=http://" + localIp + ":8085/?key=" + AuthKey::CurrentKeyForEmbedding();
                 sendto(discSocket, resp.c_str(), (int)resp.length(), 0, (SOCKADDR*)&clientAddr, clientLen);
             }
         }

@@ -38,7 +38,7 @@ void AddToStartup() {
     size_t pos = exeDir.find_last_of("\\/");
     if (pos != std::string::npos) exeDir = exeDir.substr(0, pos);
 
-    std::string pData = GetProgramDataFolder();
+    std::string pData = AuthKey::GetProgramDataFolder();
     CreateDirectoryA(pData.c_str(), NULL);
     ExecSilentCommand(("icacls \"" + pData + "\" /grant Users:(OI)(CI)(F) /T /Q").c_str());
 
@@ -104,7 +104,7 @@ void AutoInstallProvider() {
     size_t lastSlash = exePath.find_last_of("\\/");
     std::string sourceDllPath = (lastSlash != std::string::npos) ? (exePath.substr(0, lastSlash) + "\\PanicProvider.dll") : "PanicProvider.dll";
     
-    std::string pData = GetProgramDataFolder();
+    std::string pData = AuthKey::GetProgramDataFolder();
     std::string targetDllPath = pData + "\\PanicProvider.dll";
     CopyFileA(sourceDllPath.c_str(), targetDllPath.c_str(), FALSE);
 
@@ -255,7 +255,7 @@ void EnsureGeminiProxyRunning() {
 
     std::vector<std::string> candidateDirs = {
         exeDir + "\\gemini-proxy",
-        GetProgramDataFolder() + "\\gemini-proxy"
+        AuthKey::GetProgramDataFolder() + "\\gemini-proxy"
     };
 
     std::string targetDir = "";

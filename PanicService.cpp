@@ -9,6 +9,10 @@
 #include <cstdio>
 #include "src/ui/WebAssets.h"
 
+// The single authoritative per-install access key implementation, shared with
+// PanicButton.exe (src/core/Globals.h pulls the same header in).
+#include "src/core/AuthKey.h"
+
 #pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "wtsapi32.lib")
 #pragma comment(lib, "userenv.lib")
@@ -370,21 +374,13 @@ static bool IsAgentAlive() {
 }
 
 // The agent writes the per-install key here; this service shares it so a
-// single pairing works against both ports.  Cached because the file only
-// changes when the owner rotates the key deliberately.
-static const std::string& SvcAuthKey() {
-    static std::string cached;
-    if (!cached.empty()) return cached;
-    FILE* f = fopen("C:\\ProgramData\\PanicButton\\auth.key", "rb");
-    if (f) {
-        char buf[128] = {0};
-        size_t n = fread(buf, 1, sizeof(buf) - 1, f);
-        fclose(f);
-        cached.assign(buf, n);
-        while (!cached.empty() && (cached.back() == '\r' || cached.back() == '\n' || cached.back() == ' ')) cached.pop_back();
-    }
-    if (cached.size() < 16) cached = "";
-    return cached;
+// single pairing works against both ports.  The rule (path, trimming, length
+// check and reload window) now lives in ONE place - src/core/AuthKey.h - so
+// the service and the agent can never drift apart again.  The service stays a
+// pure reader: only the agent creates the key, so the Session-0 watchdog can
+// never race the agent into a different key.
+static std::string SvcAuthKey() {
+    return AuthKey::CurrentKey();
 }
 
 static bool SvcLegacyKeyAllowed() {
@@ -392,38 +388,7 @@ static bool SvcLegacyKeyAllowed() {
 }
 
 static bool SvcHasKey(const std::string& req) {
-    // 1. Authorization: Bearer <token>
-    size_t authPos = req.find("Authorization: Bearer ");
-    if (authPos == std::string::npos) authPos = req.find("authorization: bearer ");
-    if (authPos != std::string::npos) {
-        size_t start = authPos + 22;
-        size_t end = req.find_first_of("\r\n ", start);
-        std::string val = req.substr(start, (end == std::string::npos ? req.size() : end) - start);
-        if (!val.empty() && val == SvcAuthKey()) return true;
-    }
-
-    // 2. X-Panic-Key: <token>
-    size_t xPos = req.find("X-Panic-Key: ");
-    if (xPos == std::string::npos) xPos = req.find("x-panic-key: ");
-    if (xPos != std::string::npos) {
-        size_t start = xPos + 13;
-        size_t end = req.find_first_of("\r\n ", start);
-        std::string val = req.substr(start, (end == std::string::npos ? req.size() : end) - start);
-        if (!val.empty() && val == SvcAuthKey()) return true;
-    }
-
-    // 3. Query parameter key=
-    size_t pos = req.find("key=");
-    while (pos != std::string::npos) {
-        size_t start = pos + 4;
-        size_t end = req.find_first_of(" &\r\n\"", start);
-        std::string value = req.substr(start, (end == std::string::npos ? req.size() : end) - start);
-        if (!value.empty()) {
-            if (value == SvcAuthKey()) return true;
-        }
-        pos = req.find("key=", start);
-    }
-    return false;
+    return AuthKey::RequestHasValidKey(req);
 }
 
 static std::string SvcUrlDecode(const std::string& s) {

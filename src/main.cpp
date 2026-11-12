@@ -46,7 +46,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     }
 
     CreateDirectoryA("C:\\ProgramData\\PanicButton", NULL);
-    EnsureAuthKeyLoaded();
+    AuthKey::EnsureKeyExists();
     AppLog("WinMain: PANIC CTRL starting");
     // Heartbeat for PanicMasterService handoff: while this process lives, the
     // service yields port 8085 to this full agent (streaming needs user session).
@@ -85,7 +85,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     bool forceSetup = (lpCmdLine && strstr(lpCmdLine, "--setup") != NULL);
     CreateThread(NULL, 0, [](LPVOID param) -> DWORD {
         bool force = (param != NULL);
-        std::string flagPath = GetProgramDataFolder() + "\\setup_shown.txt";
+        std::string flagPath = AuthKey::GetProgramDataFolder() + "\\setup_shown.txt";
         if (force || GetFileAttributesA(flagPath.c_str()) == INVALID_FILE_ATTRIBUTES) {
             FILE* f = fopen(flagPath.c_str(), "w");
             if (f) { fprintf(f, "1\n"); fclose(f); }

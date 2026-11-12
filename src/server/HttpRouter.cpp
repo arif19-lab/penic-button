@@ -78,91 +78,11 @@
 
 static bool RequestHasValidKey(const std::string& request, bool* usedCurrentKey = nullptr) {
 
-    EnsureAuthKeyLoaded();
+    // The key rule lives in one place (src/core/AuthKey.h) so the agent, the
 
+    // Windows service and the Node proxy apply identical rules.
 
-
-    // 1. Authorization: Bearer <token>
-
-    size_t authPos = request.find("Authorization: Bearer ");
-
-    if (authPos == std::string::npos) authPos = request.find("authorization: bearer ");
-
-    if (authPos != std::string::npos) {
-
-        size_t start = authPos + 22;
-
-        size_t end = request.find_first_of("\r\n ", start);
-
-        std::string val = request.substr(start, (end == std::string::npos ? request.size() : end) - start);
-
-        if (!val.empty() && val == g_dynamicKey) {
-
-            if (usedCurrentKey) *usedCurrentKey = true;
-
-            return true;
-
-        }
-
-    }
-
-
-
-    // 2. X-Panic-Key: <token>
-
-    size_t xPos = request.find("X-Panic-Key: ");
-
-    if (xPos == std::string::npos) xPos = request.find("x-panic-key: ");
-
-    if (xPos != std::string::npos) {
-
-        size_t start = xPos + 13;
-
-        size_t end = request.find_first_of("\r\n ", start);
-
-        std::string val = request.substr(start, (end == std::string::npos ? request.size() : end) - start);
-
-        if (!val.empty() && val == g_dynamicKey) {
-
-            if (usedCurrentKey) *usedCurrentKey = true;
-
-            return true;
-
-        }
-
-    }
-
-
-
-    // 3. Query parameter: key=<token> (safe fallback for QR links and WebSockets)
-
-    size_t pos = request.find("key=");
-
-    while (pos != std::string::npos) {
-
-        size_t start = pos + 4;
-
-        size_t end = request.find_first_of(" &\r\n\"", start);
-
-        std::string value = request.substr(start, (end == std::string::npos ? request.size() : end) - start);
-
-        if (!value.empty()) {
-
-            if (value == g_dynamicKey) {
-
-                if (usedCurrentKey) *usedCurrentKey = true;
-
-                return true;
-
-            }
-
-        }
-
-        pos = request.find("key=", start);
-
-    }
-
-    return false;
+    return AuthKey::RequestHasValidKey(request, usedCurrentKey);
 
 }
 
@@ -1267,9 +1187,9 @@ void ProcessClient(SOCKET clientSocket) {
 
                 std::string lanIp = GetLocalIP();
 
-                std::string localHttpsUrl = "https://" + lanIp + ":8443/?key=" + g_dynamicKey;
+                std::string localHttpsUrl = "https://" + lanIp + ":8443/?key=" + AuthKey::CurrentKeyForEmbedding();
 
-                std::string tsHttpsUrl = tsDns.empty() ? "" : ("https://" + tsDns + "/?key=" + g_dynamicKey);
+                std::string tsHttpsUrl = tsDns.empty() ? "" : ("https://" + tsDns + "/?key=" + AuthKey::CurrentKeyForEmbedding());
 
                 time_t lastAct = g_lastClientActivity.load();
 
@@ -1313,7 +1233,7 @@ void ProcessClient(SOCKET clientSocket) {
 
                                       "\",\"lanIp\":\"" + lanIp + 
 
-                                      "\",\"key\":\"" + g_dynamicKey + 
+                                      "\",\"key\":\"" + AuthKey::CurrentKeyForEmbedding() + 
 
                                       "\",\"peerConnected\":" + (peerConnected ? "true" : "false") + 
 
@@ -1413,17 +1333,17 @@ void ProcessClient(SOCKET clientSocket) {
 
                 std::string tailscaleDns = GetTailscaleDNS();
 
-                std::string lanUrl = "http://" + myIp + ":8085/?key=" + g_dynamicKey;
+                std::string lanUrl = "http://" + myIp + ":8085/?key=" + AuthKey::CurrentKeyForEmbedding();
 
-                std::string localHttpsUrl = "https://" + myIp + ":8443/?key=" + g_dynamicKey;
+                std::string localHttpsUrl = "https://" + myIp + ":8443/?key=" + AuthKey::CurrentKeyForEmbedding();
 
                 std::string tailscaleUrl = tailscaleIp.empty() ? "" :
 
-                    "http://" + tailscaleIp + ":8085/?key=" + g_dynamicKey;
+                    "http://" + tailscaleIp + ":8085/?key=" + AuthKey::CurrentKeyForEmbedding();
 
                 std::string tailscaleHttpsUrl = tailscaleDns.empty() ? "" :
 
-                    "https://" + tailscaleDns + "/?key=" + g_dynamicKey;
+                    "https://" + tailscaleDns + "/?key=" + AuthKey::CurrentKeyForEmbedding();
 
                 std::string html = R"HTML(<!DOCTYPE html>
 
@@ -2613,7 +2533,7 @@ showMode(currentMode);
 
                 if (!f) {
 
-                    std::string pPath = GetProgramDataFolder() + "\\jsqr.min.js";
+                    std::string pPath = AuthKey::GetProgramDataFolder() + "\\jsqr.min.js";
 
                     f = fopen(pPath.c_str(), "rb");
 
@@ -2661,7 +2581,7 @@ showMode(currentMode);
 
                 std::string candidates[] = {
 
-                    GetProgramDataFolder() + "\\PanicCTRL.apk",
+                    AuthKey::GetProgramDataFolder() + "\\PanicCTRL.apk",
 
                     "PanicCTRL.apk",
 
@@ -4986,7 +4906,7 @@ showMode(currentMode);
 
         } else if (request.find("GET /api/gemini_key") != std::string::npos) {
 
-            std::string keyPath = GetProgramDataFolder() + "\\gemini_key.txt";
+            std::string keyPath = AuthKey::GetProgramDataFolder() + "\\gemini_key.txt";
 
             std::string savedKey = "";
 
@@ -5080,7 +5000,7 @@ showMode(currentMode);
 
 
 
-            std::string keyPath = GetProgramDataFolder() + "\\gemini_key.txt";
+            std::string keyPath = AuthKey::GetProgramDataFolder() + "\\gemini_key.txt";
 
             if (newKey.empty()) {
 
@@ -5413,7 +5333,7 @@ showMode(currentMode);
 
             // When editing files in android-app/www/, browser refresh (F5) INSTANTLY reflects changes without building!
 
-            std::string devPath = GetProgramDataFolder() + "\\www" + targetFile;
+            std::string devPath = AuthKey::GetProgramDataFolder() + "\\www" + targetFile;
 
             FILE* f = fopen(devPath.c_str(), "rb");
 

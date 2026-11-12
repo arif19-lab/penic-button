@@ -72,15 +72,30 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: "25mb" }));
 
 const PORT = parseInt(process.env.PORT, 10) > 0 ? parseInt(process.env.PORT, 10) : 3001;
-const KEY_FILE = "C:\\ProgramData\\PanicButton\\gemini_key.txt";
 // The agent rotates to a per-install key, so the bridge credential is read
 // from the file the agent writes instead of a compiled-in default.
-const AUTH_KEY_FILE = process.env.PANIC_AUTH_KEY_FILE || "C:\\ProgramData\\PanicButton\\auth.key";
+//
+// The path, the trim rule and the minimum length MUST match the C++ side
+// exactly (src/core/AuthKey.h): same %ProgramData% resolution, same trim
+// set (CR, LF, SPACE, TAB) and same 16 character minimum.  A mismatch here
+// used to make the proxy disagree with the agent and the Windows service.
+function programDataFolder() {
+  return (process.env.ProgramData || "C:\\ProgramData") + "\\PanicButton";
+}
+const AUTH_KEY_FILE = process.env.PANIC_AUTH_KEY_FILE || path.join(programDataFolder(), "auth.key");
+const KEY_FILE = path.join(programDataFolder(), "gemini_key.txt");
+const MIN_KEY_LENGTH = 16;
+
+function normalizeKey(raw) {
+  return String(raw == null ? "" : raw)
+    .replace(/^[\r\n \t]+/, "")
+    .replace(/[\r\n \t]+$/, "");
+}
 
 function agentAccessKey() {
   try {
-    const k = fs.readFileSync(AUTH_KEY_FILE, "utf8").trim();
-    if (k) return k;
+    const k = normalizeKey(fs.readFileSync(AUTH_KEY_FILE, "utf8"));
+    if (k.length >= MIN_KEY_LENGTH) return k;
   } catch (e) {}
   return "";
 }

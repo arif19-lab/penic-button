@@ -4,6 +4,11 @@
 #include <string>
 #include <atomic>
 
+// The single authoritative implementation of the per-install access key
+// (path, trimming, validation, generation, caching and request parsing).
+// Used by the agent, by PanicService.exe and mirrored by the Node proxy.
+#include "AuthKey.h"
+
 enum TailscaleState {
     TS_SCANNING = 0,
     TS_NOT_INSTALLED = 1,
@@ -13,7 +18,6 @@ enum TailscaleState {
 };
 extern std::atomic<int> g_tailscaleState;
 extern std::atomic<bool> g_tailscaleInstalled;
-extern std::string g_dynamicKey;
 extern std::atomic<time_t> g_lastClientActivity;
 
 std::string GetLocalIP();
@@ -24,14 +28,8 @@ std::string GetTailscaleIP();
 std::string GetTailscaleCliPath();
 std::string GetTailscaleDNS();
 std::string GetPrimaryMacAddress();
-void GenerateDynamicKey();
-// Loads the per-install access key from ProgramData, creating it with the
-// system CSPRNG on first run.  Safe to call repeatedly / from any thread.
-void LoadOrCreateAuthKey();
-void EnsureAuthKeyLoaded();
 // The old shared key stays valid only until a client proves it adopted the
 // per-install key, so existing phones migrate without a re-pair.
 bool IsLegacyKeyAllowed();
 void MarkPairedWithCurrentKey();
 bool IsWorkstationLocked();
-std::string GetProgramDataFolder();
