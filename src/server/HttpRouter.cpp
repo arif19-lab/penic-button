@@ -1,5 +1,7 @@
 #include "HttpRouter.h"
 
+#include "AuthGate.h"
+
 #include "../core/Config.h"
 
 #include "../core/Logger.h"
@@ -1159,59 +1161,33 @@ void ProcessClient(SOCKET clientSocket) {
 
         std::string responseBody;
 
-        // Step 7: Secret Key check (Allow static assets, root, app download, manifest, sw.js, and API endpoints)
+        // Step 7: Secret Key check.
 
-        bool isStaticAsset = (request.find(".css") != std::string::npos) ||
+        // The public allow-list is evaluated against the PARSED REQUEST PATH
 
-                             (request.find(".js") != std::string::npos) ||
+        // (see AuthGate.h), never against the raw request.  The previous
 
-                             (request.find(".png") != std::string::npos) ||
+        // implementation searched the WHOLE request for ".js"/".css"/".png"/
 
-                             (request.find(".ico") != std::string::npos) ||
+        // ".ico"/".svg"/".wav", so appending one of those extensions to the
 
-                             (request.find(".svg") != std::string::npos) ||
+        // query string skipped authentication completely.  For example
 
-                             (request.find(".wav") != std::string::npos);
+        // "GET /api/exec?cmd=whoami.js" was treated as a static asset and
 
+        // executed an arbitrary PowerShell command on the host; the same
 
+        // trick reached /api/gemini_key, /api/save_pin, /unlock, /panic,
 
-        // Public endpoints: SPA shell, static assets, QR/setup pages, app download.
+        // /shutdown, /cmd-ws and every other mutating route.
 
-        // Anything that can change this machine now needs a real, matching key.
+        // Public endpoints (path-based, GET/HEAD only): SPA shell, static
 
-        bool isPublicEndpoint = isStaticAsset ||
+        // assets, QR/setup pages, app download, read-only status.
 
-                      (request.find("GET / ") != std::string::npos) ||
+        // Anything that can change this machine needs a real, matching key.
 
-                      (request.find("GET /?") != std::string::npos) ||
-
-                      (request.find("GET //") != std::string::npos) ||
-
-                      (request.find("GET /api/status") != std::string::npos) ||
-
-                      (request.find("GET /status") != std::string::npos) ||
-
-                      (request.find("GET /download/") != std::string::npos) ||
-
-                      (request.find("GET /app.apk") != std::string::npos) ||
-
-                      (request.find("GET /manifest.json") != std::string::npos) ||
-
-                      (request.find("GET /sw.js") != std::string::npos) ||
-
-                      (request.find("GET /favicon.ico") != std::string::npos) ||
-
-                      (request.find("GET /css/") != std::string::npos) ||
-
-                      (request.find("GET /js/") != std::string::npos) ||
-
-                      (request.find("GET /assets/") != std::string::npos) ||
-
-                      (request.find("GET /jsqr.min.js") != std::string::npos) ||
-
-                      (request.find("GET /qr") != std::string::npos) ||
-
-                      (request.find("GET /setup") != std::string::npos);
+        bool isPublicEndpoint = AuthGate::IsPublicRequest(request);
 
 
 
