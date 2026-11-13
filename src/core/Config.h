@@ -48,3 +48,11 @@
 
 // 🛡️ WINDOWS SERVICE CONTROL ENGINE (24/7 Background System Execution)
 #define SERVICE_NAME "PanicButtonService"
+
+// ── Product version ────────────────────────────────────────────────────────
+// The single source of truth inside the binary.  It MUST match:
+//   * version.txt           (the build script verifies this)
+//   * installer.iss         AppVersion=
+//   * PanicButton.manifest  assemblyIdentity version=
+// build_release.bat refuses to build when they disagree.
+#define PANIC_CTRL_VERSION "2.7.0"

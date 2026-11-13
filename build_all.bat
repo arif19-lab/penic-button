@@ -1,16 +1,18 @@
 @echo off
 setlocal
+rem ===========================================================================
+rem  build_all.bat - build the whole release and install it on this machine
+rem ===========================================================================
+rem  The build order is handled by build_release.bat: the Android APK is
+rem  compiled BEFORE the installer, so the installer always contains the APK
+rem  that was just built and never the previous one.
+rem ===========================================================================
 
 echo Building PANIC CTRL for Windows and Android...
 call build_release.bat
 if errorlevel 1 exit /b %errorlevel%
 
-pushd android-app\android
-call gradlew.bat assembleDebug
-set BUILD_RESULT=%errorlevel%
-popd
-if not "%BUILD_RESULT%"=="0" exit /b %BUILD_RESULT%
+call deploy_release.bat
+if errorlevel 1 exit /b %errorlevel%
 
-if not exist "android-app\android\app\build\outputs\apk\debug\app-debug.apk" exit /b 1
-copy /Y "android-app\android\app\build\outputs\apk\debug\app-debug.apk" "PanicCTRL.apk" >nul
-echo Build completed successfully.
+echo Build and deploy completed successfully.

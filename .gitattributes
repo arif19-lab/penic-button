@@ -1,0 +1,28 @@
+# Normalise line endings so that every text file has a stable, platform
+# independent form in the repository.
+#
+# The important part is the eol=crlf rule for the Windows batch files: a
+# .bat file checked out with LF line endings is silently mis-parsed by cmd.exe
+# when it is CALLed from another batch file.  That failure is invisible - the
+# script exits with code 0 and does nothing - which is how the Android APK
+# build stopped running without anybody noticing.
+* text=auto
+
+# Windows scripts must have CRLF endings.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Shell scripts must have LF endings.
+*.sh text eol=lf
+
+# Binary assets are never touched.
+*.apk binary
+*.exe binary
+*.dll binary
+*.wav binary
+*.jpg binary
+*.png binary
+*.gif binary
+*.zip binary
+*.7z binary

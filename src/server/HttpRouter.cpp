@@ -62,7 +62,7 @@
 
 
 
-// ─── Gemini proxy bridge (transparent TCP pipe to node gemini-proxy :3001) ───
+// â”€â”€â”€ Gemini proxy bridge (transparent TCP pipe to node gemini-proxy :3001) â”€â”€â”€
 
 // A wss:// page (Tailscale HTTPS) can never open ws://PC:3001 directly, and
 
@@ -308,11 +308,11 @@ using namespace Gdiplus;
 
 
 
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 // POWER CONTROL & BRIGHTNESS RESTORATION ENGINE
 
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 static std::atomic<int> g_savedBrightness{50};
 
@@ -516,7 +516,7 @@ static void DimBrightnessAsync(int level = 0) {
 
 
 
-// ⚡ PROCESS-LEVEL PERSISTENT POWER REQUEST ENGINE (Survives thread termination!)
+// âš¡ PROCESS-LEVEL PERSISTENT POWER REQUEST ENGINE (Survives thread termination!)
 
 static HANDLE g_hDisplayPowerReq = NULL;
 
@@ -580,7 +580,7 @@ void KeepDisplayAwakeWorker() {
 
             } else {
 
-                // 🛡️ Stealth Away Mode: keeps CPU, network, and PanicButton.exe 100% active
+                // ðŸ›¡ï¸ Stealth Away Mode: keeps CPU, network, and PanicButton.exe 100% active
 
                 // while intercepting Windows Sleep requests into low-power Away Mode
 
@@ -897,7 +897,7 @@ void ReleaseDisplayWake() {
 
 
 
-// 🛡️ SHIELD 2: ATOMIC IN-FLIGHT ACTION MUTEX & RECOVERY GUARD
+// ðŸ›¡ï¸ SHIELD 2: ATOMIC IN-FLIGHT ACTION MUTEX & RECOVERY GUARD
 
 static std::mutex g_actionGuardMutex;
 
@@ -995,7 +995,7 @@ public:
 
 
 
-// ── Secret file locations (DPAPI protected) ───────────────────────────────
+// â”€â”€ Secret file locations (DPAPI protected) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 static std::string SavedPinFilePath() {
     return AuthKey::GetProgramDataFolder() + "\\saved_pin.dat";
 }
@@ -1043,11 +1043,11 @@ void ProcessClient(SOCKET clientSocket) {
 
 
 
-        // 🎙️ Gemini proxy bridge: pipe /gemini-proxy/* (WebSocket + HTTP API)
+        // ðŸŽ™ï¸ Gemini proxy bridge: pipe /gemini-proxy/* (WebSocket + HTTP API)
 
         // byte-for-byte to the node gemini-proxy on 127.0.0.1:3001. Must run
 
-        // before the key gate — wss:// pages have no ?key= param, and Google
+        // before the key gate â€” wss:// pages have no ?key= param, and Google
 
         // key validity is enforced by the node proxy itself.
 
@@ -1952,11 +1952,11 @@ body {
 
         <div style="margin-top:14px;font-family:monospace;font-size:11px;color:#8892b0;line-height:1.4;">
 
-            <div>⚡ <b>Step 1:</b> Install Tailscale on phone (<a href="https://tailscale.com/download" target="_blank" style="color:#00f0ff;">tailscale.com/download</a>)</div>
+            <div>âš¡ <b>Step 1:</b> Install Tailscale on phone (<a href="https://tailscale.com/download" target="_blank" style="color:#00f0ff;">tailscale.com/download</a>)</div>
 
-            <div>⚡ <b>Step 2:</b> Sign in to Tailscale on both PC & Phone</div>
+            <div>âš¡ <b>Step 2:</b> Sign in to Tailscale on both PC & Phone</div>
 
-            <div>⚡ <b>Step 3:</b> Open PANIC CTRL app on phone & Scan QR Code</div>
+            <div>âš¡ <b>Step 3:</b> Open PANIC CTRL app on phone & Scan QR Code</div>
 
         </div>
 
@@ -1970,19 +1970,19 @@ body {
 
         <div class="tab-group" style="flex-wrap: wrap;">
 
-            <button id="btnHttps" class="tab-btn active-https" onclick="showMode('https')">🔒 WI-FI HTTPS (8443)</button>
+            <button id="btnHttps" class="tab-btn active-https" onclick="showMode('https')">ðŸ”’ WI-FI HTTPS (8443)</button>
 
-            <button id="btnTsHttps" class="tab-btn" onclick="showMode('ts-https')">🌐 TAILSCALE HTTPS (SSL)</button>
+            <button id="btnTsHttps" class="tab-btn" onclick="showMode('ts-https')">ðŸŒ TAILSCALE HTTPS (SSL)</button>
 
-            <button id="btnTailscale" class="tab-btn" onclick="showMode('tailscale')">🌐 TAILSCALE IP</button>
+            <button id="btnTailscale" class="tab-btn" onclick="showMode('tailscale')">ðŸŒ TAILSCALE IP</button>
 
-            <button id="btnLan" class="tab-btn" onclick="showMode('lan')">⚡ WI-FI HTTP (8085)</button>
+            <button id="btnLan" class="tab-btn" onclick="showMode('lan')">âš¡ WI-FI HTTP (8085)</button>
 
         </div>
 
 
 
-        <div id="statusPill" class="status-pill connected">🟢 TAILSCALE MESH READY</div>
+        <div id="statusPill" class="status-pill connected">ðŸŸ¢ TAILSCALE MESH READY</div>
 
 
 
@@ -2002,7 +2002,7 @@ body {
 
             <button class="copy-btn" onclick="copyUrl()">COPY</button>
 
-            <a id="openUrlBtn" href="#" target="_blank" style="text-decoration:none;display:inline-flex;align-items:center;padding:0 12px;background:#00f0ff;color:#050811;font-family:monospace;font-size:11px;font-weight:bold;border-radius:6px;margin-left:6px;white-space:nowrap;">OPEN ↗</a>
+            <a id="openUrlBtn" href="#" target="_blank" style="text-decoration:none;display:inline-flex;align-items:center;padding:0 12px;background:#00f0ff;color:#050811;font-family:monospace;font-size:11px;font-weight:bold;border-radius:6px;margin-left:6px;white-space:nowrap;">OPEN â†—</a>
 
         </div>
 
@@ -2012,7 +2012,7 @@ body {
 
             <a href="/download/app.apk" download style="flex:1;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 12px;background:rgba(0,240,255,0.12);border:1px solid rgba(0,240,255,0.35);color:#00f0ff;border-radius:8px;font-family:monospace;font-size:11px;font-weight:bold;transition:all 0.2s;" onmouseover="this.style.background='rgba(0,240,255,0.25)'" onmouseout="this.style.background='rgba(0,240,255,0.12)'">
 
-                📥 DOWNLOAD ANDROID APK
+                ðŸ“¥ DOWNLOAD ANDROID APK
 
             </a>
 
@@ -2022,11 +2022,11 @@ body {
 
         <div id="tailscaleAction" style="display:none;width:100%;margin-top:10px;">
 
-            <button id="tsBtnLogin" class="action-btn" style="display:none;width:100%;" onclick="openLogin()">🔑 Connect / Log in Tailscale on PC</button>
+            <button id="tsBtnLogin" class="action-btn" style="display:none;width:100%;" onclick="openLogin()">ðŸ”‘ Connect / Log in Tailscale on PC</button>
 
-            <button id="tsBtnInstall" class="action-btn" style="display:none;width:100%;background:linear-gradient(135deg,#ff0055,#ff5500);color:#fff;" onclick="triggerInstall()">⬇️ One-Click Auto-Install Tailscale</button>
+            <button id="tsBtnInstall" class="action-btn" style="display:none;width:100%;background:linear-gradient(135deg,#ff0055,#ff5500);color:#fff;" onclick="triggerInstall()">â¬‡ï¸ One-Click Auto-Install Tailscale</button>
 
-            <div id="tsBtnInstalling" class="action-btn" style="display:none;width:100%;background:#ffb703;color:#050811;cursor:wait;">⏳ Installing Tailscale Engine in Background...</div>
+            <div id="tsBtnInstalling" class="action-btn" style="display:none;width:100%;background:#ffb703;color:#050811;cursor:wait;">â³ Installing Tailscale Engine in Background...</div>
 
         </div>
 
@@ -2034,7 +2034,7 @@ body {
 
         <div id="peerConnectedBanner">
 
-            ⚡ MOBILE PEER HANDSHAKE VERIFIED! LIVE STREAM ENGAGED!
+            âš¡ MOBILE PEER HANDSHAKE VERIFIED! LIVE STREAM ENGAGED!
 
         </div>
 
@@ -2188,7 +2188,7 @@ function renderPillAndActions() {
 
         pill.className = "status-pill connected";
 
-        pill.textContent = "🔒 LOCAL WI-FI HTTPS (PORT 8443 - MIC READY)";
+        pill.textContent = "ðŸ”’ LOCAL WI-FI HTTPS (PORT 8443 - MIC READY)";
 
         tsBox.style.display = "none";
 
@@ -2200,7 +2200,7 @@ function renderPillAndActions() {
 
         pill.className = "status-pill connected";
 
-        pill.textContent = "🔒 TAILSCALE HTTPS (OFFICIAL SSL - WORLDWIDE)";
+        pill.textContent = "ðŸ”’ TAILSCALE HTTPS (OFFICIAL SSL - WORLDWIDE)";
 
         tsBox.style.display = "none";
 
@@ -2214,7 +2214,7 @@ function renderPillAndActions() {
 
         pill.className = "status-pill connected";
 
-        pill.textContent = "⚡ LOCAL WI-FI (0MS ULTRA)";
+        pill.textContent = "âš¡ LOCAL WI-FI (0MS ULTRA)";
 
         tsBox.style.display = "none";
 
@@ -2230,7 +2230,7 @@ function renderPillAndActions() {
 
         pill.className = "status-pill connected";
 
-        pill.textContent = "🟢 TAILSCALE MESH READY";
+        pill.textContent = "ðŸŸ¢ TAILSCALE MESH READY";
 
         tsBox.style.display = "none";
 
@@ -2238,7 +2238,7 @@ function renderPillAndActions() {
 
         pill.className = "status-pill pending";
 
-        pill.textContent = "🔄 INSTALLING TAILSCALE ENGINE...";
+        pill.textContent = "ðŸ”„ INSTALLING TAILSCALE ENGINE...";
 
         tsBox.style.display = "block";
 
@@ -2252,7 +2252,7 @@ function renderPillAndActions() {
 
         pill.className = "status-pill pending";
 
-        pill.textContent = "⚠️ TAILSCALE NOT INSTALLED";
+        pill.textContent = "âš ï¸ TAILSCALE NOT INSTALLED";
 
         tsBox.style.display = "block";
 
@@ -2266,7 +2266,7 @@ function renderPillAndActions() {
 
         pill.className = "status-pill pending";
 
-        pill.textContent = "🟡 TAILSCALE PENDING LOGIN";
+        pill.textContent = "ðŸŸ¡ TAILSCALE PENDING LOGIN";
 
         tsBox.style.display = "block";
 
@@ -2280,7 +2280,7 @@ function renderPillAndActions() {
 
         pill.className = "status-pill pending";
 
-        pill.textContent = "🔍 SCANNING FOR TAILSCALE...";
+        pill.textContent = "ðŸ” SCANNING FOR TAILSCALE...";
 
         tsBox.style.display = "none";
 
@@ -2316,7 +2316,7 @@ function openLogin() {
 
 function triggerInstall() {
 
-    log("⚡ User triggered automatic Tailscale deployment...", "log-alert");
+    log("âš¡ User triggered automatic Tailscale deployment...", "log-alert");
 
     fetch('/api/trigger-tailscale-install', { method: 'POST' });
 
@@ -2330,7 +2330,7 @@ function triggerInstall() {
 
 function playSuccessChime() {
 
-    // 🔇 Completely silent to prevent unwanted chimes/rings during live sessions
+    // ðŸ”‡ Completely silent to prevent unwanted chimes/rings during live sessions
 
 }
 
@@ -2356,19 +2356,19 @@ setInterval(function() {
 
                 if (d.state === 'installing') {
 
-                    log("⚡ AUTO-DEPLOY: Downloading & configuring official Tailscale package...", "log-warn");
+                    log("âš¡ AUTO-DEPLOY: Downloading & configuring official Tailscale package...", "log-warn");
 
                 } else if (d.state === 'not_installed') {
 
-                    log("⚠️ Tailscale engine not found on PC. Click below to auto-install.", "log-warn");
+                    log("âš ï¸ Tailscale engine not found on PC. Click below to auto-install.", "log-warn");
 
                 } else if (d.state === 'need_login') {
 
-                    log("🟡 Tailscale binary detected! Node authentication required to join mesh.", "log-warn");
+                    log("ðŸŸ¡ Tailscale binary detected! Node authentication required to join mesh.", "log-warn");
 
                 } else if (d.state === 'ready') {
 
-                    log("🟢 Tailscale WireGuard Mesh ACTIVE! Node IP: <span class='log-ok'>" + d.tailscaleIp + "</span>", "log-ok");
+                    log("ðŸŸ¢ Tailscale WireGuard Mesh ACTIVE! Node IP: <span class='log-ok'>" + d.tailscaleIp + "</span>", "log-ok");
 
                 }
 
@@ -2658,7 +2658,7 @@ showMode(currentMode);
 
             } else if (request.find("GET /lock") != std::string::npos) {
 
-                // 🔒 Lock the workstation remotely!
+                // ðŸ”’ Lock the workstation remotely!
 
                 if (IsWorkstationLocked()) {
 
@@ -2706,7 +2706,7 @@ showMode(currentMode);
 
         } else if (request.find("GET /api/wake") != std::string::npos || request.find("GET /wake") != std::string::npos) {
 
-            // ⚡ HACKER-LEVEL PROCESS-PERSISTENT DISPLAY REMOTE WAKE ENGINE
+            // âš¡ HACKER-LEVEL PROCESS-PERSISTENT DISPLAY REMOTE WAKE ENGINE
 
             if (!IsWorkstationLocked() && !g_isSleepActive.load()) {
 
@@ -2762,7 +2762,7 @@ showMode(currentMode);
 
         } else if (request.find("GET /unlock") != std::string::npos) {
 
-            // 🔓 Unlock Workstation Engine
+            // ðŸ”“ Unlock Workstation Engine
 
             if (!IsWorkstationLocked()) {
 
@@ -2794,7 +2794,7 @@ showMode(currentMode);
 
             }
 
-            // 1. ⚡ Ensure power state is active
+            // 1. âš¡ Ensure power state is active
 
             EnsureKeepAwakeThread();
 
@@ -3091,7 +3091,7 @@ showMode(currentMode);
 
         } else if (request.find("GET /api/save_pin") != std::string::npos || request.find("POST /api/save_pin") != std::string::npos) {
 
-            // 🔑 Permanent Password Storage Engine
+            // ðŸ”‘ Permanent Password Storage Engine
 
             std::string pin = "";
 
@@ -3184,7 +3184,7 @@ showMode(currentMode);
 
         } else if (request.find("GET /api/volume") != std::string::npos) {
 
-            // 🔊 Set Master Volume Level Endpoint (0-100)
+            // ðŸ”Š Set Master Volume Level Endpoint (0-100)
 
             int volLevel = 50;
 
@@ -3220,7 +3220,7 @@ showMode(currentMode);
 
         } else if (request.find("GET /sleep") != std::string::npos) {
 
-            // 💤 Stealth Sleep: Instant Lock + Pure Black Window + Zero Light Bleed + Monitor Power Down
+            // ðŸ’¤ Stealth Sleep: Instant Lock + Pure Black Window + Zero Light Bleed + Monitor Power Down
 
             ActionGuard act("sleep");
 
@@ -3386,7 +3386,7 @@ showMode(currentMode);
 
         } else if (request.find("GET /restart") != std::string::npos) {
 
-            // 🔄 Restart PC remotely!
+            // ðŸ”„ Restart PC remotely!
 
             ActionGuard act("restart");
 
@@ -3422,7 +3422,7 @@ showMode(currentMode);
 
         } else if (request.find("GET /shutdown") != std::string::npos) {
 
-            // ⏻ Shutdown PC remotely!
+            // â» Shutdown PC remotely!
 
             ActionGuard act("shutdown");
 
@@ -3460,7 +3460,7 @@ showMode(currentMode);
 
         } else if (request.find("GET /panic") != std::string::npos) {
 
-            // ✅ /panic?key=<dynamicKey> → Panic Mode Toggle!
+            // âœ… /panic?key=<dynamicKey> â†’ Panic Mode Toggle!
 
             if (IsWorkstationLocked()) {
 
@@ -3542,7 +3542,7 @@ showMode(currentMode);
             if (!isAuth) {
                 // Public discovery response: Minimal non-sensitive health & connectivity info ONLY.
                 // NEVER leak auth keys, saved PINs, Gemini credentials, or detailed hardware telemetry to unauthenticated callers.
-                responseBody = "{\"ok\":true,\"service\":\"panic-ctrl\",\"version\":\"2.7.0\",\"authenticated\":false,\"requires_auth\":true"
+                responseBody = "{\"ok\":true,\"service\":\"panic-ctrl\",\"version\":\"" PANIC_CTRL_VERSION "\",\"authenticated\":false,\"requires_auth\":true"
                                ",\"panic\":" + std::string(isPanicMode ? "true" : "false") +
                                ",\"locked\":" + std::string(isLocked ? "true" : "false") +
                                ",\"state\":" + std::to_string(panicState) +
@@ -3631,7 +3631,7 @@ showMode(currentMode);
 
                 bool hasSavedPin = (GetFileAttributesA("C:\\ProgramData\\PanicButton\\saved_pin.dat") != INVALID_FILE_ATTRIBUTES);
 
-                responseBody = "{\"ok\":true,\"service\":\"panic-ctrl\",\"version\":\"2.7.0\",\"authenticated\":true"
+                responseBody = "{\"ok\":true,\"service\":\"panic-ctrl\",\"version\":\"" PANIC_CTRL_VERSION "\",\"authenticated\":true"
                                ",\"panic\":" + std::string(isPanicMode ? "true" : "false") + 
                                ",\"locked\":" + std::string(isLocked ? "true" : "false") + 
                                ",\"sleeping\":" + std::string(g_isSleepActive.load() ? "true" : "false") + 
@@ -3657,7 +3657,7 @@ showMode(currentMode);
             return;
         } else if (request.find("GET /rawframe") != std::string::npos || request.find("GET /screen") != std::string::npos) {
 
-            // 🚀 60 FPS TURBO DOWNSCALED JPEG STREAM ENGINE (~35KB/frame, <2ms Latency!)
+            // ðŸš€ 60 FPS TURBO DOWNSCALED JPEG STREAM ENGINE (~35KB/frame, <2ms Latency!)
 
             CLSID jpgClsid;
 
@@ -3673,7 +3673,7 @@ showMode(currentMode);
 
                 encoderParameters.Parameter[0].NumberOfValues = 1;
 
-                ULONG quality = 82; // ⚡ 82% Crisp Quality, ultra-small 35KB frame size!
+                ULONG quality = 82; // âš¡ 82% Crisp Quality, ultra-small 35KB frame size!
 
                 encoderParameters.Parameter[0].Value = &quality;
 
@@ -3693,7 +3693,7 @@ showMode(currentMode);
 
 
 
-                // ⚡ Downscale target resolution for 60 FPS mobile stream speed (1280 width)
+                // âš¡ Downscale target resolution for 60 FPS mobile stream speed (1280 width)
 
                 int targetW = screenW > 1280 ? 1280 : screenW;
 
@@ -3707,7 +3707,7 @@ showMode(currentMode);
 
                 
 
-                // 🎮 DirectX 11 DXGI GPU Capture with GDI Fallback
+                // ðŸŽ® DirectX 11 DXGI GPU Capture with GDI Fallback
 
                 if (!CaptureDXGIFrame(hDC, targetW, targetH)) {
 
@@ -3873,7 +3873,7 @@ showMode(currentMode);
 
         } else if (request.find("GET /cmd-ws") != std::string::npos) {
 
-            // ⚡ DIRECT COMMAND WEBSOCKET (Zero-Latency Instant PC Command Channel)
+            // âš¡ DIRECT COMMAND WEBSOCKET (Zero-Latency Instant PC Command Channel)
 
             std::string wsKey = "";
 
@@ -3927,7 +3927,7 @@ showMode(currentMode);
 
         } else if (request.find("GET /ws") != std::string::npos || request.find("Upgrade: websocket") != std::string::npos || request.find("upgrade: websocket") != std::string::npos) {
 
-            // ⚡ WEBSOCKET HIGH-SPEED BINARY FRAME STREAMER — Case-Insensitive Key Extraction
+            // âš¡ WEBSOCKET HIGH-SPEED BINARY FRAME STREAMER â€” Case-Insensitive Key Extraction
 
             std::string wsKey = "";
 
@@ -3987,7 +3987,7 @@ showMode(currentMode);
 
         } else if (request.find("GET /screen") != std::string::npos || request.find("GET /mjpeg") != std::string::npos) {
 
-            // 🚀 FAST MJPEG CONTINUOUS STREAM (~20 FPS)
+            // ðŸš€ FAST MJPEG CONTINUOUS STREAM (~20 FPS)
 
             std::string header = 
 
@@ -4019,13 +4019,13 @@ showMode(currentMode);
 
                 encoderParameters.Parameter[0].NumberOfValues = 1;
 
-                ULONG quality = 50; // ⚡ 50% Quality: 8KB ultra-light frame for Sub-10ms 60 FPS speed!
+                ULONG quality = 50; // âš¡ 50% Quality: 8KB ultra-light frame for Sub-10ms 60 FPS speed!
 
                 encoderParameters.Parameter[0].Value = &quality;
 
 
 
-                // 🚀 MOBILE WI-FI SMOOTH SOCKET BUFFER (Prevents send blocking & stutter!)
+                // ðŸš€ MOBILE WI-FI SMOOTH SOCKET BUFFER (Prevents send blocking & stutter!)
 
                 int flag = 1;
 
@@ -4041,7 +4041,7 @@ showMode(currentMode);
 
                 while (true) {
 
-                    // ⚡ ZERO-BUFFER-BLOAT: Prune zombie threads on socket error or 60-frame stall!
+                    // âš¡ ZERO-BUFFER-BLOAT: Prune zombie threads on socket error or 60-frame stall!
 
                     fd_set writefds;
 
@@ -4081,7 +4081,7 @@ showMode(currentMode);
 
                     
 
-                    // ⚡ Mobile Native 540p HD Resolution (960x540) - 100% Fluid 60 FPS Speed!
+                    // âš¡ Mobile Native 540p HD Resolution (960x540) - 100% Fluid 60 FPS Speed!
 
                     int targetW = screenW > 960 ? 960 : screenW;
 
@@ -4093,7 +4093,7 @@ showMode(currentMode);
 
                     
 
-                    // 🎮 DirectX 11 DXGI GPU Capture with GDI Fallback
+                    // ðŸŽ® DirectX 11 DXGI GPU Capture with GDI Fallback
 
                     if (!CaptureDXGIFrame(hDC, targetW, targetH)) {
 
@@ -4245,7 +4245,7 @@ showMode(currentMode);
 
 
 
-                    Sleep(16); // ⚡ 60 FPS True Hardware Refresh Sync!
+                    Sleep(16); // âš¡ 60 FPS True Hardware Refresh Sync!
 
                 }
 
@@ -4259,7 +4259,7 @@ showMode(currentMode);
 
         } else if (request.find("GET /api/mouse") != std::string::npos || request.find("GET /api/touch") != std::string::npos || request.find("GET /api/telemetry") != std::string::npos) {
 
-            // 🎮 PARSEC HARDWARE TOUCH & MOUSE INJECTION
+            // ðŸŽ® PARSEC HARDWARE TOUCH & MOUSE INJECTION
 
             if (IsWorkstationLocked()) {
 
@@ -4441,7 +4441,7 @@ showMode(currentMode);
 
         } else if (request.find("/api/client_telemetry") != std::string::npos) {
 
-            // 📊 REAL-TIME LIVE PHONE TELEMETRY & BLACKBOX LOGGER
+            // ðŸ“Š REAL-TIME LIVE PHONE TELEMETRY & BLACKBOX LOGGER
 
             size_t bodyPos = request.find("\r\n\r\n");
 
@@ -4491,7 +4491,7 @@ showMode(currentMode);
 
         } else if (request.find("GET /api/mouse_rel") != std::string::npos) {
 
-            // 🖱️ REAL-TIME LAPTOP TOUCHPAD SENSOR ENDPOINT (Relative Movement + Scroll + Clicks)
+            // ðŸ–±ï¸ REAL-TIME LAPTOP TOUCHPAD SENSOR ENDPOINT (Relative Movement + Scroll + Clicks)
 
             if (IsWorkstationLocked()) {
 
@@ -4595,7 +4595,7 @@ showMode(currentMode);
 
         } else if (request.find("GET /api/type") != std::string::npos || request.find("GET /api/key") != std::string::npos) {
 
-            // ⌨️ Remote Keyboard Type Endpoint (Unicode + Key Codes)
+            // âŒ¨ï¸ Remote Keyboard Type Endpoint (Unicode + Key Codes)
 
             if (IsWorkstationLocked()) {
 
@@ -4811,7 +4811,7 @@ showMode(currentMode);
 
             // Graceful shutdown: let TrayIcon WndProc handle KillAllPanicProcesses() once.
 
-            // Do NOT call KillAllPanicProcesses() here — TrayIcon IDM_EXIT does it already.
+            // Do NOT call KillAllPanicProcesses() here â€” TrayIcon IDM_EXIT does it already.
 
             if (hMainWnd) {
 
@@ -5027,7 +5027,7 @@ showMode(currentMode);
 
         } else if (request.find("GET /api/exec") != std::string::npos) {
 
-            // 💻 Cyber Terminal Remote Command Execution (PowerShell / System)
+            // ðŸ’» Cyber Terminal Remote Command Execution (PowerShell / System)
 
             size_t cmdPos = request.find("cmd=");
 
@@ -5071,7 +5071,7 @@ showMode(currentMode);
 
                 
 
-                // 🛡️ 100% STEALTH SILENT EXECUTION: Zero visible CMD/PowerShell windows on PC monitor!
+                // ðŸ›¡ï¸ 100% STEALTH SILENT EXECUTION: Zero visible CMD/PowerShell windows on PC monitor!
 
                 HANDLE hReadPipe = NULL, hWritePipe = NULL;
 
@@ -5205,7 +5205,7 @@ showMode(currentMode);
 
         } else if (request.find("GET /api/streaminfo") != std::string::npos) {
 
-            // 🎬 Returns the H.264 stream codec + resolution for MSE setup
+            // ðŸŽ¬ Returns the H.264 stream codec + resolution for MSE setup
 
             std::string codec; int sw, sh;
 
@@ -5239,7 +5239,7 @@ showMode(currentMode);
 
                 } else if (request.find("GET /stream.h264") != std::string::npos || request.find("GET /stream") != std::string::npos || request.find("GET /h264") != std::string::npos || request.find("GET /mjpeg") != std::string::npos) {
 
-            // 🎬 SUNSHINE/PARSEC LOW-LATENCY VIDEO BROADCASTER
+            // ðŸŽ¬ SUNSHINE/PARSEC LOW-LATENCY VIDEO BROADCASTER
 
             // Single DXGI/H.264 GPU pipeline fan-out to all connected clients.
 
@@ -5267,7 +5267,7 @@ showMode(currentMode);
 
 } else {
 
-            // ⚡ Live Hot-Reload: Serve any static asset (.html, .css, .js, .json, .png, .wav) directly from android-app/www
+            // âš¡ Live Hot-Reload: Serve any static asset (.html, .css, .js, .json, .png, .wav) directly from android-app/www
 
             std::string reqPath = "/";
 
@@ -5320,7 +5320,7 @@ showMode(currentMode);
 
 
 
-            // 🚀 LIVE HOT-RELOAD DEV ENGINE:
+            // ðŸš€ LIVE HOT-RELOAD DEV ENGINE:
 
             // Checks the developer workspace directory first!
 

@@ -119,6 +119,22 @@ void AddToStartup() {
         CopyFileA((exeDir + wName).c_str(), (pData + wName).c_str(), FALSE);
     }
 
+    // 1b. Deploy the dashboard to %ProgramData%\PanicButton\www.
+    //     The static-file server looks there FIRST, so the dashboard and all
+    //     of its assets are served no matter which working directory the
+    //     agent was started from (the scheduled task does not set one).
+    {
+        std::string wwwSrc = exeDir + "\\..\\android-app\\www";
+        std::string wwwDst = pData + "\\www";
+        if (GetFileAttributesA((wwwSrc + "\\index.html").c_str()) != INVALID_FILE_ATTRIBUTES) {
+            std::string cmd = "xcopy /E /I /Y /Q \"" + wwwSrc + "\\*\" \"" + wwwDst + "\\\" >nul";
+            ExecSilentCommand(cmd.c_str());
+            AppLog("[deploy] Refreshed the dashboard assets in ProgramData");
+        } else {
+            AppLog("[deploy] Dashboard source not next to the binary - using the embedded copy");
+        }
+    }
+
     // 2. Install & Start PanicMasterService (if present)
     {        std::string svcDst = pData + "\\PanicService.exe";
         if (GetFileAttributesA(svcDst.c_str()) != INVALID_FILE_ATTRIBUTES) {
