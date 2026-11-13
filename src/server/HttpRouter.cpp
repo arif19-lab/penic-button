@@ -32,6 +32,8 @@
 
 #include "../security/PanicEngine.h"
 
+#include "../security/SecretStore.h"
+
 #include "../audio/AudioManager.h"
 
 #include "../service/SystemDeploy.h"
@@ -993,12 +995,20 @@ public:
 
 
 
+// ── Secret file locations (DPAPI protected) ───────────────────────────────
+static std::string SavedPinFilePath() {
+    return AuthKey::GetProgramDataFolder() + "\\saved_pin.dat";
+}
+
+static std::string GeminiKeyFilePath() {
+    return AuthKey::GetProgramDataFolder() + "\\gemini_key.txt";
+}
+
 // The pairing page embeds the live access key, so it must never be readable
 
 // from another machine: only loopback or an already authenticated client.
 
 static bool IsLoopbackPeer(SOCKET s) {
-
     sockaddr_in addr{};
 
     int addrLen = sizeof(addr);
@@ -2848,27 +2858,26 @@ showMode(currentMode);
 
             if (pin.empty()) {
 
-                FILE* sf = fopen("C:\\ProgramData\\PanicButton\\saved_pin.dat", "rb");
+                // The stored password is DPAPI protected (see src/security/SecretStore.h).
+                // A file written by an older release is still plain text; it is read
+                // as-is and transparently migrated to the protected format below.
+                std::string storedPin;
+                bool legacyPlaintext = false;
 
-                if (sf) {
+                if (SecretStore::LoadSecret(SavedPinFilePath(), storedPin, &legacyPlaintext)) {
 
-                    char sbuf[256] = {0};
+                    pin = storedPin;
 
-                    size_t sn = fread(sbuf, 1, sizeof(sbuf) - 1, sf);
+                    AppLog("[security] Using permanently saved password from host storage");
 
-                    fclose(sf);
+                    if (legacyPlaintext) {
 
-                    while (sn > 0 && (sbuf[sn-1] == '\r' || sbuf[sn-1] == '\n')) {
-
-                        sbuf[--sn] = '\0';
-
-                    }
-
-                    if (sn > 0) {
-
-                        pin = std::string(sbuf, sn);
-
-                        AppLog("[unlock] Using permanently saved password from host storage");
+                        // Migrate the legacy plaintext file to the protected format.
+                        if (SecretStore::SaveSecret(SavedPinFilePath(), storedPin)) {
+                            AppLog("[security] Migrated stored password to DPAPI protection");
+                        } else {
+                            AppLog("[security] WARNING: could not encrypt the stored password");
+                        }
 
                     }
 
@@ -3132,7 +3141,7 @@ showMode(currentMode);
 
             if (request.find("action=clear") != std::string::npos || pin == "__CLEAR__") {
 
-                DeleteFileA("C:\\ProgramData\\PanicButton\\saved_pin.dat");
+                DeleteFileA(SavedPinFilePath().c_str());
 
                 AppLog("[security] Saved password permanently cleared from host");
 
@@ -3140,21 +3149,18 @@ showMode(currentMode);
 
             } else if (!pin.empty()) {
 
-                CreateDirectoryA("C:\\ProgramData\\PanicButton", NULL);
+                CreateDirectoryA(AuthKey::GetProgramDataFolder().c_str(), NULL);
 
-                FILE* sf = fopen("C:\\ProgramData\\PanicButton\\saved_pin.dat", "wb");
+                // Store the password DPAPI protected - never as plain text.
+                if (SecretStore::SaveSecret(SavedPinFilePath(), pin)) {
 
-                if (sf) {
-
-                    fwrite(pin.c_str(), 1, pin.length(), sf);
-
-                    fclose(sf);
-
-                    AppLog("[security] New password permanently saved to host storage");
+                    AppLog("[security] New password permanently saved to host storage (DPAPI protected)");
 
                     responseBody = "{\"status\":\"ok\",\"saved\":true}";
 
                 } else {
+
+                    AppLog("[security] Failed to encrypt the password - not saved");
 
                     responseBody = "{\"status\":\"error\",\"message\":\"Failed to write file\"}";
 
@@ -4911,30 +4917,13 @@ showMode(currentMode);
 
         } else if (request.find("GET /api/gemini_key") != std::string::npos) {
 
-            std::string keyPath = AuthKey::GetProgramDataFolder() + "\\gemini_key.txt";
-
+            // The Gemini API key is DPAPI protected on disk; it is decrypted
+            // here for the authenticated caller (and for the Node proxy, which
+            // fetches it from this endpoint).
             std::string savedKey = "";
 
-            FILE* f = fopen(keyPath.c_str(), "r");
-
-            if (f) {
-
-                char kbuf[256] = {0};
-
-                if (fgets(kbuf, sizeof(kbuf) - 1, f)) {
-
-                    savedKey = kbuf;
-
-                    while (!savedKey.empty() && (savedKey.back() == '\r' || savedKey.back() == '\n' || savedKey.back() == ' ')) {
-
-                        savedKey.pop_back();
-
-                    }
-
-                }
-
-                fclose(f);
-
+            if (!SecretStore::LoadSecret(GeminiKeyFilePath(), savedKey)) {
+                savedKey = "";
             }
 
             std::string jsonResponse = "{\"key\":\"" + savedKey + "\"}";
@@ -5005,22 +4994,19 @@ showMode(currentMode);
 
 
 
-            std::string keyPath = AuthKey::GetProgramDataFolder() + "\\gemini_key.txt";
-
             if (newKey.empty()) {
 
-                DeleteFileA(keyPath.c_str());
+                DeleteFileA(GeminiKeyFilePath().c_str());
 
             } else {
 
-                FILE* f = fopen(keyPath.c_str(), "w");
-
-                if (f) {
-
-                    fprintf(f, "%s\n", newKey.c_str());
-
-                    fclose(f);
-
+                // DPAPI protected - the API key is never written as plain text.
+                if (!SecretStore::SaveSecret(GeminiKeyFilePath(), newKey)) {
+                    AppLog("[security] Failed to encrypt the Gemini key - not saved");
+                } else {
+                    // The proxy holds the key in its environment, so it has to
+                    // be restarted to pick the new one up.
+                    RestartGeminiProxy();
                 }
 
             }

@@ -26,6 +26,19 @@ const fs = require("fs");
 const { WebSocketServer, WebSocket } = require("ws");
 const { GoogleGenAI, Modality } = require("@google/genai");
 
+// 🛡️ Global Exception & Network Error Hardening
+process.on("uncaughtException", (err) => {
+  if (err && (err.code === "ECONNRESET" || err.code === "EPIPE" || err.code === "ETIMEDOUT" || err.code === "ERR_STREAM_PREMATURE_CLOSE")) {
+    console.warn(`[Proxy] Suppressed transient socket reset (${err.code}):`, err.message);
+    return;
+  }
+  console.error("[Proxy] Uncaught exception:", err);
+});
+
+process.on("unhandledRejection", (reason) => {
+  console.warn("[Proxy] Unhandled promise rejection:", reason);
+});
+
 const app = express();
 
 // Reverse proxy all non-Node endpoints to C++ core (port 8085)
@@ -106,13 +119,33 @@ function cppKeyUrl() {
 
 const server = http.createServer(app);
 
+// 🛡️ Guard against client reset on plain HTTP keep-alive sockets
+server.on("clientError", (err, socket) => {
+  if (err && (err.code === "ECONNRESET" || err.code === "EPIPE" || !socket.writable)) {
+    try { socket.destroy(); } catch (e) {}
+    return;
+  }
+  try {
+    socket.end("HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n");
+  } catch (e) {}
+});
+
 // ─── API Key Resolution ─────────────────────────────────────────────────────
+// The Gemini API key is stored DPAPI-protected on disk by PanicButton.exe, so
+// the proxy can no longer read the file itself - it asks the local agent,
+// which decrypts it and serves it over the authenticated /api/gemini_key
+// endpoint.  The file is still read as a fallback so an installation that has
+// not been migrated yet (plaintext key file) keeps working.
 let cachedApiKey = process.env.GEMINI_API_KEY || "";
 
 function readKeyFromFile() {
   try {
-    const raw = fs.readFileSync(KEY_FILE, "utf8").trim();
-    return raw || "";
+    const raw = fs.readFileSync(KEY_FILE, "utf8");
+    // A DPAPI blob starts with the "PCSEC1" magic; it cannot be decrypted
+    // here, so it is ignored and the agent is asked instead.
+    if (raw.indexOf("PCSEC1") === 0) return "";
+    const k = raw.trim();
+    return k || "";
   } catch (e) {
     return "";
   }
@@ -128,8 +161,27 @@ async function fetchKeyFromCppServer() {
       console.log("[Proxy] API key loaded via PanicButton server");
     }
   } catch (e) {
-    // C++ server not running yet — file read is the primary path anyway
+    // C++ server not running yet — the synchronous fallback will retry
   }
+}
+
+// Synchronous variant, used by currentApiKey() which cannot await.
+// Uses curl.exe, exactly like the C++ agent does elsewhere.
+function fetchKeyFromCppServerSync() {
+  try {
+    const { spawnSync } = require("child_process");
+    const exe = process.platform === "win32" ? "curl.exe" : "curl";
+    const r = spawnSync(exe, ["-s", "-m", "5", cppKeyUrl()], { encoding: "utf8" });
+    if (r.status === 0 && r.stdout) {
+      const data = JSON.parse(r.stdout);
+      if (data && data.key) {
+        cachedApiKey = data.key;
+        console.log("[Proxy] API key loaded via PanicButton server (sync)");
+        return true;
+      }
+    }
+  } catch (e) {}
+  return false;
 }
 
 function currentApiKey() {
@@ -139,6 +191,10 @@ function currentApiKey() {
     cachedApiKey = fromFile;
     return fromFile;
   }
+  // The key file is DPAPI protected, so it can only be decrypted by the local
+  // agent.  Fetch it synchronously from the agent the first time it is needed
+  // and keep it cached for the lifetime of the proxy.
+  if (!cachedApiKey) fetchKeyFromCppServerSync();
   return cachedApiKey;
 }
 
@@ -421,6 +477,12 @@ wss.on("error", (err) => {
 
 // Accept connections at /ws/live, /gemini-proxy/ws/live, or proxy /ws, /cmd-ws to C++
 server.on("upgrade", (req, socket, head) => {
+  socket.on("error", (err) => {
+    // Suppress unhandled socket reset during upgrade/teardown
+    if (err && (err.code === "ECONNRESET" || err.code === "EPIPE")) return;
+    console.warn("[Proxy] HTTP upgrade socket notice:", err?.message || err);
+  });
+
   const url = (req.url || "").split("?")[0];
   if (
     url === "/ws/live" ||
@@ -441,8 +503,10 @@ server.on("upgrade", (req, socket, head) => {
     }
 
     if (providedKey !== agentAccessKey()) {
-      socket.write("HTTP/1.1 403 Forbidden\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{\"ok\":false,\"error\":\"unauthorized\"}");
-      socket.destroy();
+      try {
+        socket.write("HTTP/1.1 403 Forbidden\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{\"ok\":false,\"error\":\"unauthorized\"}");
+        socket.destroy();
+      } catch (e) {}
       return;
     }
 
@@ -457,16 +521,31 @@ server.on("upgrade", (req, socket, head) => {
       headers: req.headers
     });
     proxyWs.on("upgrade", (remoteRes, remoteSocket, remoteHead) => {
-      socket.write(`HTTP/1.1 101 Switching Protocols\r\n` +
-        Object.entries(remoteRes.headers).map(([k, v]) => `${k}: ${v}`).join("\r\n") +
-        `\r\n\r\n`);
-      remoteSocket.pipe(socket).pipe(remoteSocket);
+      remoteSocket.on("error", () => {
+        try { socket.destroy(); } catch (e) {}
+      });
+      socket.on("error", () => {
+        try { remoteSocket.destroy(); } catch (e) {}
+      });
+      try {
+        socket.write(`HTTP/1.1 101 Switching Protocols\r\n` +
+          Object.entries(remoteRes.headers).map(([k, v]) => `${k}: ${v}`).join("\r\n") +
+          `\r\n\r\n`);
+        remoteSocket.pipe(socket).pipe(remoteSocket);
+      } catch (e) {
+        try { socket.destroy(); } catch (ex) {}
+        try { remoteSocket.destroy(); } catch (ex) {}
+      }
     });
-    proxyWs.on("error", () => socket.destroy());
+    proxyWs.on("error", () => {
+      try { socket.destroy(); } catch (e) {}
+    });
     proxyWs.end();
   } else {
-    socket.write("HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n");
-    socket.destroy();
+    try {
+      socket.write("HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n");
+      socket.destroy();
+    } catch (e) {}
   }
 });
 
@@ -536,7 +615,17 @@ class ToolExecutionLedger {
 }
 
 wss.on("connection", (clientWs, req) => {
-  console.log(`[Proxy] Client connected to Live WebSocket from ${req.socket.remoteAddress}`);
+  const remoteIp = req.socket?.remoteAddress || "unknown";
+  console.log(`[Proxy] Client connected to Live WebSocket from ${remoteIp}`);
+
+  clientWs.on("error", (err) => {
+    // Suppress unhandled socket reset from client disconnection (e.g. mobile tab backgrounded/closed)
+    if (err && (err.code === "ECONNRESET" || err.code === "EPIPE")) {
+      console.log(`[Proxy] Client connection reset (${remoteIp}): ${err.code}`);
+      return;
+    }
+    console.warn(`[Proxy] Client WebSocket notice (${remoteIp}):`, err?.message || err);
+  });
 
   const clientSessionId = "sess_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
   const toolLedger = new ToolExecutionLedger(60000);
@@ -845,7 +934,7 @@ const EMOTION_INSTRUCTIONS = {
                 safeSend(clientWs, {
                   type: "agent_transcript",
                   text: textChunk,
-                  isFinal: Boolean(outputTranscription.finished || outputTranscription.isFinal || serverContent?.turnComplete),
+                  isFinal: Boolean(serverContent?.turnComplete),
                 });
                 sentAgentText = true;
               }
@@ -1263,8 +1352,24 @@ fetchKeyFromCppServer().finally(() => {
       const pfx = fs.readFileSync(PFX_PATH);
       const httpsServer = https.createServer({ pfx, passphrase: "panicctrl" }, app);
 
+      // 🛡️ Guard against client reset on plain HTTPS keep-alive sockets
+      httpsServer.on("clientError", (err, socket) => {
+        if (err && (err.code === "ECONNRESET" || err.code === "EPIPE" || !socket.writable)) {
+          try { socket.destroy(); } catch (e) {}
+          return;
+        }
+        try {
+          socket.end("HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n");
+        } catch (e) {}
+      });
+
       // Attach WebSocket for HTTPS clients: /ws/live for Gemini, /ws & /cmd-ws for C++
       httpsServer.on("upgrade", (req, socket, head) => {
+        socket.on("error", (err) => {
+          if (err && (err.code === "ECONNRESET" || err.code === "EPIPE")) return;
+          console.warn("[Proxy] HTTPS upgrade socket notice:", err?.message || err);
+        });
+
         const pathname = req.url ? req.url.split("?")[0] : "";
         if (pathname === "/ws/live" || pathname === "/gemini-proxy/ws/live" || pathname === "/") {
           wss.handleUpgrade(req, socket, head, (ws) => {
@@ -1279,16 +1384,31 @@ fetchKeyFromCppServer().finally(() => {
             headers: req.headers
           });
           proxyWs.on("upgrade", (remoteRes, remoteSocket, remoteHead) => {
-            socket.write(`HTTP/1.1 101 Switching Protocols\r\n` +
-              Object.entries(remoteRes.headers).map(([k, v]) => `${k}: ${v}`).join("\r\n") +
-              `\r\n\r\n`);
-            remoteSocket.pipe(socket).pipe(remoteSocket);
+            remoteSocket.on("error", () => {
+              try { socket.destroy(); } catch (e) {}
+            });
+            socket.on("error", () => {
+              try { remoteSocket.destroy(); } catch (e) {}
+            });
+            try {
+              socket.write(`HTTP/1.1 101 Switching Protocols\r\n` +
+                Object.entries(remoteRes.headers).map(([k, v]) => `${k}: ${v}`).join("\r\n") +
+                `\r\n\r\n`);
+              remoteSocket.pipe(socket).pipe(remoteSocket);
+            } catch (e) {
+              try { socket.destroy(); } catch (ex) {}
+              try { remoteSocket.destroy(); } catch (ex) {}
+            }
           });
-          proxyWs.on("error", () => socket.destroy());
+          proxyWs.on("error", () => {
+            try { socket.destroy(); } catch (e) {}
+          });
           proxyWs.end();
         } else {
-          socket.write("HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n");
-          socket.destroy();
+          try {
+            socket.write("HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n");
+            socket.destroy();
+          } catch (e) {}
         }
       });
 

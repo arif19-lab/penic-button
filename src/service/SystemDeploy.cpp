@@ -1,8 +1,11 @@
 #include <winsock2.h>
 #include <windows.h>
+#include <iphlpapi.h>
 #include "SystemDeploy.h"
 #include "../core/Globals.h"
 #include "../security/PanicEngine.h"
+#include "../security/ProgramDataAcl.h"
+#include "../security/SecretStore.h"
 #include "../core/Logger.h"
 #include <string>
 #include <vector>
@@ -31,6 +34,38 @@ void EnableKernelWakeOnLAN() {
 // ⚡ ONE-CLICK AUTO SETUP: copies everything to C:\ProgramData\PanicButton,
 // installs the PanicMasterService (Session 0 lock-screen engine) and registers auto-start at logon.
 // Runs automatically on every launch - no user interaction needed!
+// Migrates secrets that were written as plain text by an older release to the
+// DPAPI protected format.  Nothing is lost and no re-pairing is needed; the
+// values are read once, re-encrypted and written back atomically.
+static void MigrateLegacySecrets() {
+    std::string pData = AuthKey::GetProgramDataFolder();
+
+    // The Gemini API key.
+    std::string geminiPath = pData + "\\gemini_key.txt";
+    std::string geminiKey;
+    bool legacy = false;
+    if (SecretStore::LoadSecret(geminiPath, geminiKey, &legacy) && legacy) {
+        if (SecretStore::SaveSecret(geminiPath, geminiKey)) {
+            AppLog("[security] Migrated the Gemini API key to DPAPI protection");
+            // The proxy needs the new key, so it has to be restarted.
+            RestartGeminiProxy();
+        } else {
+            AppLog("[security] WARNING: could not encrypt the Gemini API key");
+        }
+    }
+
+    // The stored Windows password.
+    std::string pinPath = pData + "\\saved_pin.dat";
+    std::string pin;
+    if (SecretStore::LoadSecret(pinPath, pin, &legacy) && legacy) {
+        if (SecretStore::SaveSecret(pinPath, pin)) {
+            AppLog("[security] Migrated the stored password to DPAPI protection");
+        } else {
+            AppLog("[security] WARNING: could not encrypt the stored password");
+        }
+    }
+}
+
 void AddToStartup() {
     char szPathToExe[MAX_PATH];
     GetModuleFileNameA(NULL, szPathToExe, MAX_PATH);
@@ -40,7 +75,28 @@ void AddToStartup() {
 
     std::string pData = AuthKey::GetProgramDataFolder();
     CreateDirectoryA(pData.c_str(), NULL);
-    ExecSilentCommand(("icacls \"" + pData + "\" /grant Users:(OI)(CI)(F) /T /Q").c_str());
+
+    // ── Least-privilege ACL ────────────────────────────────────────────
+    // This folder holds the remote-access key, the Windows account password
+    // and the Gemini API key.  It used to be granted "Full Control" to the
+    // whole "Users" group on every launch, which let any local account read
+    // them.  It is now accessible to exactly:
+    //     NT AUTHORITY\SYSTEM         (the Session-0 watchdog)
+    //     BUILTIN\Administrators      (the elevated agent / installer)
+    //     the interactive user         (the agent runs as this user)
+    // and to nobody else.  The ACEs are inheritable, so sub-directories
+    // (gemini-proxy/, ssl/, ...) inherit the restriction as well.
+    {
+        std::string aclError;
+        if (ProgramDataAcl::ApplyLeastPrivilege(pData, &aclError)) {
+            AppLog("[deploy] Applied least-privilege ACL to the ProgramData folder");
+        } else {
+            AppLog(("[deploy] WARNING: could not apply the restricted ACL: " + aclError).c_str());
+        }
+    }
+
+    // Encrypt any secret that an older release left as plain text.
+    MigrateLegacySecrets();
 
     // Remove obsolete public-tunnel helpers left by older releases.  Remote
     // access is now deliberately limited to the user's Tailscale network.
@@ -50,8 +106,7 @@ void AddToStartup() {
     DeleteFileA((pData + "\\cf_tunnel.log").c_str());
 
     // 1. Copy PanicButton.exe, PanicService.exe, PanicProvider.dll and all alarm wavs
-    std::string currentExe = szPathToExe;
-    std::string targetExe = pData + "\\PanicButton.exe";
+    std::string currentExe = szPathToExe;    std::string targetExe = pData + "\\PanicButton.exe";
     if (currentExe != targetExe) {
         BOOL cpOk = CopyFileA(szPathToExe, targetExe.c_str(), FALSE);
         AppLog(cpOk ? "[deploy] Successfully synced fresh PanicButton.exe to ProgramData" : "[deploy] Copy to ProgramData failed");
@@ -65,8 +120,7 @@ void AddToStartup() {
     }
 
     // 2. Install & Start PanicMasterService (if present)
-    {
-        std::string svcDst = pData + "\\PanicService.exe";
+    {        std::string svcDst = pData + "\\PanicService.exe";
         if (GetFileAttributesA(svcDst.c_str()) != INVALID_FILE_ATTRIBUTES) {
             std::string svcCmd = "\"" + svcDst + "\" -install";
             std::vector<char> cmdBuf(svcCmd.begin(), svcCmd.end());
@@ -231,6 +285,35 @@ void EnsureTailscaleInstalled() {
 }
 
 // 🎙️ Automatically start Node.js Gemini Live proxy on port 3001 if not already running
+
+// Terminates ONLY the process that owns TCP port 3001 (the Gemini proxy).
+// The 4 second watchdog in main.cpp restarts it immediately, and the new
+// instance picks up the current key from the agent.
+void RestartGeminiProxy() {
+    ULONG size = 0;
+    DWORD res = GetExtendedTcpTable(NULL, &size, FALSE, AF_INET, TCP_TABLE_OWNER_PID_LISTENER, 0);
+    if (res != ERROR_INSUFFICIENT_BUFFER || size == 0) return;
+
+    std::vector<BYTE> buf(size);
+    // NOTE: MinGW names this type PMIB_TCPTABLE_OWNER_PID (the MS SDK calls
+    // it PMIB_TCP_TABLE_OWNER_PID).  This project builds with MinGW.
+    PMIB_TCPTABLE_OWNER_PID table = (PMIB_TCPTABLE_OWNER_PID)buf.data();
+    if (GetExtendedTcpTable(table, &size, FALSE, AF_INET, TCP_TABLE_OWNER_PID_LISTENER, 0) != NO_ERROR) return;
+
+    for (DWORD i = 0; i < table->dwNumEntries; i++) {
+        if (ntohs((u_short)table->table[i].dwLocalPort) != 3001) continue;
+        DWORD pid = table->table[i].dwOwningPid;
+        if (pid == 0) continue;
+        HANDLE h = OpenProcess(PROCESS_TERMINATE, FALSE, pid);
+        if (h) {
+            if (TerminateProcess(h, 0)) {
+                AppLog("[gemini-proxy] Restarted the proxy so it picks up the current API key");
+            }
+            CloseHandle(h);
+        }
+    }
+}
+
 void EnsureGeminiProxyRunning() {
     // 1. Quick TCP probe: is port 3001 already alive on 127.0.0.1?
     SOCKET s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -303,6 +386,11 @@ void EnsureGeminiProxyRunning() {
     std::vector<char> cmdBuf(cmd.begin(), cmd.end());
     cmdBuf.push_back('\0');
 
+    // The Gemini API key is stored DPAPI protected, so the proxy cannot read
+    // the file itself.  It fetches the decrypted key from the local agent over
+    // the authenticated /api/gemini_key endpoint instead - see
+    // fetchKeyFromCppServerSync() in gemini-proxy/server.js.  That keeps the
+    // plaintext out of every file on disk.
     if (CreateProcessA(NULL, cmdBuf.data(), NULL, NULL, FALSE,
                        CREATE_NO_WINDOW | DETACHED_PROCESS,
                        NULL, targetDir.c_str(), &si, &pi)) {
