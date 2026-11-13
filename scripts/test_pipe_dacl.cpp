@@ -100,12 +100,46 @@ int main() {
     std::string sddl = d.Sddl();
     std::printf("\n  SDDL: %s\n", sddl.c_str());
     Check(sddl.find("D:") != std::string::npos, "SDDL contains a DACL");
-    Check(sddl.find("(A;;FA;;;SY)") != std::string::npos, "SDDL grants SYSTEM full access");
-    Check(sddl.find("(A;;FA;;;BA)") != std::string::npos, "SDDL grants Administrators full access");
+    // The provider only ever needs to WRITE to the pipe (it reads from its own
+    // instance), so FILE_GENERIC_WRITE ("FW") is the minimum correct right.
+    Check(sddl.find("(A;;FW;;;SY)") != std::string::npos, "SDDL grants SYSTEM write access");
+    Check(sddl.find("(A;;FW;;;BA)") != std::string::npos, "SDDL grants Administrators write access");
     Check(sddl.find(";;;WD)") == std::string::npos, "SDDL does NOT grant Everyone access");
     Check(sddl.find(";;;AU)") == std::string::npos, "SDDL does NOT grant Authenticated Users");
     Check(sddl.find(";;;NU)") == std::string::npos, "SDDL does NOT grant NETWORK access");
     Check(sddl.find(";;;IU)") == std::string::npos, "SDDL does NOT grant INTERACTIVE access");
+    Check(sddl.find(";;;BU)") == std::string::npos, "SDDL does NOT grant BUILTIN\\Users");
+    Check(sddl.find(";;;S-1-5-11)") == std::string::npos, "SDDL does NOT grant Authenticated Service");
+
+    // ---- 5. The DACL is actually ENFORCED, not merely declared -----------
+    // Create a pipe with exactly this descriptor and try to open it for
+    // writing from this (unprivileged) token.  It must be denied.
+    {
+        const char* testPipe = "\\\\.\\pipe\\PanicDaclEnforcementTest";
+        SECURITY_ATTRIBUTES sa = *d.Attributes();
+        HANDLE hp = CreateNamedPipeA(testPipe,
+                                     PIPE_ACCESS_INBOUND | FILE_FLAG_OVERLAPPED,
+                                     PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
+                                     1, 1024, 1024, 0, &sa);
+        if (hp != INVALID_HANDLE_VALUE) {
+            // The server end is up; a client that is not SYSTEM/Administrator
+            // must not be able to open it for writing.
+            HANDLE hc = CreateFileA(testPipe, GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
+            Check(hc == INVALID_HANDLE_VALUE, "an unprivileged client CANNOT open the pipe for writing");
+            if (hc == INVALID_HANDLE_VALUE) {
+                DWORD err = GetLastError();
+                std::printf("    client open denied with error %lu (ERROR_ACCESS_DENIED=%lu)\n",
+                            err, (DWORD)ERROR_ACCESS_DENIED);
+                Check(err == ERROR_ACCESS_DENIED, "the denial is ERROR_ACCESS_DENIED");
+            } else {
+                CloseHandle(hc);
+            }
+            DisconnectNamedPipe(hp);
+            CloseHandle(hp);
+        } else {
+            Check(false, "could not create the enforcement test pipe");
+        }
+    }
 
     std::printf("\npassed: %d   failed: %d\n", g_pass, g_fail);
     if (g_fail == 0) { std::printf("PipeDACL: ALL TESTS PASSED\n"); return 0; }

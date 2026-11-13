@@ -28,6 +28,7 @@
 
 #include <windows.h>
 #include <sddl.h>
+#include <string>
 
 namespace PipeSecurity {
 
@@ -82,9 +83,9 @@ public:
     bool Ok() const { return m_ok; }
     const SECURITY_ATTRIBUTES* Attributes() const { return m_ok ? &m_sa : NULL; }
 
-    // SDDL for diagnostics/tests, e.g.
-    //   O:SYD:PAI(D;;FA;;;SY)(D;;FA;;;BA)
-    std::string Sddl() const;
+// SDDL for diagnostics/tests, e.g.
+//   O:SYD:PAI(D;;FA;;;SY)(D;;FA;;;BA)
+std::string Sddl() const;
 
 private:
     bool m_ok;
@@ -94,7 +95,6 @@ private:
     SECURITY_ATTRIBUTES m_sa;
 };
 
-// Kept out of line so the header stays free of <string> for its main users.
 inline std::string RestrictedDescriptor::Sddl() const {
     if (!m_ok) return "<none>";
     LPSTR s = NULL;
