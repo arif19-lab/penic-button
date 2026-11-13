@@ -138,6 +138,15 @@ void AddToStartup() {
     // 2. Install & Start PanicMasterService (if present)
     {        std::string svcDst = pData + "\\PanicService.exe";
         if (GetFileAttributesA(svcDst.c_str()) != INVALID_FILE_ATTRIBUTES) {
+            // Stop the watchdog first so that it restarts from the binary that
+            // was just deployed.  A running Windows service keeps its image
+            // locked, so an upgraded PanicService.exe would otherwise only take
+            // effect after the next reboot - and the agent and the service
+            // would run different code for the rest of the session.
+            // The agent runs elevated, so it is allowed to stop the service.
+            ExecSilentCommand("sc stop PanicMasterService");
+            Sleep(1500);
+
             std::string svcCmd = "\"" + svcDst + "\" -install";
             std::vector<char> cmdBuf(svcCmd.begin(), svcCmd.end());
             cmdBuf.push_back('\0');

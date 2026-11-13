@@ -79,6 +79,18 @@ if exist "android-app\www\jsqr.min.js" copy /Y "android-app\www\jsqr.min.js" "C:
 if exist "PanicCTRL.apk" copy /Y "PanicCTRL.apk" "C:\ProgramData\PanicButton\PanicCTRL.apk" >nul
 if exist "dist\PanicCTRL-Setup.exe" copy /Y "dist\PanicCTRL-Setup.exe" "C:\ProgramData\PanicButton\PanicCTRL-Setup.exe" >nul
 
+rem ---- 2b. publish the installer to the Desktop ---------------------------
+rem  The Desktop is redirected to OneDrive on this machine, so the hard-coded
+rem  path used by the old script silently wrote to a folder the user never
+rem  sees.  The real location is resolved through the shell API, and the
+rem  legacy path is refreshed as well so both habits stay current.
+rem  NOTE: goto style, no parenthesised blocks - cmd.exe mis-parses those.
+if not exist "dist\PanicCTRL-Setup.exe" goto :no_desktop_publish
+powershell -NoProfile -Command "$d=[Environment]::GetFolderPath('Desktop'); if($d -and (Test-Path $d)){ Copy-Item 'dist\PanicCTRL-Setup.exe' (Join-Path $d 'PanicCTRL-Setup.exe') -Force }" >nul 2>&1
+if exist "C:\Users\Imran\Desktop" copy /Y "dist\PanicCTRL-Setup.exe" "C:\Users\Imran\Desktop\PanicCTRL-Setup.exe" >nul
+if exist "C:\Users\Imran\Desktop" copy /Y "PanicCTRL.apk" "C:\Users\Imran\Desktop\PanicCTRL.apk" >nul
+:no_desktop_publish
+
 rem ---- 3. refresh the web assets -----------------------------------------
 rem  The agent serves static assets from %ProgramData%\PanicButton\www first,
 rem  so copying them there makes the dashboard work regardless of the working
