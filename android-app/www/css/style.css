@@ -11260,6 +11260,7 @@ body.gemini-dark .cg-studio-send-btn:hover {
    Exact match to Antigravity Voice Assistant Reference Implementation
    ========================================================================== */
 
+
 .cg-transcript-hud {
   position: absolute;
   /* top/bottom set dynamically by JS positionHUD(); fallback values below */
@@ -11281,7 +11282,7 @@ body.gemini-dark .cg-studio-send-btn:hover {
 }
 
 .cg-transcript-hud.expanded {
-  bottom: 100px; /* tighter fallback — JS positionHUD() overrides at runtime */
+  bottom: 16px; /* ref app bottom-4 = 16px gap; JS positionHUD() overrides */
 }
 
 .cg-transcript-hud.collapsed {
@@ -11538,6 +11539,27 @@ body.gemini-mode:not(.gemini-dark) .cg-transcript-hud .cg-hud-sync-bar {
   flex-direction: column;
   gap: 10px;
   scroll-behavior: smooth;
+  /* Thin custom scrollbar like ref app */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.15) transparent;
+}
+.cg-hud-feed-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.cg-hud-feed-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.cg-hud-feed-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.18);
+  border-radius: 4px;
+}
+body.gemini-light .cg-hud-feed-scroll,
+body.gemini-mode:not(.gemini-dark) .cg-hud-feed-scroll {
+  scrollbar-color: rgba(0,0,0,0.15) transparent;
+}
+body.gemini-light .cg-hud-feed-scroll::-webkit-scrollbar-thumb,
+body.gemini-mode:not(.gemini-dark) .cg-hud-feed-scroll::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.15);
 }
 
 .cg-transcript-hud.collapsed .cg-hud-feed-scroll,
@@ -11756,10 +11778,29 @@ body.gemini-mode:not(.gemini-dark) .cg-transcript-hud .cg-hud-timestamp {
 .cg-hud-words-wrap {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 3px 4px;
   font-size: 12px;
   line-height: 1.5;
   word-break: break-word;
+}
+
+/* 🌊 Listening & Speaking Wave Animation inside HUD Turn Cards */
+.cg-hud-wave-anim {
+  height: 18px;
+  width: auto;
+  max-width: 52px;
+  object-fit: contain;
+  display: inline-block;
+  vertical-align: middle;
+  filter: drop-shadow(0 0 4px rgba(59, 130, 246, 0.6));
+  pointer-events: none;
+  flex-shrink: 0;
+  margin-right: 4px;
+}
+
+.cg-hud-wave-anim.agent-wave {
+  filter: drop-shadow(0 0 4px rgba(16, 185, 129, 0.6));
 }
 
 .cg-hud-word {

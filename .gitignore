@@ -33,3 +33,6 @@ android-app/android/build_output*.txt
 # IDE & Editor files
 .vscode/
 .idea/
+
+# Local test artifact (keep on this machine, do not commit)
+/antigravity-full-bundle.js
