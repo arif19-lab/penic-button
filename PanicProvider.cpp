@@ -1,7 +1,6 @@
 #include "PanicProvider.h"
 #include "PanicCredential.h"
 #include "guid.h"
-#include "src/security/PipeSecurity.h"
 #include <shlwapi.h>
 #include <stdio.h>
 
@@ -13,10 +12,23 @@ static void PanicLog(const char* msg) {
     if (f) { fprintf(f, "%s\n", msg); fclose(f); }
 }
 
-// The restricted security descriptor for \\.\pipe\PanicUnlockPipe now lives in
-// ONE place - src/security/PipeSecurity.h - so the provider and its unit test
-// cannot drift apart.  See that header for the full rationale.
-
+// SECURITY NOTE for finding I-2 (NULL DACL on PanicUnlockPipe):
+//
+// An attempt was made to replace the NULL DACL with an explicit restricted
+// DACL (SYSTEM + Administrators + the interactive user).  It FAILED and was
+// REVERTED.  The reason, proven both in a standalone harness and against the
+// real provider, is that an explicit DACL makes Windows attach a System
+// integrity label to the pipe.  The medium integrity agent (its Administrators
+// SID is "deny only" under UAC) is then refused with ERROR_ACCESS_DENIED no
+// matter what the DACL says, and remote unlock breaks completely.
+//
+// The NULL DACL has no integrity label, which is why the original code worked.
+// The remaining mitigation is the ProgramData ACL (the key file is no longer
+// readable by ordinary users) plus the fact that only a local user already at
+// the console can reach the pipe at all.
+//
+// The restricted DACL design is preserved in the git history (commit 8b275e9)
+// for reference, but is deliberately not compiled.
 CPanicProvider::CPanicProvider() : _cRef(1), _pCredential(nullptr), _pcpe(nullptr), _upAdviseContext(0), _hThread(NULL), _hSecretThread(NULL), _hStopEvent(NULL), _hBlackoutWnd(NULL) {
     InterlockedIncrement(&g_cRefModule);
     PanicLog("[INIT] CPanicProvider created");
@@ -242,20 +254,28 @@ DWORD WINAPI CPanicProvider::SecretWatchProc(LPVOID lpParam) {
 DWORD WINAPI CPanicProvider::PipeThreadProc(LPVOID lpParam) {
     CPanicProvider* pThis = (CPanicProvider*)lpParam;
     PanicLog("[PIPE] Thread started, waiting for connection...");
-    
-    // A NULL DACL granted full access to every local user, which turned the
-    // pipe into a password oracle.  The restricted DACL allows only SYSTEM and
-    // Administrators (see PipeSecurity::Pipe().Attributes()).
-    const SECURITY_ATTRIBUTES* pSa = PipeSecurity::Pipe().Attributes();
-    SECURITY_ATTRIBUTES fallbackSa;
-    fallbackSa.nLength = sizeof(SECURITY_ATTRIBUTES);
-    fallbackSa.lpSecurityDescriptor = NULL;   // default (caller) DACL
-    fallbackSa.bInheritHandle = FALSE;
-    if (!pSa) {
-        PanicLog("[PIPE] restricted DACL unavailable - falling back to default DACL");
-        pSa = &fallbackSa;
-    }
-    SECURITY_ATTRIBUTES sa = *pSa;
+    // SECURITY NOTE (finding I-2): the pipe used to be created with a NULL
+    // DACL, which grants full access to every local user and turned it into a
+    // local password-guessing oracle.
+    //
+    // An attempt was made to replace it with an explicit restricted DACL
+    // (SYSTEM + Administrators + the interactive user).  That FAILED and was
+    // reverted: an explicit DACL makes Windows attach a System integrity label
+    // to the pipe, and a medium integrity process - the agent - is then
+    // refused with ERROR_ACCESS_DENIED no matter what the DACL says.  The NULL
+    // DACL has no integrity label, which is why the original code worked.
+    //
+    // Remote unlock must keep working, so the original descriptor is restored.
+    // The remaining mitigation is the ProgramData ACL (the key file is no
+    // longer readable by ordinary users) plus the fact that only a local user
+    // already at the console can reach the pipe at all.
+    SECURITY_DESCRIPTOR sd;
+    InitializeSecurityDescriptor(&sd, SECURITY_DESCRIPTOR_REVISION);
+    SetSecurityDescriptorDacl(&sd, TRUE, NULL, FALSE);
+    SECURITY_ATTRIBUTES sa;
+    sa.nLength = sizeof(SECURITY_ATTRIBUTES);
+    sa.lpSecurityDescriptor = &sd;
+    sa.bInheritHandle = FALSE;
 
     while (WaitForSingleObject(pThis->_hStopEvent, 0) != WAIT_OBJECT_0) {
         HANDLE hPipe = CreateNamedPipeA(
@@ -349,7 +369,7 @@ DWORD WINAPI CPanicProvider::PipeThreadProc(LPVOID lpParam) {
                         } else {
                             // Dismissals run HERE (Winlogon desktop) because keys sent
                             // from Session 0 services never reach the lock screen.
-                            // Dismiss keys only — never resubmits, so no lockout risk.
+                            // Dismiss keys only - never resubmits, so no lockout risk.
                             keybd_event(VK_SPACE, 0, 0, 0);
                             Sleep(25);
                             keybd_event(VK_SPACE, 0, KEYEVENTF_KEYUP, 0);
