@@ -3,7 +3,6 @@
  */
 
 var KEY = window.KEY || localStorage.getItem("panic_key") || "";
-var _cmdWS = null;
 
 // 📊 REAL-TIME CLIENT TELEMETRY & BLACKBOX LOGGER
 var Telemetry = {
@@ -1335,9 +1334,9 @@ function toggleAutoShield() {
   }
 }
 
-// Start periodic telemetry poll (2s for true real-time response)
-setInterval(pollBentoTelemetry, 2000);
-setTimeout(pollBentoTelemetry, 500);
+// The telemetry poll is already scheduled above; a second identical timer here
+// used to double every /api/status request.
+
 // ──────────────────────────────────────────────────────────────────
 
 function showCyberToast(msg, type) {

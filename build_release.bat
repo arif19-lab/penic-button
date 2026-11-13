@@ -54,7 +54,7 @@ if errorlevel 1 (
 
 rem ---- 3. compile the three Windows binaries -----------------------------
 echo [3/5] Compiling PanicButton.exe...
-g++ -O2 -std=c++17 src/main.cpp src/audio/*.cpp src/capture/*.cpp src/core/*.cpp src/encoder/*.cpp src/input/*.cpp src/security/*.cpp src/server/*.cpp src/service/*.cpp src/streaming/*.cpp src/ui/*.cpp resource.o -o PanicButton.exe -Isrc -lws2_32 -liphlpapi -lwinhttp -lgdiplus -ldxgi -ld3d11 -lmfplat -lmfuuid -lwmcodecdspuuid -lstrmiids -luuid -lole32 -loleaut32 -lcrypt32 -lwinmm -lwtsapi32 -lpowrprof -static -mwindows
+g++ -O2 -std=c++17 src/main.cpp src/audio/*.cpp src/capture/*.cpp src/core/*.cpp src/encoder/*.cpp src/input/TouchInjector.cpp src/security/*.cpp src/server/*.cpp src/service/SystemDeploy.cpp src/streaming/*.cpp src/ui/*.cpp resource.o -o PanicButton.exe -Isrc -lws2_32 -liphlpapi -lwinhttp -lgdiplus -ldxgi -ld3d11 -lmfplat -lmfuuid -lwmcodecdspuuid -lstrmiids -luuid -lole32 -loleaut32 -lcrypt32 -lwinmm -lwtsapi32 -lpowrprof -static -mwindows
 if errorlevel 1 (
     echo [ERROR] PanicButton.exe compilation failed!
     exit /b 1

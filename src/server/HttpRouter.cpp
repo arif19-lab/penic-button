@@ -28,8 +28,6 @@
 
 #include "../input/TouchInjector.h"
 
-#include "../input/KeyboardInjector.h"
-
 #include "../security/PanicEngine.h"
 
 #include "../security/SecretStore.h"
@@ -92,15 +90,9 @@ static bool RequestHasValidKey(const std::string& request, bool* usedCurrentKey 
 
 
 
-// The PWA manifest used to pin the compile-time key, which breaks the moment
-
-// an install rotates it.  Rewrite the finished manifest with the live key.
-
-static std::string WithLiveKey(const std::string& body) {
-    return body;
-}
-
-
+// The PWA manifest used to pin the compile-time key, which broke the moment
+// an install rotated it.  The manifest is now built without any key at all,
+// so the helper that used to rewrite it is gone.
 
 static void BridgeToGeminiProxy(SOCKET clientSocket, const std::string& firstChunk) {
 
@@ -2486,8 +2478,6 @@ showMode(currentMode);
 
 })JSON";
 
-                responseBody = WithLiveKey(responseBody);
-
                 std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/manifest+json\r\nAccess-Control-Allow-Origin: *\r\n\r\n" + responseBody;
 
                 send(clientSocket, res.c_str(), (int)res.size(), 0);
@@ -4844,68 +4834,6 @@ showMode(currentMode);
             send(clientSocket, res.c_str(), (int)res.size(), 0);
 
             send(clientSocket, (const char*)pngBytes.data(), outLen, 0);
-
-            shutdown(clientSocket, SD_SEND);
-
-            closesocket(clientSocket);
-
-            return;
-
-
-
-        } else if (request.find("GET /manifest.json") != std::string::npos) {
-
-            std::string manifest = "{\n"
-
-                "  \"name\": \"PanicCTRL Cyber Node\",\n"
-
-                "  \"short_name\": \"PanicCTRL\",\n"
-
-                "  \"start_url\": \"/\",\n"
-
-                "  \"display\": \"standalone\",\n"
-
-                "  \"background_color\": \"#020408\",\n"
-
-                "  \"theme_color\": \"#00f0ff\",\n"
-
-                "  \"orientation\": \"any\",\n"
-
-                "  \"icons\": [\n"
-
-                "    {\n"
-
-                "      \"src\": \"/icon-192.png\",\n"
-
-                "      \"sizes\": \"192x192\",\n"
-
-                "      \"type\": \"image/png\",\n"
-
-                "      \"purpose\": \"any maskable\"\n"
-
-                "    },\n"
-
-                "    {\n"
-
-                "      \"src\": \"/icon-512.png\",\n"
-
-                "      \"sizes\": \"512x512\",\n"
-
-                "      \"type\": \"image/png\",\n"
-
-                "      \"purpose\": \"any maskable\"\n"
-
-                "    }\n"
-
-                "  ]\n"
-
-                "}";
-
-            manifest = WithLiveKey(manifest);
-
-            std::string res = "HTTP/1.1 200 OK\r\nContent-Type: application/manifest+json\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: " + std::to_string(manifest.size()) + "\r\nConnection: close\r\n\r\n" + manifest;
-
-            send(clientSocket, res.c_str(), (int)res.size(), 0);
 
             shutdown(clientSocket, SD_SEND);
 

@@ -843,8 +843,6 @@ window.addEventListener('DOMContentLoaded', function() {
 
   setInterval(checkPcConnection, 3000);
 
-  setTimeout(connectCommandWS, 2000);
-
   // Only probe if initial connection is completely dead after 2 seconds
 
   setTimeout(function() {
@@ -867,37 +865,7 @@ window.addEventListener('DOMContentLoaded', function() {
 
 
 
-// Direct command WebSocket.
 
-var _cmdWS = null;
-
-function connectCommandWS() {
-
-  if (_cmdWS && (_cmdWS.readyState === WebSocket.OPEN || _cmdWS.readyState === WebSocket.CONNECTING)) return;
-
-  try {
-
-    var wsUrl = getWsUrl('/cmd-ws?key=' + KEY);
-
-    console.log('[CmdWS] Connecting to:', wsUrl);
-
-    _cmdWS = new WebSocket(wsUrl);
-
-    _cmdWS.onopen = function() { console.log('[CmdWS] Connected! Commands will use WebSocket.'); };
-
-    _cmdWS.onclose = function() {
-
-      _cmdWS = null;
-
-      setTimeout(connectCommandWS, 3000);
-
-    };
-
-    _cmdWS.onerror = function() { if (_cmdWS) _cmdWS.close(); };
-
-  } catch(e) { console.warn('[CmdWS] Error:', e); }
-
-}
 
 var probedOk = false;
 
