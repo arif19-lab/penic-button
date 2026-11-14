@@ -1,4 +1,4 @@
-/**
+﻿/**
 
  * 🎙️ GEMINI MULTIMODAL LIVE AI ENGINE
 
@@ -55,6 +55,71 @@ var liveSpeechRecognizer = null;
 var isSpeechRecognizerActive = false;
 
 var accumulatedSpokenText = "";
+
+
+function initLiveSpeechRecognizer() {
+  var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    console.warn("[WebSpeech] Not available in this browser");
+    return;
+  }
+
+  // Stop any existing recognizer before starting a new one
+  if (liveSpeechRecognizer) {
+    try { liveSpeechRecognizer.onend = null; liveSpeechRecognizer.stop(); } catch(e) {}
+    liveSpeechRecognizer = null;
+    isSpeechRecognizerActive = false;
+  }
+
+  try {
+    var recognizer = new SpeechRecognition();
+    recognizer.continuous = true;
+    recognizer.interimResults = true;
+    recognizer.lang = navigator.language || 'en-US';
+
+    console.warn("[WebSpeech] Starting recognizer (lang=" + recognizer.lang + ")");
+
+    recognizer.onresult = function(event) {
+      // Don't process when AI is speaking (avoids acoustic feedback)
+      if (isGeminiAudioPlaying()) return;
+
+      var liveTranscript = '';
+      for (var i = event.resultIndex; i < event.results.length; i++) {
+        liveTranscript += event.results[i][0].transcript + ' ';
+      }
+      var cleaned = liveTranscript.trim();
+      if (!cleaned) return;
+
+      // Only feed Web Speech results until Gemini's server-side transcription arrives
+      if (accumulatedSpokenText) return;
+
+      // Feed instantly to Live Transcript HUD (no server roundtrip delay)
+      if (window.LiveTranscriptHUD) {
+        window.LiveTranscriptHUD.onUserTranscript(cleaned, false);
+      }
+    };
+
+    recognizer.onend = function() {
+      // Keep recognizer alive while session is connected
+      if (geminiWs && geminiWs.readyState === WebSocket.OPEN) {
+        try { recognizer.start(); } catch(e) {}
+      } else {
+        isSpeechRecognizerActive = false;
+      }
+    };
+
+    recognizer.onerror = function(event) {
+      if (event.error === 'no-speech' || event.error === 'aborted') return;
+    };
+
+    recognizer.start();
+    liveSpeechRecognizer = recognizer;
+    isSpeechRecognizerActive = true;
+    console.warn("[WebSpeech] Recognizer started successfully");
+  } catch(e) {
+    console.warn("[WebSpeech] Failed to start: " + e.message);
+  }
+}
 
 
 
@@ -838,913 +903,160 @@ if (document.readyState === "loading") {
 
 
 
-/// 🔮 DYNAMIC NEURAL AUDIO ORB VISUALIZER ENGINE (REFERENCE PARITY)
-
-var orbCanvas = null;
-
-var orbCtx = null;
-
-var visualizerMode = localStorage.getItem("gemini_vis_mode") || "chatgpt-avm";
-
-var smoothedEnergy = 0.15;
-
-var visTime = 0;
-
-var _visAnimFrame = null;
-
-
-
-// Emotion color themes
-
-var EMOTION_THEMES = {
-
-  curious: {
-
-    primary: "#06b6d4",
-
-    glow: "rgba(6, 182, 212, 0.4)",
-
-    gradient: ["#0891b2", "#06b6d4", "#67e8f9"],
-
-    label: "Curious & Inquisitive",
-
-    moodEmoji: "💡"
-
-  },
-
-  enthusiastic: {
-
-    primary: "#f59e0b",
-
-    glow: "rgba(245, 158, 11, 0.45)",
-
-    gradient: ["#d97706", "#f59e0b", "#fde047"],
-
-    label: "Enthusiastic & Energetic",
-
-    moodEmoji: "⚡"
-
-  },
-
-  calm: {
-
-    primary: "#10b981",
-
-    glow: "rgba(16px, 185, 129, 0.35)",
-
-    gradient: ["#059669", "#10b981", "#6ee7b7"],
-
-    label: "Calm & Grounded",
-
-    moodEmoji: "🍃"
-
-  },
-
-  joyful: {
-
-    primary: "#ec4899",
-
-    glow: "rgba(236, 72, 153, 0.4)",
-
-    gradient: ["#db2777", "#ec4899", "#f472b6"],
-
-    label: "Joyful & Playful",
-
-    moodEmoji: "✨"
-
-  },
-
-  empathetic: {
-
-    primary: "#8b5cf6",
-
-    glow: "rgba(139, 92, 246, 0.4)",
-
-    gradient: ["#7c3aed", "#8b5cf6", "#c4b5fd"],
-
-    label: "Empathetic & Warm",
-
-    moodEmoji: "💜"
-
-  },
-
-  thoughtful: {
-
-    primary: "#3b82f6",
-
-    glow: "rgba(59, 130, 246, 0.4)",
-
-    gradient: ["#2563eb", "#3b82f6", "#93c5fd"],
-
-    label: "Thoughtful & Analytical",
-
-    moodEmoji: "🔭"
-
-  },
-
-  hesitant: {
-
-    primary: "#a855f7",
-
-    glow: "rgba(168, 85, 247, 0.35)",
-
-    gradient: ["#9333ea", "#a855f7", "#e9d5ff"],
-
-    label: "Hesitant & Deliberate",
-
-    moodEmoji: "💭"
-
-  },
-
-  frustrated: {
-
-    primary: "#f43f5e",
-
-    glow: "rgba(244, 63, 94, 0.4)",
-
-    gradient: ["#e11d48", "#f43f5e", "#fda4af"],
-
-    label: "Stressed / Urgent",
-
-    moodEmoji: "🔥"
-
-  },
-
-  neutral: {
-
-    primary: "#6366f1",
-
-    glow: "rgba(99, 102, 241, 0.35)",
-
-    gradient: ["#4f46e5", "#6366f1", "#a5b4fc"],
-
-    label: "Natural & Balanced",
-
-    moodEmoji: "🌀"
-
-  }
-
-};
-
-
-
-function getEmotionTheme(emotionName) {
-
-  var normalized = (emotionName || "").toLowerCase().trim();
-
-  for (var key in EMOTION_THEMES) {
-
-    if (normalized.indexOf(key) !== -1) {
-
-      return EMOTION_THEMES[key];
-
-    }
-
-  }
-
-  return EMOTION_THEMES.neutral;
-
+// Antigravity Orb: exact reference implementation (Three.js + GLSL).
+// Vendored in vendor/antigravity-orb.js and mounted into #antigravityOrbContainer.
+var antigravityOrbHandle = null;
+var antigravityOrbUpdateTimer = null;
+var antigravityOrbLastUser = -1;
+var antigravityOrbLastAgent = -1;
+var antigravityOrbLastTheme = null;
+var antigravityOrbLastMicAnalyser = null;
+var antigravityOrbLastAgentAnalyser = null;
+
+var antigravityMicAnalyser = null;
+var antigravityAgentAnalyser = null;
+
+function getAntigravityOrbTheme() {
+  return document.body.classList.contains("gemini-light") ? "light" : "dark";
 }
 
-
-
-// 1. ChatGPT Advanced Voice Mode (AVM) Authentic Fluid Blue & Cyan Blob
-
-function renderChatGptAvm(ctx, cx, cy, baseRadius, energy, time, userActive, agentActive, connected, freqData) {
-
-  var outerAuraRadius = baseRadius * (1.8 + energy * 0.4);
-
-  var ambientAura = ctx.createRadialGradient(cx, cy, baseRadius * 0.3, cx, cy, outerAuraRadius);
-
-  ambientAura.addColorStop(
-
-    0,
-
-    connected
-
-      ? agentActive
-
-        ? "rgba(14, 165, 233, 0.35)"
-
-        : userActive
-
-        ? "rgba(6, 182, 212, 0.4)"
-
-        : "rgba(30, 58, 138, 0.25)"
-
-      : "rgba(51, 65, 85, 0.15)"
-
-  );
-
-  ambientAura.addColorStop(0.55, connected ? "rgba(37, 99, 235, 0.12)" : "rgba(30, 41, 59, 0.05)");
-
-  ambientAura.addColorStop(1, "rgba(0, 0, 0, 0)");
-
-
-
-  ctx.save();
-
-  ctx.fillStyle = ambientAura;
-
-  ctx.beginPath();
-
-  ctx.arc(cx, cy, outerAuraRadius, 0, Math.PI * 2);
-
-  ctx.fill();
-
-  ctx.restore();
-
-
-
-  var avmLayers = [
-
-    {
-
-      points: 64,
-
-      radiusRatio: 1.05,
-
-      waveAmp: 24 * energy,
-
-      speed: 1.1,
-
-      alpha: 0.85,
-
-      gradStart: "#0284c7",
-
-      gradMid: "#06b6d4",
-
-      gradEnd: "#38bdf8"
-
-    },
-
-    {
-
-      points: 52,
-
-      radiusRatio: 0.94,
-
-      waveAmp: 18 * energy,
-
-      speed: -1.3,
-
-      alpha: 0.9,
-
-      gradStart: "#1d4ed8",
-
-      gradMid: "#0284c7",
-
-      gradEnd: "#67e8f9"
-
-    },
-
-    {
-
-      points: 40,
-
-      radiusRatio: 0.84,
-
-      waveAmp: 14 * energy,
-
-      speed: 1.6,
-
-      alpha: 0.95,
-
-      gradStart: "#38bdf8",
-
-      gradMid: "#e0f2fe",
-
-      gradEnd: "#0284c7"
-
-    }
-
-  ];
-
-
-
-  avmLayers.forEach(function(layer, idx) {
-
-    ctx.save();
-
-    ctx.beginPath();
-
-
-
-    var numPoints = layer.points;
-
-    var angleStep = (Math.PI * 2) / numPoints;
-
-    var layerRadius = baseRadius * layer.radiusRatio;
-
-    var coords = [];
-
-
-
-    for (var i = 0; i < numPoints; i++) {
-
-      var angle = i * angleStep;
-
-      var freqBin = Math.floor((i / numPoints) * 32);
-
-      var freqAmp = (freqData && freqData[freqBin] ? freqData[freqBin] : 0) / 255;
-
-
-
-      var w1 = Math.sin(angle * 2 + time * layer.speed + idx * 1.5);
-
-      var w2 = Math.cos(angle * 3 - time * 0.9 * layer.speed);
-
-      var w3 = Math.sin(angle * 5 + time * 1.4);
-
-      var w4 = Math.cos(angle * 7 - time * 0.7);
-
-
-
-      var organicDistortion = (w1 * 0.45 + w2 * 0.3 + w3 * 0.15 + w4 * 0.1) * layer.waveAmp;
-
-      var audioDisplacement = freqAmp * 32 * energy;
-
-
-
-      var r = layerRadius + (connected ? organicDistortion + audioDisplacement : Math.sin(angle * 3 + time) * 4);
-
-      var x = cx + Math.cos(angle) * r;
-
-      var y = cy + Math.sin(angle) * r;
-
-      coords.push({ x: x, y: y });
-
-    }
-
-
-
-    ctx.moveTo(
-
-      (coords[0].x + coords[coords.length - 1].x) / 2,
-
-      (coords[0].y + coords[coords.length - 1].y) / 2
-
-    );
-
-
-
-    for (var j = 0; j < coords.length; j++) {
-
-      var next = coords[(j + 1) % coords.length];
-
-      var midX = (coords[j].x + next.x) / 2;
-
-      var midY = (coords[j].y + next.y) / 2;
-
-      ctx.quadraticCurveTo(coords[j].x, coords[j].y, midX, midY);
-
-    }
-
-
-
-    ctx.closePath();
-
-
-
-    var grad = ctx.createRadialGradient(
-
-      cx - baseRadius * 0.3,
-
-      cy - baseRadius * 0.3,
-
-      baseRadius * 0.1,
-
-      cx,
-
-      cy,
-
-      baseRadius * 1.1
-
-    );
-
-    grad.addColorStop(0, layer.gradEnd);
-
-    grad.addColorStop(0.4, layer.gradMid);
-
-    grad.addColorStop(1, layer.gradStart);
-
-
-
-    ctx.fillStyle = grad;
-
-    ctx.globalAlpha = connected ? layer.alpha : 0.35;
-
-    ctx.shadowColor = "rgba(14, 165, 233, 0.6)";
-
-    ctx.shadowBlur = 28 * energy;
-
-    ctx.fill();
-
-    ctx.restore();
-
+function getAntigravityOrbState() {
+  if (window.LiveTranscriptHUD && typeof window.LiveTranscriptHUD.getState === "function") {
+    var hudState = window.LiveTranscriptHUD.getState();
+    if (["idle","listening","thinking","speaking","interrupted"].indexOf(hudState) !== -1) return hudState;
+  }
+  var st = blobState.status;
+  if (st === "speak") return "speaking";
+  if (st === "listen") return "listening";
+  if (st === "conn" || st === "exec" || st === "think") return "thinking";
+  if (st === "interrupted") return "interrupted";
+  return "idle";
+}
+
+function updateAntigravityOrb() {
+  if (!antigravityOrbHandle) return;
+  var theme = getAntigravityOrbTheme();
+  if (theme !== antigravityOrbLastTheme) {
+    antigravityOrbLastTheme = theme;
+    antigravityOrbHandle.setTheme(theme);
+  }
+  antigravityOrbHandle.setState(getAntigravityOrbState());
+  var micAnalyser = antigravityMicAnalyser;
+  var agentAnalyser = antigravityAgentAnalyser;
+  if (micAnalyser !== antigravityOrbLastMicAnalyser || agentAnalyser !== antigravityOrbLastAgentAnalyser) {
+    antigravityOrbLastMicAnalyser = micAnalyser;
+    antigravityOrbLastAgentAnalyser = agentAnalyser;
+    antigravityOrbHandle.setAnalysers(micAnalyser, agentAnalyser);
+  }
+  var userLevel = Math.max(0, Math.min(1, Number(blobState.micLevel) || 0));
+  var agentLevel = Math.max(0, Math.min(1, Number(blobState.geminiLevel) || 0));
+  if (Math.abs(userLevel - antigravityOrbLastUser) > 0.008 || Math.abs(agentLevel - antigravityOrbLastAgent) > 0.008) {
+    antigravityOrbLastUser = userLevel;
+    antigravityOrbLastAgent = agentLevel;
+    antigravityOrbHandle.setLevels(userLevel, agentLevel);
+  }
+}
+
+function mountAntigravityOrb() {
+  var container = document.getElementById("antigravityOrbContainer");
+  if (!container || !window.AntigravityOrb || antigravityOrbHandle) {
+    updateAntigravityOrb();
+    return;
+  }
+  antigravityOrbLastTheme = getAntigravityOrbTheme();
+  antigravityOrbHandle = window.AntigravityOrb.mount(container, {
+    state: getAntigravityOrbState(),
+    theme: antigravityOrbLastTheme,
+    userAudioLevel: Math.max(0, Math.min(1, Number(blobState.micLevel) || 0)),
+    agentAudioLevel: Math.max(0, Math.min(1, Number(blobState.geminiLevel) || 0)),
+    micAnalyserNode: antigravityMicAnalyser,
+    agentAnalyserNode: antigravityAgentAnalyser,
+    onClick: function() { if (typeof handleStudioMicClick === "function") handleStudioMicClick(); }
   });
-
-
-
-  var hotspotRadius = baseRadius * 0.42 * (0.9 + energy * 0.25);
-
-  var hotspotGrad = ctx.createRadialGradient(
-
-    cx - hotspotRadius * 0.25,
-
-    cy - hotspotRadius * 0.25,
-
-    0,
-
-    cx,
-
-    cy,
-
-    hotspotRadius
-
-  );
-
-  hotspotGrad.addColorStop(0, "#ffffff");
-
-  hotspotGrad.addColorStop(0.35, "rgba(224, 242, 254, 0.95)");
-
-  hotspotGrad.addColorStop(0.7, "rgba(56, 189, 248, 0.6)");
-
-  hotspotGrad.addColorStop(1, "rgba(2, 132, 199, 0)");
-
-
-
-  ctx.save();
-
-  ctx.beginPath();
-
-  ctx.arc(cx, cy, hotspotRadius, 0, Math.PI * 2);
-
-  ctx.fillStyle = hotspotGrad;
-
-  ctx.globalAlpha = connected ? (agentActive || userActive ? 0.95 : 0.85) : 0.3;
-
-  ctx.fill();
-
-  ctx.restore();
-
-
-
-  if (connected && (agentActive || userActive)) {
-
-    ctx.save();
-
-    var rippleRadius = baseRadius * (1.18 + Math.sin(time * 3) * 0.08 + energy * 0.2);
-
-    ctx.beginPath();
-
-    ctx.arc(cx, cy, rippleRadius, 0, Math.PI * 2);
-
-    ctx.strokeStyle = agentActive ? "rgba(125, 211, 252, 0.4)" : "rgba(34, 211, 238, 0.45)";
-
-    ctx.lineWidth = 1.5;
-
-    ctx.stroke();
-
-    ctx.restore();
-
-  }
-
-}
-
-
-
-// 2. Render 3D-feel Fluid Dynamic Orb
-
-function renderFluidOrb(ctx, cx, cy, baseRadius, energy, time, colorTheme, userActive, agentActive, connected, freqData) {
-
-  var outerGlowRadius = baseRadius * (1.6 + energy * 0.5);
-
-  var outerGradient = ctx.createRadialGradient(cx, cy, baseRadius * 0.4, cx, cy, outerGlowRadius);
-
-  outerGradient.addColorStop(0, connected ? colorTheme.glow : "rgba(100, 116, 139, 0.15)");
-
-  outerGradient.addColorStop(0.6, connected ? (userActive ? "rgba(6, 182, 212, 0.15)" : "rgba(99, 102, 241, 0.12)") : "rgba(71, 85, 105, 0.05)");
-
-  outerGradient.addColorStop(1, "rgba(0, 0, 0, 0)");
-
-
-
-  ctx.save();
-
-  ctx.fillStyle = outerGradient;
-
-  ctx.beginPath();
-
-  ctx.arc(cx, cy, outerGlowRadius, 0, Math.PI * 2);
-
-  ctx.fill();
-
-  ctx.restore();
-
-
-
-  var layers = [
-
-    { points: 48, radiusMult: 1.08, noiseAmp: 22 * energy, speed: 1.0, alpha: 0.35, color: colorTheme.gradient[0] },
-
-    { points: 40, radiusMult: 0.98, noiseAmp: 18 * energy, speed: -1.2, alpha: 0.5, color: colorTheme.gradient[1] },
-
-    { points: 32, radiusMult: 0.88, noiseAmp: 14 * energy, speed: 1.4, alpha: 0.75, color: colorTheme.gradient[2] }
-
-  ];
-
-
-
-  layers.forEach(function(layer, layerIdx) {
-
-    ctx.save();
-
-    ctx.beginPath();
-
-    var points = layer.points;
-
-    var angleStep = (Math.PI * 2) / points;
-
-    var layerRadius = baseRadius * layer.radiusMult;
-
-    var coords = [];
-
-
-
-    for (var i = 0; i < points; i++) {
-
-      var angle = i * angleStep;
-
-      var freqBin = Math.floor((i / points) * 32);
-
-      var freqAmp = (freqData && freqData[freqBin] ? freqData[freqBin] : 0) / 255;
-
-
-
-      var wave1 = Math.sin(angle * 3 + time * layer.speed + layerIdx);
-
-      var wave2 = Math.cos(angle * 5 - time * 0.8 * layer.speed);
-
-      var wave3 = Math.sin(angle * 7 + time * 1.5);
-
-      var displacement = (wave1 * 0.5 + wave2 * 0.3 + wave3 * 0.2) * layer.noiseAmp + freqAmp * 26 * energy;
-
-
-
-      var r = layerRadius + displacement;
-
-      coords.push({ x: cx + Math.cos(angle) * r, y: cy + Math.sin(angle) * r });
-
+  antigravityOrbLastUser = Math.max(0, Math.min(1, Number(blobState.micLevel) || 0));
+  antigravityOrbLastAgent = Math.max(0, Math.min(1, Number(blobState.geminiLevel) || 0));
+  antigravityOrbLastMicAnalyser = antigravityMicAnalyser;
+  antigravityOrbLastAgentAnalyser = antigravityAgentAnalyser;
+  container.onkeydown = function(event) {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      if (typeof handleStudioMicClick === "function") handleStudioMicClick();
     }
-
-
-
-    ctx.moveTo((coords[0].x + coords[coords.length - 1].x) / 2, (coords[0].y + coords[coords.length - 1].y) / 2);
-
-    for (var k = 0; k < coords.length; k++) {
-
-      var next = coords[(k + 1) % coords.length];
-
-      ctx.quadraticCurveTo(coords[k].x, coords[k].y, (coords[k].x + next.x) / 2, (coords[k].y + next.y) / 2);
-
-    }
-
-    ctx.closePath();
-
-
-
-    var grad = ctx.createLinearGradient(cx - baseRadius, cy - baseRadius, cx + baseRadius, cy + baseRadius);
-
-    grad.addColorStop(0, layer.color);
-
-    grad.addColorStop(1, colorTheme.gradient[(layerIdx + 1) % 3]);
-
-
-
-    ctx.fillStyle = grad;
-
-    ctx.globalAlpha = connected ? layer.alpha : 0.25;
-
-    ctx.shadowColor = colorTheme.glow;
-
-    ctx.shadowBlur = 24 * energy;
-
-    ctx.fill();
-
-    ctx.restore();
-
-  });
-
-
-
-  var innerRadius = baseRadius * 0.45 * (0.85 + energy * 0.3);
-
-  var innerGradient = ctx.createRadialGradient(cx - innerRadius * 0.25, cy - innerRadius * 0.25, 0, cx, cy, innerRadius);
-
-  innerGradient.addColorStop(0, "#ffffff");
-
-  innerGradient.addColorStop(0.4, colorTheme.gradient[2]);
-
-  innerGradient.addColorStop(0.8, colorTheme.gradient[0]);
-
-  innerGradient.addColorStop(1, "rgba(255, 255, 255, 0)");
-
-
-
-  ctx.save();
-
-  ctx.beginPath();
-
-  ctx.arc(cx, cy, innerRadius, 0, Math.PI * 2);
-
-  ctx.fillStyle = innerGradient;
-
-  ctx.globalAlpha = connected ? 0.9 : 0.4;
-
-  ctx.fill();
-
-  ctx.restore();
-
+  };
+  if (antigravityOrbUpdateTimer) clearInterval(antigravityOrbUpdateTimer);
+  antigravityOrbUpdateTimer = setInterval(updateAntigravityOrb, 33);
 }
 
+function collapseHudTerminal() {
+  setHudTerminalExpanded(false);
+}
 
-
-// 3. Render Circular Waveform Ring Mode
-
-function renderWaveformRing(ctx, cx, cy, baseRadius, energy, time, colorTheme, userActive, agentActive, freqData) {
-
-  ctx.save();
-
-  var bars = 64;
-
-  var step = (Math.PI * 2) / bars;
-
-
-
-  for (var i = 0; i < bars; i++) {
-
-    var angle = i * step;
-
-    var freq = (freqData && freqData[i % 32] ? freqData[i % 32] : 0) / 255;
-
-    var barHeight = 8 + freq * 60 * energy;
-
-
-
-    var x1 = cx + Math.cos(angle) * (baseRadius - barHeight * 0.4);
-
-    var y1 = cy + Math.sin(angle) * (baseRadius - barHeight * 0.4);
-
-    var x2 = cx + Math.cos(angle) * (baseRadius + barHeight * 0.6);
-
-    var y2 = cy + Math.sin(angle) * (baseRadius + barHeight * 0.6);
-
-
-
-    ctx.beginPath();
-
-    ctx.moveTo(x1, y1);
-
-    ctx.lineTo(x2, y2);
-
-    ctx.strokeStyle = i % 2 === 0 ? colorTheme.gradient[1] : colorTheme.gradient[2];
-
-    ctx.lineWidth = 3;
-
-    ctx.lineCap = "round";
-
-    ctx.globalAlpha = 0.7 + freq * 0.3;
-
-    ctx.stroke();
-
+function setHudTerminalExpanded(expanded) {
+  var section = document.getElementById("cgHudTerminalSection");
+  var btn = document.getElementById("btnToggleHudTerminal");
+  var content = document.getElementById("cgHudTerminalContent");
+  var count = document.getElementById("cgHudTerminalCount");
+  if (!section || !btn || !content) return;
+  var currentlyExpanded = section.classList.contains("expanded");
+  if (currentlyExpanded === expanded) return;
+  section.classList.toggle("expanded", expanded);
+  section.classList.toggle("collapsed", !expanded);
+  btn.setAttribute("aria-expanded", expanded ? "true" : "false");
+  btn.title = expanded ? "Collapse Workstation Terminal logs" : "Expand Workstation Terminal logs";
+  content.setAttribute("aria-hidden", expanded ? "false" : "true");
+  if (expanded && count) {
+    count.textContent = "0";
+    count.style.display = "none";
+    window.setTimeout(function() {
+      var logs = document.getElementById("cgHudTerminalLogs");
+      if (logs) logs.scrollTop = logs.scrollHeight;
+    }, 200);
   }
-
-
-
-  ctx.beginPath();
-
-  ctx.arc(cx, cy, baseRadius * 0.55, 0, Math.PI * 2);
-
-  ctx.fillStyle = colorTheme.glow;
-
-  ctx.fill();
-
-  ctx.restore();
-
 }
 
+function sanitizeHudTerminalText(text) {
+  return escapeHtml(String(text || "")).replace(/\n/g, "<br>");
+}
 
-
-// 4. Render Neural Symmetric Spectrum Bars Mode
-
-function renderNeuralBars(ctx, cx, cy, baseRadius, energy, _time, colorTheme, freqData) {
-
-  ctx.save();
-
-  var barCount = 36;
-
-  var barWidth = 6;
-
-  var gap = 5;
-
-  var totalWidth = barCount * (barWidth + gap);
-
-  var startX = cx - totalWidth / 2;
-
-
-
-  for (var i = 0; i < barCount; i++) {
-
-    var distFromCenter = Math.abs(i - barCount / 2) / (barCount / 2);
-
-    var freqIdx = Math.floor((1 - distFromCenter) * 28);
-
-    var val = (freqData && freqData[freqIdx] ? freqData[freqIdx] : 0) / 255;
-
-
-
-    var barHeight = Math.max(6, val * 120 * energy);
-
-    var x = startX + i * (barWidth + gap);
-
-    var y = cy - barHeight / 2;
-
-
-
-    var grad = ctx.createLinearGradient(x, y, x, y + barHeight);
-
-    grad.addColorStop(0, colorTheme.gradient[0]);
-
-    grad.addColorStop(0.5, colorTheme.gradient[1]);
-
-    grad.addColorStop(1, colorTheme.gradient[2]);
-
-
-
-    ctx.fillStyle = grad;
-
-    ctx.beginPath();
-
-    if (ctx.roundRect) {
-
-      ctx.roundRect(x, y, barWidth, barHeight, 4);
-
-    } else {
-
-      ctx.rect(x, y, barWidth, barHeight);
-
-    }
-
-    ctx.fill();
-
+function appendHudTerminalLog(type, cleanText) {
+  var logs = document.getElementById("cgHudTerminalLogs");
+  var section = document.getElementById("cgHudTerminalSection");
+  var badge = document.getElementById("cgHudTerminalBadge");
+  var count = document.getElementById("cgHudTerminalCount");
+  if (!logs || !section) return false;
+  var line = document.createElement("div");
+  line.className = "cg-hud-terminal-line";
+  var stamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  var formatted;
+  var lineType = type === "err" ? "err" : (type === "tool" ? "tool" : (type === "out" ? "out" : "sys"));
+  if (type === "out" && typeof formatToolOutput === "function") {
+    formatted = formatToolOutput(cleanText);
+  } else {
+    formatted = sanitizeHudTerminalText(cleanText);
   }
-
-  ctx.restore();
-
-}
-
-
-
-function initGeminiOrbVisualizer() {
-
-  orbCanvas = document.getElementById("geminiOrbCanvas");
-
-  if (!orbCanvas) return;
-
-  orbCtx = orbCanvas.getContext("2d");
-
-
-
-  function resizeOrbCanvas() {
-
-    if (!orbCanvas) return;
-
-    var rect = orbCanvas.getBoundingClientRect();
-
-    if (rect.width === 0 || rect.height === 0) return;
-
-    var dpr = window.devicePixelRatio || 1;
-
-    orbCanvas.width = Math.round(rect.width * dpr);
-
-    orbCanvas.height = Math.round(rect.height * dpr);
-
-    if (orbCtx) {
-
-      orbCtx.setTransform(1, 0, 0, 1, 0, 0);
-
-      orbCtx.scale(dpr, dpr);
-
-    }
-
+  line.innerHTML = '<span class="cg-hud-terminal-prompt">&gt; [' + escapeHtml(stamp) + ']</span>' + '<span class="cg-hud-terminal-text ' + lineType + '">' + formatted + '</span>';
+  logs.appendChild(line);
+  while (logs.children.length > 120) logs.removeChild(logs.firstElementChild);
+  if (badge) {
+    var badgeText = lineType === "err" ? "ERROR" : (lineType === "tool" ? "TOOL" : "LOGS");
+    badge.textContent = badgeText;
+    badge.classList.toggle("err", lineType === "err");
   }
-
-  resizeOrbCanvas();
-
-  window.addEventListener("resize", resizeOrbCanvas);
-
-
-
-  if (_visAnimFrame) cancelAnimationFrame(_visAnimFrame);
-
-
-
-  function renderVisualizerLoop() {
-
-    _visAnimFrame = requestAnimationFrame(renderVisualizerLoop);
-
-    if (!orbCanvas || !orbCtx) return;
-
-    if (orbCanvas.offsetParent === null) return; // Tab not active
-
-
-
-    var rect = orbCanvas.getBoundingClientRect();
-
-    var width = rect.width;
-
-    var height = rect.height;
-
-    if (width === 0 || height === 0) return;
-
-    var cx = width / 2;
-
-    var cy = height / 2;
-
-
-
-    orbCtx.clearRect(0, 0, width, height);
-
-
-
-    var userSpeaking = (blobState.status === "listen" && blobState.micLevel > 0.08);
-
-    var agentSpeaking = (blobState.status === "speak" && blobState.geminiLevel > 0.05);
-
-    var isConn = (blobState.status === "listen" || blobState.status === "speak");
-
-
-
-    var activeRms = agentSpeaking ? blobState.geminiLevel : (userSpeaking ? blobState.micLevel : 0.05);
-
-    var targetEnergy = isConn ? Math.max(0.15, Math.min(1.2, activeRms * 2.8 + (agentSpeaking || userSpeaking ? 0.35 : 0.15))) : 0.08;
-
-
-
-    smoothedEnergy += (targetEnergy - smoothedEnergy) * 0.12;
-
-    visTime += 0.02 + smoothedEnergy * 0.03;
-
-
-
-    var baseRadius = Math.min(width, height) * 0.28;
-
-    var theme = getEmotionTheme(window._currentLiveTone ? window._currentLiveTone.primaryEmotion : "curious");
-
-    var freqData = window._latestAudioFreqData || new Uint8Array(64);
-
-
-
-    if (visualizerMode === "chatgpt-avm") {
-
-      renderChatGptAvm(orbCtx, cx, cy, baseRadius, smoothedEnergy, visTime, userSpeaking, agentSpeaking, isConn, freqData);
-
-    } else if (visualizerMode === "fluid-orb") {
-
-      renderFluidOrb(orbCtx, cx, cy, baseRadius, smoothedEnergy, visTime, theme, userSpeaking, agentSpeaking, isConn, freqData);
-
-    } else if (visualizerMode === "waveform-ring") {
-
-      renderWaveformRing(orbCtx, cx, cy, baseRadius, smoothedEnergy, visTime, theme, userSpeaking, agentSpeaking, freqData);
-
-    } else {
-
-      renderNeuralBars(orbCtx, cx, cy, baseRadius, smoothedEnergy, visTime, theme, freqData);
-
-    }
-
+  if (!section.classList.contains("expanded") && count) {
+    var nextCount = parseInt(count.textContent || "0", 10) + 1;
+    count.textContent = String(nextCount);
+    count.style.display = "inline-flex";
+  } else {
+    logs.scrollTop = logs.scrollHeight;
   }
-
-
-
-  renderVisualizerLoop();
-
+  return true;
 }
 
-
-
-if (document.readyState === "loading") {
-
-  document.addEventListener("DOMContentLoaded", initGeminiOrbVisualizer);
-
-} else {
-
-  initGeminiOrbVisualizer();
-
+function toggleHudTerminal() {
+  var section = document.getElementById("cgHudTerminalSection");
+  if (!section) return;
+  setHudTerminalExpanded(!section.classList.contains("expanded"));
 }
-
-
 
 function installPWA() {
 
@@ -2820,9 +2132,23 @@ function updateUserSpeechBubble(text, isFinal) {
   var hero = document.getElementById("geminiHeroGreeting");
   if (hero) hero.style.display = "none";
 
+  // Mark that Gemini's server-side transcription has arrived — this stops
+  // the Web Speech fallback from feeding, letting the more accurate server
+  // transcription take over seamlessly.
+  // Interim chunks are concatenated (like Antigravity's appendTranscriptFragment);
+  // final text replaces the accumulated buffer with the complete transcript.
+  if (!isListeningPlaceholder) {
+    if (isFinal) {
+      accumulatedSpokenText = cleanText;
+    } else {
+      accumulatedSpokenText = accumulatedSpokenText ? accumulatedSpokenText + cleanText : cleanText;
+    }
+  }
+
   // 🎙️ Stream User turn into Live Transcript HUD
   if (window.LiveTranscriptHUD) {
-    window.LiveTranscriptHUD.onUserTranscript(cleanText, Boolean(isFinal));
+    var hudText = isListeningPlaceholder ? cleanText : accumulatedSpokenText;
+    window.LiveTranscriptHUD.onUserTranscript(hudText, Boolean(isFinal));
   }
 
   // NOTE: User speech bubbles in the center terminal stream are permanently removed.
@@ -2876,89 +2202,8 @@ function appendGeminiLog(type, text, isStreamChunk) {
     currentUserStreamRow = null;
     currentUserStreamText = "";
 
-        // 💻 UNIFIED SYSTEM & TOOL TERMINAL BOX
-
-    var timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-
-    
-
-    // Check if the last element is already an active terminal box
-
-    var lastBox = l.lastElementChild;
-
-    var termBody = null;
-
-    if (lastBox && lastBox.classList.contains("cg-terminal-box")) {
-
-      termBody = lastBox.querySelector(".cg-term-body");
-
-    }
-
-    
-
-    if (!termBody) {
-
-      var box = document.createElement("div");
-
-      box.className = "cg-terminal-box";
-
-      var badgeText = (type === "err") ? "ERROR" : (type === "tool" ? "TOOL" : "LOGS");
-
-      var badgeClass = (type === "err") ? "cg-term-badge err" : "cg-term-badge";
-
-      
-
-      box.innerHTML = 
-
-        '<div class="cg-term-head">' +
-
-          '<div class="cg-term-title">💻 WORKSTATION TERMINAL</div>' +
-
-          '<span class="' + badgeClass + '">' + badgeText + '</span>' +
-
-        '</div>' +
-
-        '<div class="cg-term-body"></div>';
-
-      l.appendChild(box);
-
-      termBody = box.querySelector(".cg-term-body");
-
-    }
-
-    
-
-    var line = document.createElement("div");
-
-    line.className = "cg-term-line";
-
-    
-
-    var formattedText = cleanText;
-
-    if (type === "out") {
-
-      formattedText = formatToolOutput(cleanText);
-
-    } else {
-
-      formattedText = escapeHtml(cleanText);
-
-    }
-
-    
-
-    var textClass = "cg-term-text " + type;
-
-    line.innerHTML = '<span class="cg-term-prompt">&gt; [' + timeStr + ']</span><span class="' + textClass + '">' + formattedText + '</span>';
-
-    termBody.appendChild(line);
-
-    termBody.scrollTop = termBody.scrollHeight;
-
+    appendHudTerminalLog(type, cleanText);
   }
-
-  
 
   // Auto scroll smooth to bottom
 
@@ -3555,7 +2800,7 @@ function setGeminiStatus(st, titleText, subText) {
   if (window.LiveTranscriptHUD) {
     var mappedSt = (st === "speak") ? "speaking" :
                    (st === "listen") ? "listening" :
-                   (st === "think") ? "thinking" :
+                   (st === "think" || st === "conn" || st === "exec") ? "thinking" :
                    (st === "interrupted") ? "interrupted" : "idle";
     window.LiveTranscriptHUD.setState(mappedSt);
   }
@@ -5023,12 +4268,6 @@ function connectGeminiLive() {
 
     initPlaybackAudioContext();
 
-    if (typeof initLiveSpeechRecognizer === "function") {
-
-      try { initLiveSpeechRecognizer(); } catch(e) {}
-
-    }
-
   };
 
 
@@ -5443,6 +4682,9 @@ function handleGeminiServerMessage(msg) {
 
 
   if (msg.serverContent && msg.serverContent.turnComplete) {
+    if (window.LiveTranscriptHUD && typeof window.LiveTranscriptHUD.onAgentTranscript === 'function') {
+      window.LiveTranscriptHUD.onAgentTranscript('', true);
+    }
 
     var userTextToRecord = (currentUserStreamText && currentUserStreamText.trim()) ? currentUserStreamText.trim() : "";
 
@@ -6239,11 +5481,18 @@ function startMicrophoneCapture() {
 
     audioInputSource = audioInputCtx.createMediaStreamSource(stream);
 
+    // Start Web Speech recognizer for instant local user transcription.
+    // Must be called after getUserMedia succeeds (user granted mic permission),
+    // not from an async WebSocket callback — matches Antigravity's approach.
+    if (typeof initLiveSpeechRecognizer === "function") {
+      try { initLiveSpeechRecognizer(); } catch(e) {}
+    }
+
 
 
     // Visualizer Analyser Node
-
     var analyser = audioInputCtx.createAnalyser();
+    antigravityMicAnalyser = analyser;
 
     analyser.fftSize = 512;
 
@@ -6702,11 +5951,12 @@ function initPlaybackAudioContext() {
     });
 
     playbackGainNode = audioPlaybackCtx.createGain();
-
     playbackGainNode.gain.value = 1.0;
-
-    playbackGainNode.connect(audioPlaybackCtx.destination);
-
+    antigravityAgentAnalyser = audioPlaybackCtx.createAnalyser();
+    antigravityAgentAnalyser.fftSize = 512;
+    antigravityAgentAnalyser.smoothingTimeConstant = 0.6;
+    playbackGainNode.connect(antigravityAgentAnalyser);
+    antigravityAgentAnalyser.connect(audioPlaybackCtx.destination);
     nextPlayTime = 0;
 
   }
@@ -6840,6 +6090,9 @@ function disconnectGeminiLive() {
 
   }
 
+  antigravityMicAnalyser = null;
+  antigravityAgentAnalyser = null;
+
   if (audioPlaybackCtx) {
 
     try { audioPlaybackCtx.close(); } catch(e) {}
@@ -6971,19 +6224,10 @@ function closeGemini3DotMenu() {
 
 
 function isSidebarMiniRail() {
-
   var drawer = document.getElementById("cgSidebarDrawer");
-
   if (!drawer) return false;
-
   if (window.innerWidth < 860) return false;
-
-  return drawer.classList.contains("mini-rail") || 
-
-         drawer.classList.contains("collapsed") || 
-
-         (drawer.offsetWidth > 0 && drawer.offsetWidth <= 100);
-
+  return drawer.classList.contains("mini-rail") || drawer.classList.contains("collapsed") || drawer.offsetWidth <= 72;
 }
 
 
@@ -7259,213 +6503,81 @@ function toggleMorePills() {
 
 
 function toggleCgSidebar() {
-
   var drawer = document.getElementById("cgSidebarDrawer");
-
-  var backdrop = document.getElementById("cgSidebarBackdrop");
-
-  var container = document.querySelector(".cg-app-container");
-
   if (!drawer) return;
 
-  
+  var isClosed = (window.innerWidth >= 860)
+    ? (drawer.classList.contains("mini-rail") || drawer.classList.contains("collapsed") || drawer.offsetWidth <= 72)
+    : (!drawer.classList.contains("open"));
 
-  if (window.innerWidth >= 860) {
-
-    // Desktop: Smooth side-by-side dock collapse/expand — close goes to mini-rail (68px icons only), avatar click opens
-
-    var isCollapsed = drawer.classList.contains("collapsed") || drawer.classList.contains("mini-rail");
-
-    if (isCollapsed) {
-
-      drawer.classList.remove("collapsed");
-
-      if (container) container.classList.remove("sidebar-collapsed");
-
-      var savedW = parseInt(localStorage.getItem("panic_sidebar_width")) || 260;
-
-      if (savedW <= 70) savedW = 260;
-
-      if (savedW <= 120) {
-
-        drawer.classList.add("mini-rail");
-
-      } else {
-
-        drawer.classList.remove("mini-rail");
-
-      }
-
-      document.documentElement.style.setProperty("--cg-sidebar-width", savedW + "px");
-
-      drawer.style.width = savedW + "px";
-
-    } else {
-
-      drawer.classList.remove("collapsed");
-
-      drawer.classList.add("mini-rail");
-
-      if (container) container.classList.remove("sidebar-collapsed");
-
-      document.documentElement.style.setProperty("--cg-sidebar-width", "68px");
-
-      drawer.style.width = "68px";
-
-      localStorage.setItem("panic_sidebar_width", "68");
-
-    }
-
+  if (isClosed) {
+    openCgSidebar();
   } else {
-
-    // Mobile: Off-canvas slide-out drawer with silky spring physics
-
-    var isOpen = drawer.classList.contains("open");
-
-    if (isOpen) {
-
-      closeCgSidebar();
-
-    } else {
-
-      openCgSidebar();
-
-    }
-
+    closeCgSidebar();
   }
-
 }
-
-
 
 function openCgSidebar() {
-
   if (typeof closeMiniRailUserPopover === "function") closeMiniRailUserPopover();
-
   var drawer = document.getElementById("cgSidebarDrawer");
-
   var backdrop = document.getElementById("cgSidebarBackdrop");
-
   var container = document.querySelector(".cg-app-container");
-
   if (!drawer) return;
 
+  var savedW = parseInt(localStorage.getItem("panic_sidebar_width")) || 260;
+  if (savedW <= 70) savedW = 260;
 
+  drawer.classList.remove("cg-drawer-exiting", "collapsed", "mini-rail");
+  drawer.classList.add("open");
+  drawer.style.pointerEvents = "auto";
 
   if (window.innerWidth >= 860) {
-
-    drawer.classList.remove("collapsed");
-
     if (container) container.classList.remove("sidebar-collapsed");
-
-    var savedW = parseInt(localStorage.getItem("panic_sidebar_width")) || 260;
-
-    if (savedW <= 70) savedW = 260;
-
-    if (savedW <= 120) drawer.classList.add("mini-rail");
-
-    else drawer.classList.remove("mini-rail");
-
     document.documentElement.style.setProperty("--cg-sidebar-width", savedW + "px");
-
     drawer.style.width = savedW + "px";
-
-  } else {
-
-    drawer.classList.add("drawer-animating");
-
-    if (backdrop) backdrop.classList.add("backdrop-animating");
-
-    
-
-    drawer.classList.add("open");
-
-    drawer.style.transform = "translate3d(0px, 0, 0)";
-
-    drawer.style.webkitTransform = "translate3d(0px, 0, 0)";
-
-    
-
     if (backdrop) {
-
-      backdrop.style.display = "block";
-
-      backdrop.style.opacity = "1";
-
-      backdrop.classList.add("open");
-
+      backdrop.style.display = "none";
+      backdrop.classList.remove("open", "backdrop-animating");
     }
-
+  } else {
+    document.body.classList.add("sidebar-open");
+    drawer.style.width = "";
+    if (backdrop) {
+      backdrop.style.display = "block";
+      backdrop.classList.add("open", "backdrop-animating");
+    }
   }
-
 }
 
-
-
 function closeCgSidebar() {
-
   if (typeof closeMiniRailUserPopover === "function") closeMiniRailUserPopover();
-
   var drawer = document.getElementById("cgSidebarDrawer");
-
   var backdrop = document.getElementById("cgSidebarBackdrop");
-
   var container = document.querySelector(".cg-app-container");
-
   if (!drawer) return;
 
-
-
   if (window.innerWidth >= 860) {
-
-    drawer.classList.remove("collapsed");
-
-    drawer.classList.add("mini-rail");
-
-    if (container) container.classList.remove("sidebar-collapsed");
-
-    document.documentElement.style.setProperty("--cg-sidebar-width", "68px");
-
-    drawer.style.width = "68px";
-
-    localStorage.setItem("panic_sidebar_width", "68");
-
-  } else {
-
-    drawer.classList.add("drawer-animating");
-
-    if (backdrop) backdrop.classList.add("backdrop-animating");
-
-    
-
+    // Desktop: Smoothly collapse from Right to Left into the 64px Icon Rail
     drawer.classList.remove("open");
-
-    drawer.style.transform = "translate3d(-100%, 0, 0)";
-
-    drawer.style.webkitTransform = "translate3d(-100%, 0, 0)";
-
-    
-
+    drawer.classList.add("mini-rail", "collapsed");
+    document.documentElement.style.setProperty("--cg-sidebar-width", "64px");
+    drawer.style.width = "64px";
+    drawer.style.pointerEvents = "auto";
+    if (container) container.classList.add("sidebar-collapsed");
     if (backdrop) {
-
-      backdrop.style.opacity = "0";
-
-      backdrop.classList.remove("open");
-
-      setTimeout(function() {
-
-        if (!drawer.classList.contains("open")) {
-
-          backdrop.style.display = "none";
-
-        }
-
-      }, 300);
-
+      backdrop.style.display = "none";
+      backdrop.classList.remove("open", "backdrop-animating");
     }
-
+  } else {
+    // Mobile: Off-canvas slide right-to-left
+    drawer.classList.remove("open");
+    drawer.classList.add("collapsed");
+    document.body.classList.remove("sidebar-open");
+    if (backdrop) {
+      backdrop.style.display = "none";
+      backdrop.classList.remove("open", "backdrop-animating");
+    }
   }
-
 }
 
 
@@ -7477,232 +6589,6 @@ function toggleSidebarMenu() {
 }
 
 
-
-// ↔️ ANTIGRAVITY SIDEBAR DRAGGABLE RESIZER ENGINE WITH MINI-RAIL SUPPORT
-
-function initSidebarResizerEngine() {
-
-  var resizer = document.getElementById("cgSidebarResizer");
-
-  var sidebar = document.getElementById("cgSidebarDrawer");
-
-  if (!resizer || !sidebar) return;
-
-
-
-  var widthBadge = document.getElementById("sidebarWidthBadge");
-
-  if (!widthBadge) {
-
-    widthBadge = document.createElement("div");
-
-    widthBadge.id = "sidebarWidthBadge";
-
-    widthBadge.style.cssText = "position:fixed;top:14px;left:0;transform:translateX(-50%);background:rgba(15,23,42,0.92);color:#00f0ff;border:1px solid rgba(0,240,255,0.5);padding:5px 10px;border-radius:8px;font-family:monospace;font-size:12px;font-weight:700;z-index:10000;pointer-events:none;display:none;box-shadow:0 4px 16px rgba(0,0,0,0.4);backdrop-filter:blur(8px);";
-
-    document.body.appendChild(widthBadge);
-
-  }
-
-  
-
-  var isResizing = false;
-
-  var startX = 0;
-
-  var startWidth = 260;
-
-  
-
-  var savedWidth = localStorage.getItem("panic_sidebar_width");
-
-  if (savedWidth && window.innerWidth >= 860 && !sidebar.classList.contains("collapsed")) {
-
-    var sw = parseInt(savedWidth);
-
-    if (sw <= 120 && sw >= 50) {
-
-      sidebar.classList.add("mini-rail");
-
-      sw = 68;
-
-    }
-
-    document.documentElement.style.setProperty("--cg-sidebar-width", sw + "px");
-
-    sidebar.style.width = sw + "px";
-
-  }
-
-  
-
-  function startResize(e) {
-
-    if (window.innerWidth < 860) return;
-
-    isResizing = true;
-
-    var pt = (e.touches && e.touches[0]) ? e.touches[0] : e;
-
-    startX = pt.clientX;
-
-    startWidth = sidebar.getBoundingClientRect().width;
-
-    document.body.style.cursor = "col-resize";
-
-    document.body.style.userSelect = "none";
-
-    resizer.classList.add("dragging");
-
-    var curW = Math.round(startWidth);
-
-    widthBadge.textContent = curW + "px";
-
-    widthBadge.style.left = (sidebar.getBoundingClientRect().left + curW + 12) + "px";
-
-    widthBadge.style.display = "block";
-
-    
-
-    window.addEventListener("mousemove", doResize, { passive: false });
-
-    window.addEventListener("mouseup", stopResize);
-
-    window.addEventListener("touchmove", doResize, { passive: false });
-
-    window.addEventListener("touchend", stopResize);
-
-    if (e.cancelable) e.preventDefault();
-
-  }
-
-  
-
-  function doResize(e) {
-
-    if (!isResizing) return;
-
-    var pt = (e.touches && e.touches[0]) ? e.touches[0] : e;
-
-    var clientX = pt.clientX;
-
-    var newWidth = startWidth + (clientX - startX);
-
-    
-
-    // 🎯 Mini-rail snapping: when resized below 140px, show ONLY icons!
-
-    if (newWidth <= 130) {
-
-      if (newWidth < 45) {
-
-        // Snap collapse completely
-
-        sidebar.classList.add("collapsed");
-
-        sidebar.classList.remove("mini-rail");
-
-        newWidth = 0;
-
-      } else {
-
-        // Lock to sleek mini-rail width (68px)
-
-        sidebar.classList.remove("collapsed");
-
-        sidebar.classList.add("mini-rail");
-
-        newWidth = 68;
-
-      }
-
-    } else {
-
-      sidebar.classList.remove("collapsed");
-
-      sidebar.classList.remove("mini-rail");
-
-      if (newWidth > 650) newWidth = 650;
-
-    }
-
-    
-
-    document.documentElement.style.setProperty("--cg-sidebar-width", newWidth + "px");
-
-    sidebar.style.width = newWidth + "px";
-
-    widthBadge.textContent = Math.round(newWidth) + "px";
-
-    widthBadge.style.left = (sidebar.getBoundingClientRect().left + newWidth + 12) + "px";
-
-    widthBadge.style.display = "block";
-
-    var container = document.querySelector(".cg-app-container");
-
-    if (container) {
-
-      if (newWidth === 0) container.classList.add("sidebar-collapsed");
-
-      else container.classList.remove("sidebar-collapsed");
-
-    }
-
-    
-
-    if (e.cancelable) e.preventDefault();
-
-  }
-
-  
-
-  function stopResize() {
-
-    if (!isResizing) return;
-
-    isResizing = false;
-
-    document.body.style.cursor = "";
-
-    document.body.style.userSelect = "";
-
-    resizer.classList.remove("dragging");
-
-    
-
-    var finalWidth = sidebar.getBoundingClientRect().width;
-
-    if (finalWidth >= 50) {
-
-      localStorage.setItem("panic_sidebar_width", Math.round(finalWidth));
-
-    }
-
-    setTimeout(function(){ if (!isResizing) widthBadge.style.display = "none"; }, 900);
-
-    
-
-    window.removeEventListener("mousemove", doResize);
-
-    window.removeEventListener("mouseup", stopResize);
-
-    window.removeEventListener("touchmove", doResize);
-
-    window.removeEventListener("touchend", stopResize);
-
-  }
-
-  
-
-  resizer.addEventListener("mousedown", startResize);
-
-  resizer.addEventListener("touchstart", startResize, { passive: false });
-
-}
-
-
-
-// 📱 CHATGPT / GEMINI PRODUCTION-GRADE 120Hz SLIDE-IN GESTURE CONTROLLER
 
 function initMobileDrawerGestureEngine() {
 
@@ -8008,14 +6894,31 @@ function initMobileDrawerGestureEngine() {
 
 }
 
+function initSidebarInitialState() {
+  var drawer = document.getElementById("cgSidebarDrawer");
+  if (!drawer) return;
+  var savedW = parseInt(localStorage.getItem("panic_sidebar_width")) || 260;
+  if (savedW <= 70) savedW = 260;
+  if (window.innerWidth >= 860) {
+    drawer.classList.add("open");
+    drawer.classList.remove("collapsed", "mini-rail", "cg-drawer-exiting", "drawer-animating");
+    drawer.style.width = savedW + "px";
+    drawer.style.pointerEvents = "auto";
+  } else {
+    drawer.classList.add("collapsed");
+    drawer.classList.remove("open", "mini-rail", "cg-drawer-exiting", "drawer-animating");
+    drawer.style.pointerEvents = "none";
+  }
+}
+
 if (document.readyState === "loading") {
-
-  document.addEventListener("DOMContentLoaded", initMobileDrawerGestureEngine);
-
+  document.addEventListener("DOMContentLoaded", function() {
+    initSidebarInitialState();
+    initMobileDrawerGestureEngine();
+  });
 } else {
-
+  initSidebarInitialState();
   initMobileDrawerGestureEngine();
-
 }
 
 
@@ -8652,9 +7555,8 @@ window.setupOptionHoverPreviews = setupOptionHoverPreviews;
 
 window.addEventListener("DOMContentLoaded", function() {
 
-  initGeminiOrbVisualizer();
+  mountAntigravityOrb();
 
-  initSidebarResizerEngine();
 
   setupOptionHoverPreviews();
 
@@ -8662,9 +7564,8 @@ window.addEventListener("DOMContentLoaded", function() {
 
 setTimeout(function() {
 
-  initGeminiOrbVisualizer();
+  mountAntigravityOrb();
 
-  initSidebarResizerEngine();
 
   setupOptionHoverPreviews();
 
@@ -9143,6 +8044,8 @@ window.LiveTranscriptHUD = (function() {
   var agentAudioStartTime = 0;
   var agentAudioTotalDuration = 0;
   var syncInterval = null;
+  var lastUserWordRevealAt = 0;
+  var revealingUserTurnId = null;
 
   var LISTENING_GIF_DATA_URI = "data:image/gif;base64,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";
 
@@ -9183,30 +8086,101 @@ window.LiveTranscriptHUD = (function() {
   }
 
   function startSyncLoop() {
-    if (syncInterval) clearInterval(syncInterval);
-    syncInterval = setInterval(function() {
-      if (state === 'speaking' && currentAgentTurnId && audioPlaybackCtx && agentAudioTotalDuration > 0) {
-        var now = audioPlaybackCtx.currentTime;
-        var elapsed = Math.max(0, now - agentAudioStartTime);
-        var progress = Math.min(1.0, elapsed / agentAudioTotalDuration);
-        audioPlaybackProgress = progress;
+    if (syncInterval) cancelAnimationFrame(syncInterval);
+    function syncFrame() {
+      // 1. Agent word-by-word pop-in sync.
+      //    Audio playing  -> advance with the speaker (floor(progress * words)).
+      //    No audio (text-only reply / pre-audio TTS delay) -> timed reveal
+      //    (one word every ~70ms, matching the user-side cadence) so words
+      //    still pop in instead of freezing or dumping all at once.
+      var agentTurn = currentAgentTurnId ? findTurn(currentAgentTurnId) : null;
+      var agentHasAudio = !!(audioPlaybackCtx && agentAudioTotalDuration > 0);
+      if (agentTurn && agentTurn.words && agentTurn.words.length > 0) {
+        if (state === 'speaking' && agentHasAudio) {
+          var now = audioPlaybackCtx.currentTime;
+          var elapsed = Math.max(0, now - agentAudioStartTime);
+          var progress = Math.min(1.0, elapsed / agentAudioTotalDuration);
+          audioPlaybackProgress = progress;
 
-        var turn = findTurn(currentAgentTurnId);
-        if (turn && turn.words && turn.words.length > 0) {
-          var syncedIdx = Math.min(turn.words.length - 1, Math.max(0, Math.floor(progress * turn.words.length)));
+          var syncedIdx = Math.min(agentTurn.words.length - 1, Math.max(0, Math.floor(progress * agentTurn.words.length)));
           activeAgentWordIndex = syncedIdx;
-          if (turn.spokenWordIndex !== syncedIdx) {
-            turn.spokenWordIndex = syncedIdx;
-            turn.words.forEach(function(w, wIdx) {
+          if (agentTurn.spokenWordIndex < syncedIdx) {
+            agentTurn.spokenWordIndex = syncedIdx;
+            agentTurn.words.forEach(function(w, wIdx) {
               w.isSpoken = (wIdx <= syncedIdx);
               w.isCurrent = (wIdx === syncedIdx);
             });
-            renderWordsForTurn(turn);
+            renderWordsForTurn(agentTurn);
+          }
+          updateSyncBar();
+        } else if (!agentTurn.revealDone) {
+          var wallMs = performance.now();
+          if (wallMs - (agentTurn._timedRevealAt || 0) >= 70) {
+            agentTurn._timedRevealAt = wallMs;
+            var timedTarget = agentTurn.words.length - 1;
+            var timedCur = (agentTurn.spokenWordIndex | 0);
+            if (timedCur < timedTarget) {
+              agentTurn.spokenWordIndex = timedCur + 1;
+              var timedIdx = agentTurn.spokenWordIndex;
+              agentTurn.words.forEach(function(w, wIdx) {
+                w.isSpoken = wIdx <= timedIdx;
+                w.isCurrent = wIdx === timedIdx;
+              });
+              renderWordsForTurn(agentTurn);
+            } else {
+              agentTurn.revealDone = true;
+              agentTurn.words.forEach(function(w) {
+                w.isSpoken = true;
+                w.isCurrent = false;
+              });
+              renderWordsForTurn(agentTurn);
+            }
           }
         }
+      } else if (state === 'speaking' && agentHasAudio) {
         updateSyncBar();
       }
-    }, 45);
+
+      // User speech reveals one word every ~55ms, including a final
+      // full-text event, so the HUD does not show all words at once.
+      if (revealingUserTurnId) {
+        var userTurn = findTurn(revealingUserTurnId);
+        if (userTurn && userTurn.words && userTurn.words.length > 0) {
+          var userTarget = userTurn.words.length - 1;
+          var wallNowMs = performance.now();
+          if (userTurn.spokenWordIndex < userTarget && wallNowMs - lastUserWordRevealAt >= 55) {
+            lastUserWordRevealAt = wallNowMs;
+            userTurn.spokenWordIndex = Math.min(userTarget, Math.max(0, userTurn.spokenWordIndex + 1));
+            userTurn.words.forEach(function(w, wIdx) {
+              w.isSpoken = wIdx <= userTurn.spokenWordIndex;
+              w.isCurrent = wIdx === userTurn.spokenWordIndex;
+            });
+            renderWordsForTurn(userTurn);
+          } else if (userTurn.spokenWordIndex >= userTarget) {
+            userTurn.words.forEach(function(w) {
+              w.isSpoken = true;
+              w.isCurrent = false;
+            });
+            revealingUserTurnId = null;
+            // KEY FIX: Only finalize (null currentUserTurnId) if isFinal text has arrived.
+            // If still interim, more text may come, keep currentUserTurnId alive.
+            if (userTurn.isFinalText) {
+              userTurn.isComplete = true;
+              userTurn.revealDone = true;
+              if (currentUserTurnId === userTurn.id) {
+                currentUserTurnId = null;
+                state = 'idle';
+              }
+            }
+            renderWordsForTurn(userTurn);
+          }
+        } else {
+          revealingUserTurnId = null;
+        }
+      }
+      syncInterval = requestAnimationFrame(syncFrame);
+    }
+    syncInterval = requestAnimationFrame(syncFrame);
   }
 
   function toggleExpand() {
@@ -9274,6 +8248,8 @@ window.LiveTranscriptHUD = (function() {
   }
 
   function onUserTranscript(text, isFinal) {
+    // A new live voice turn takes priority over the log overlay.
+    collapseHudTerminal();
     if (!text) return;
     var rawText = String(text).replace(/^👤 User:\s*/, "").replace(/^PS >\s*/, "").trim();
     if (!rawText) return;
@@ -9326,48 +8302,57 @@ window.LiveTranscriptHUD = (function() {
     }
 
     var wordsArray = rawText.split(/\s+/).filter(Boolean);
+
+    // KEY FIX: Never dump all words at once on isFinal.
+    // Keep the already-revealed count as floor; rAF loop will advance the rest.
+    var currentRevealedIdx = (turn && turn.spokenWordIndex >= 0) ? turn.spokenWordIndex : 0;
+    // Clamp to current progress - never go backward, never jump to end.
+    var revealedCount = Math.max(1, Math.min(wordsArray.length, currentRevealedIdx + 1));
     var wordsObj = wordsArray.map(function(w, idx) {
       return {
         id: 'u-' + Date.now() + '-' + idx,
         text: w,
-        isSpoken: true,
-        isCurrent: (idx === wordsArray.length - 1)
+        isSpoken: idx < revealedCount,
+        isCurrent: idx === revealedCount - 1
       };
     });
 
     if (turn) {
       turn.text = rawText;
       turn.words = wordsObj;
-      turn.spokenWordIndex = wordsObj.length - 1;
-      if (isFinal) {
-        turn.isComplete = true;
-        currentUserTurnId = null;
-        state = 'idle';
-      }
+      turn.spokenWordIndex = revealedCount - 1;
+      turn.isComplete = false;
+      turn.revealDone = false;
+      turn.isFinalText = Boolean(isFinal);
+      revealingUserTurnId = turn.id;
+      // KEY FIX: Do NOT null currentUserTurnId here on isFinal.
+      // The rAF loop will finalize when all words are revealed.
+      state = 'listening';
     } else {
       turn = {
         id: 'turn-u-' + Date.now(),
         role: 'user',
         text: rawText,
         words: wordsObj,
-        spokenWordIndex: wordsObj.length - 1,
+        spokenWordIndex: revealedCount - 1,
         timestamp: Date.now(),
-        isComplete: Boolean(isFinal),
-        isInterrupted: false
+        isComplete: false,
+        isInterrupted: false,
+        revealDone: false,
+        isFinalText: Boolean(isFinal)
       };
       conversation.push(turn);
-      if (!isFinal) {
-        currentUserTurnId = turn.id;
-        state = 'listening';
-      } else {
-        state = 'idle';
-      }
+      currentUserTurnId = turn.id;
+      revealingUserTurnId = turn.id;
+      state = 'listening';
     }
 
     render();
   }
 
   function onAgentTranscript(chunk, isFinal) {
+    // Agent speech takes priority over the log overlay.
+    collapseHudTerminal();
     // Cleanly finalize any open user turn
     if (currentUserTurnId) {
       var prevUserTurn = findTurn(currentUserTurnId);
@@ -9407,6 +8392,8 @@ window.LiveTranscriptHUD = (function() {
         currentAgentTurnId = turn.id;
       }
 
+      turn.isComplete = false;
+
       turn.text = currentAgentRawText;
       var curIdx = (turn.spokenWordIndex >= 0) ? turn.spokenWordIndex : 0;
       turn.words = wordsArray.map(function(w, idx) {
@@ -9443,6 +8430,8 @@ window.LiveTranscriptHUD = (function() {
   }
 
   function onInterrupted() {
+    // Barge-in also takes priority over the log overlay.
+    collapseHudTerminal();
     if (currentAgentTurnId) {
       var turn = findTurn(currentAgentTurnId);
       if (turn) {
@@ -9459,6 +8448,8 @@ window.LiveTranscriptHUD = (function() {
   }
 
   function onAudioChunk(duration, startTime) {
+    // Agent audio starting early enough takes priority over the log overlay.
+    collapseHudTerminal();
     if (!agentAudioStartTime || agentAudioStartTime === 0) {
       agentAudioStartTime = startTime;
       agentAudioTotalDuration = duration;
@@ -9468,18 +8459,19 @@ window.LiveTranscriptHUD = (function() {
   }
 
   function finalizeAgentAudio() {
+    // Audio playback may end slightly before the final outputTranscription chunk.
+    // Do NOT close the HUD turn here, or late chunks would start a duplicate card.
     if (currentAgentTurnId) {
       var turn = findTurn(currentAgentTurnId);
       if (turn) {
         turn.isComplete = true;
-        turn.spokenWordIndex = Math.max(0, turn.words.length - 1);
+        turn.revealDone = true;
+        turn.spokenWordIndex = Math.max(-1, turn.words.length - 1);
         turn.words.forEach(function(w) {
           w.isSpoken = true;
           w.isCurrent = false;
         });
       }
-      currentAgentTurnId = null;
-      currentAgentRawText = "";
     }
     agentAudioStartTime = 0;
     agentAudioTotalDuration = 0;
@@ -9606,49 +8598,39 @@ window.LiveTranscriptHUD = (function() {
       if (isActivelySpeaking) {
         speakingHtml = '<span class="cg-hud-speaking-badge"><span class="cg-hud-speaking-dot"></span>Speaking</span>';
       } else if (isActivelyListening) {
-        speakingHtml = '<span class="cg-hud-speaking-badge"><span class="cg-hud-speaking-dot"></span>Listening</span>';
+        // User live turn: keep only the wave GIF, no redundant Listening label.
+        speakingHtml = '';
       }
 
       var interruptedHtml = turn.isInterrupted ? '<span class="cg-hud-interrupted-badge">· Interrupted</span>' : '';
 
-      var headerHtml =
-        '<div class="cg-hud-card-header">' +
+      // Update header (safe to rebuild — no transitions needed on header)
+      var headerInner =
           '<div class="cg-hud-header-left">' +
             '<span class="cg-hud-role-badge">' + (isAgent ? "Agent" : "You") + '</span>' +
             speakingHtml +
             interruptedHtml +
           '</div>' +
-          '<span class="cg-hud-timestamp">' + timeStr + '</span>' +
-        '</div>';
+          '<span class="cg-hud-timestamp">' + timeStr + '</span>';
 
-      // 🌊 Listening / Speaking Wave GIF indicator: "gif > user transcription" & "same agent gif > transcription"
-      var waveGifHtml = "";
-      if (isTurnStreaming) {
-        var waveClass = isAgent ? "cg-hud-wave-anim agent-wave" : "cg-hud-wave-anim";
-        waveGifHtml = '<img src="' + LISTENING_GIF_DATA_URI + '" alt="' + (isAgent ? "Speaking..." : "Listening...") + '" class="' + waveClass + '" /> ';
+      var headerDiv = cardEl.querySelector('.cg-hud-card-header');
+      if (!headerDiv) {
+        headerDiv = document.createElement('div');
+        headerDiv.className = 'cg-hud-card-header';
+        cardEl.appendChild(headerDiv);
+      }
+      headerDiv.innerHTML = headerInner;
+
+      // Ensure words wrapper exists (created once, then managed by renderWordsForTurn)
+      var wordsWrap = cardEl.querySelector('.cg-hud-words-wrap');
+      if (!wordsWrap) {
+        wordsWrap = document.createElement('div');
+        wordsWrap.className = 'cg-hud-words-wrap';
+        cardEl.appendChild(wordsWrap);
       }
 
-      var maxWordIdx = isTurnStreaming ? turn.spokenWordIndex : Math.max(0, turn.words.length - 1);
-      var wordsToRender = (isTurnStreaming && revealMode === 'progressive')
-        ? turn.words.slice(0, maxWordIdx + 1)
-        : turn.words;
-
-      var wordsHtml = "";
-      if (wordsToRender.length > 0) {
-        wordsHtml = wordsToRender.map(function(w, wIdx) {
-          var isCurrentWord = isTurnStreaming && (wIdx === maxWordIdx);
-          var isSpoken = !isTurnStreaming || (wIdx <= maxWordIdx);
-          var wordClass = isCurrentWord ? "current" : (isSpoken ? "spoken" : "dimmed");
-          return '<span class="cg-hud-word ' + wordClass + '">' + escapeHtml(w.text) + '</span>';
-        }).join(" ");
-      } else if (turn.text) {
-        wordsHtml = '<span class="cg-hud-word spoken">' + escapeHtml(turn.text) + '</span>';
-      } else if (isTurnStreaming) {
-        // Active turn with no words yet: placeholder wave GIF already rendered!
-        wordsHtml = '<span class="cg-hud-word dimmed">' + (isAgent ? "Thinking..." : "Listening...") + '</span>';
-      }
-
-      cardEl.innerHTML = headerHtml + '<div class="cg-hud-words-wrap">' + waveGifHtml + wordsHtml + '</div>';
+      // Render words incrementally (preserves DOM spans for smooth CSS transitions)
+      renderWordsForTurn(turn);
     });
 
     var validIds = conversation.map(function(t) { return t.id; });
@@ -9674,29 +8656,91 @@ window.LiveTranscriptHUD = (function() {
 
     var isAgent = (turn.role === 'agent');
     var isTurnStreaming = !turn.isComplete;
-    var waveGifHtml = "";
+
+    // --- Wave GIF: add or remove without touching word spans ---
+    var existingWave = wordsWrap.querySelector('.cg-hud-wave-anim');
     if (isTurnStreaming) {
-      var waveClass = isAgent ? "cg-hud-wave-anim agent-wave" : "cg-hud-wave-anim";
-      waveGifHtml = '<img src="' + LISTENING_GIF_DATA_URI + '" alt="' + (isAgent ? "Speaking..." : "Listening...") + '" class="' + waveClass + '" /> ';
+      if (!existingWave) {
+        var waveImg = document.createElement('img');
+        waveImg.src = LISTENING_GIF_DATA_URI;
+        waveImg.alt = isAgent ? "Speaking..." : "Listening...";
+        waveImg.className = isAgent ? "cg-hud-wave-anim agent-wave" : "cg-hud-wave-anim";
+        if (isAgent) {
+          // Agent: wave at the beginning, before words
+          wordsWrap.insertBefore(waveImg, wordsWrap.firstChild);
+        } else {
+          // User: wave at the end, after words
+          wordsWrap.appendChild(waveImg);
+        }
+      }
+    } else {
+      if (existingWave) existingWave.remove();
     }
 
-    var maxWordIdx = turn.spokenWordIndex;
+    // --- Determine which words to show ---
+    var maxWordIdx = isTurnStreaming ? turn.spokenWordIndex : Math.max(0, turn.words.length - 1);
     var wordsToRender = (revealMode === 'progressive')
       ? turn.words.slice(0, maxWordIdx + 1)
       : turn.words;
 
-    var wordsHtml = "";
-    if (wordsToRender.length > 0) {
-      wordsWrap.innerHTML = waveGifHtml + wordsToRender.map(function(w, wIdx) {
-        var isCurrentWord = (wIdx === maxWordIdx);
-        var isSpoken = (wIdx <= maxWordIdx);
-        var wordClass = isCurrentWord ? "current" : (isSpoken ? "spoken" : "dimmed");
-        return '<span class="cg-hud-word ' + wordClass + '">' + escapeHtml(w.text) + '</span>';
-      }).join(" ");
-    } else if (turn.text) {
-      wordsWrap.innerHTML = waveGifHtml + '<span class="cg-hud-word spoken">' + escapeHtml(turn.text) + '</span>';
+    // Fallback: if no words array but text exists, use text directly
+    if (wordsToRender.length === 0 && turn.text) {
+      wordsToRender = [{ text: turn.text }];
     }
 
+    // Agent "Thinking..." placeholder when no transcription yet
+    if (wordsToRender.length === 0 && isTurnStreaming && isAgent) {
+      if (wordsWrap.querySelectorAll('.cg-hud-word').length === 0) {
+        var thinking = document.createElement('span');
+        thinking.className = 'cg-hud-word dimmed';
+        thinking.textContent = 'Thinking...';
+        wordsWrap.appendChild(thinking);
+      }
+    }
+
+    // --- Update existing word spans, create new ones (preserves DOM for CSS transitions) ---
+    var existingSpans = wordsWrap.querySelectorAll('.cg-hud-word');
+
+    for (var i = 0; i < wordsToRender.length; i++) {
+      var span = existingSpans[i];
+      if (!span) {
+        // New word — create span and insert at correct position
+        span = document.createElement('span');
+        span.className = 'cg-hud-word';
+        span.textContent = wordsToRender[i].text;
+        var waveEl = wordsWrap.querySelector('.cg-hud-wave-anim');
+        if (!isAgent && waveEl) {
+          // User: words go before the wave GIF
+          wordsWrap.insertBefore(span, waveEl);
+        } else {
+          // Agent: words go after the wave GIF (or append if no wave)
+          wordsWrap.appendChild(span);
+        }
+      } else {
+        // Existing word — update text if changed (interim correction)
+        if (span.textContent !== wordsToRender[i].text) {
+          span.textContent = wordsToRender[i].text;
+        }
+      }
+
+      // Update class based on current state
+      var isCurrentWord = isTurnStreaming && (i === maxWordIdx);
+      var isSpoken = !isTurnStreaming || (i <= maxWordIdx);
+      var newClass = isCurrentWord ? "cg-hud-word current" : (isSpoken ? "cg-hud-word spoken" : "cg-hud-word dimmed");
+      if (span.className !== newClass) {
+        span.className = newClass;
+      }
+    }
+
+    // Remove excess spans (interim correction reduced word count or mode switched)
+    var allSpans = wordsWrap.querySelectorAll('.cg-hud-word');
+    if (allSpans.length > wordsToRender.length) {
+      for (var j = wordsToRender.length; j < allSpans.length; j++) {
+        allSpans[j].remove();
+      }
+    }
+
+    // Auto-scroll to current word
     var activeWord = wordsWrap.querySelector(".cg-hud-word.current");
     if (activeWord) {
       activeWord.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -9739,6 +8783,9 @@ window.LiveTranscriptHUD = (function() {
     onAudioChunk: onAudioChunk,
     finalizeAgentAudio: finalizeAgentAudio,
     setState: setState,
+    getState: function() {
+      return state;
+    },
     render: render
   };
 })();

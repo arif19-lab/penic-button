@@ -17,6 +17,7 @@
 #include "../server/WebSocket.h"
 #include "../input/TouchInjector.h"
 #include "../core/Logger.h"
+#include "LiveBroadcaster.h" // for shared HandleStreamInputMessage()
 
 using namespace Gdiplus;
 
@@ -76,98 +77,11 @@ public:
             int br = recv(sock, (char*)rxBuf, sizeof(rxBuf), 0);
             if (br > 0) {
                 std::string msg = ReadWebSocketTextMessage(rxBuf, br);
-                if (msg == "CLOSE") break;
                 if (msg == "A") {
                     if (inFlight > 0) inFlight--;
                     continue;
                 }
-                if (!msg.empty()) {
-                    // In-socket Touch Command: "T:action:px:py:id"
-                    if (msg[0] == 'T' && msg.size() > 5) {
-                        char act[16] = {0};
-                        int px = -1, py = -1, tid = 0;
-                        if (sscanf(msg.c_str(), "T:%15[^:]:%d:%d:%d", act, &px, &py, &tid) >= 3 && px >= 0 && py >= 0) {
-                            int targetX = (px * screenW) / 10000;
-                            int targetY = (py * screenH) / 10000;
-
-                            bool touchHandled = false;
-                            if (g_touchInitialized && g_pfnInjectTouch) {
-                                POINTER_TOUCH_INFO_CUSTOM contact;
-                                memset(&contact, 0, sizeof(POINTER_TOUCH_INFO_CUSTOM));
-                                contact.pointerInfo.pointerType = PT_TOUCH;
-                                contact.pointerInfo.pointerId = tid;
-                                contact.pointerInfo.ptPixelLocation.x = targetX;
-                                contact.pointerInfo.ptPixelLocation.y = targetY;
-                                contact.touchFlags = TOUCH_FLAG_NONE;
-                                contact.touchMask = TOUCH_MASK_CONTACTAREA | TOUCH_MASK_PRESSURE;
-                                contact.pressure = 32000;
-                                contact.rcContact.left   = targetX - 4;
-                                contact.rcContact.right  = targetX + 4;
-                                contact.rcContact.top    = targetY - 4;
-                                contact.rcContact.bottom = targetY + 4;
-
-                                std::string actStr = act;
-                                if (actStr == "down") {
-                                    contact.pointerInfo.pointerFlags = POINTER_FLAG_DOWN | POINTER_FLAG_INRANGE | POINTER_FLAG_INCONTACT;
-                                    touchHandled = (g_pfnInjectTouch(1, &contact) == TRUE);
-                                } else if (actStr == "move") {
-                                    contact.pointerInfo.pointerFlags = POINTER_FLAG_UPDATE | POINTER_FLAG_INRANGE | POINTER_FLAG_INCONTACT;
-                                    touchHandled = (g_pfnInjectTouch(1, &contact) == TRUE);
-                                } else if (actStr == "up") {
-                                    contact.pointerInfo.pointerFlags = POINTER_FLAG_UP;
-                                    touchHandled = (g_pfnInjectTouch(1, &contact) == TRUE);
-                                } else if (actStr == "tap") {
-                                    contact.pointerInfo.pointerFlags = POINTER_FLAG_DOWN | POINTER_FLAG_INRANGE | POINTER_FLAG_INCONTACT;
-                                    if (g_pfnInjectTouch(1, &contact)) {
-                                        contact.pointerInfo.pointerFlags = POINTER_FLAG_UP;
-                                        g_pfnInjectTouch(1, &contact);
-                                        touchHandled = true;
-                                    }
-                                }
-                            }
-
-                            // 🛡️ Bulletproof Fallback: if touch digitizer hits a state desync, mouse_event executes seamlessly!
-                            if (!touchHandled) {
-                                SetCursorPos(targetX, targetY);
-                                std::string actStr = act;
-                                if (actStr == "down") {
-                                    mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
-                                } else if (actStr == "up") {
-                                    mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
-                                } else if (actStr == "tap") {
-                                    mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
-                                    mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
-                                }
-                            }
-                        }
-                    } else if (msg[0] == 'M' && msg.size() > 3) {
-                        // 🖱️ In-socket Real-Time Mousepad Command: "M:dx:dy:scroll:click" (<0.1ms!)
-                        int dx = 0, dy = 0, sc = 0, clk = 0;
-                        sscanf(msg.c_str(), "M:%d:%d:%d:%d", &dx, &dy, &sc, &clk);
-                        if (dx != 0 || dy != 0) {
-                            POINT cur;
-                            GetCursorPos(&cur);
-                            SetCursorPos(cur.x + dx, cur.y + dy);
-                            mouse_event(MOUSEEVENTF_MOVE, dx, dy, 0, 0);
-                        }
-                        if (sc != 0) {
-                            mouse_event(MOUSEEVENTF_WHEEL, 0, 0, (DWORD)sc, 0);
-                        }
-                        if (clk == 1) {
-                            mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
-                            Sleep(15);
-                            mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
-                        } else if (clk == 2) {
-                            mouse_event(MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, 0);
-                            Sleep(15);
-                            mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0);
-                        } else if (clk == 3) {
-                            mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
-                        } else if (clk == 4) {
-                            mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
-                        }
-                    }
-                }
+                if (!HandleStreamInputMessage(msg, screenW, screenH)) break;
             } else if (br == 0) {
                 break; // Socket closed
             } else {

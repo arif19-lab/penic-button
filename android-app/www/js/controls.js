@@ -806,6 +806,10 @@ function fallbackToMJPEG(){
 // ── UNIFIED ROCK-SOLID STREAMING & RENDERING ENGINE ─────────────
 var isStreaming = false;
 var _canvasWS = null;
+var _vidWS = null;
+var _vidDecoder = null;
+var _vidCodec = null;
+var _vidCodecConfigured = false;
 var _canvasEl = null;
 var _canvasCtx = null;
 var _fsCanvasEl = null;
@@ -816,6 +820,7 @@ var _fpsTimer = null;
 var _fallbackActive = false;
 var _fallbackAbortCtrl = null;
 var _reconnectTimeout = null;
+var _vidReconnectTimer = null;
 
 // 🎨 Centralized Dual-Canvas Frame Dispatcher (Updates Dashboard Canvas + Fullscreen Canvas in 1 shot)
 function renderFrame(sourceBitmap) {
@@ -861,6 +866,11 @@ function startCanvasStream() {
   _fsCanvasEl = document.getElementById("fsCanvas");
   _fsOverlayEl = document.getElementById("fsOverlay");
 
+  // When the native Android player is rendering video into the SurfaceView
+  // behind the WebView, keep the canvas visible but empty — the JS stream is
+  // only used for input, so starting the JPEG decoder would just burn CPU.
+  var nativeActive = window.AndroidNativeStream && typeof window.AndroidNativeStream.start === 'function';
+
   if (_canvasEl) {
     _canvasEl.style.display = "block";
     _canvasCtx = _canvasEl.getContext("2d", { alpha: false, desynchronized: true });
@@ -893,7 +903,112 @@ function startCanvasStream() {
     _frameCount = 0;
   }, 1000);
 
-  _connectWebSocket();
+  // Prefer WebCodecs hardware decode when available; otherwise fall back to
+  // the JPEG canvas path.  The native SurfaceView path still renders behind
+  // the WebView and is untouched by this choice.
+  if (!nativeActive && typeof VideoDecoder !== 'undefined') {
+    _connectVidWebSocket();
+  } else if (!nativeActive) {
+    _connectWebSocket();
+  }
+}
+
+// ── WebCodecs /ws/vid path — Annex-B H.264 → VideoDecoder ───────────────────
+// On modern Chrome (and most Android WebView builds) this is the lowest
+// latency path because it bypasses the JPEG→Bitmap decode entirely.
+function _connectVidWebSocket() {
+  if (!isStreaming) return;
+  _fallbackActive = false;
+
+  var wsUrl = getWsUrl('/ws/vid?key=' + KEY);
+  var pendingKey = false;
+  var haveKey = false;
+
+  function _destroy() {
+    try { if (_vidWS) { _vidWS.onopen = _vidWS.onmessage = _vidWS.onerror = _vidWS.onclose = null; _vidWS.close(); } } catch(e){}
+    _vidWS = null;
+  }
+
+  function _fallback() {
+    _destroy();
+    if (_vidDecoder) { try { _vidDecoder.close(); } catch(e){} _vidDecoder = null; }
+    _vidCodecConfigured = false;
+    if (isStreaming) _connectWebSocket(); // graceful degradation to JPEG
+  }
+
+  try {
+    _vidWS = new WebSocket(wsUrl);
+    _vidWS.binaryType = 'arraybuffer';
+
+    _vidWS.onopen = function() {
+      _fallbackActive = false;
+      var q = document.querySelector('.stream-quality');
+      if (q) q.textContent = "⚡ HW • 60 FPS";
+      try { _vidWS.send('A'); } catch(e){}
+    };
+
+    _vidWS.onmessage = function(e) {
+      if (!isStreaming) return;
+      if (typeof e.data === 'string') {
+        // Config frame: "C:avc1.64001E:1920x1080"
+        if (e.data.charCodeAt(0) === 67 /* 'C' */) {
+          var parts = e.data.split(':');
+          if (parts.length >= 3) {
+            _vidCodec = parts[1];
+            var dims = parts[2].split('x');
+            var w = parseInt(dims[0],10)||1280, h = parseInt(dims[1],10)||720;
+            if (typeof VideoDecoder !== 'undefined') {
+              try {
+                if (!_vidDecoder) {
+                  _vidDecoder = new VideoDecoder({
+                    output: function(frame) {
+                      renderFrame(frame);
+                      frame.close();
+                    },
+                    error: function(err) {
+                      // Decoder failure -> graceful JPEG fallback
+                      _fallback();
+                    }
+                  });
+                }
+                _vidDecoder.configure({
+                  codec: _vidCodec,
+                  optimizeForLatency: true,
+                  hardwareAcceleration: 'prefer-hardware'
+                });
+                _vidCodecConfigured = true;
+              } catch(cfgErr) {
+                _fallback();
+              }
+            }
+          }
+        }
+        return;
+      }
+
+      if (!_vidCodecConfigured || !_vidDecoder) return;
+      var u8 = new Uint8Array(e.data);
+      if (u8.length < 6) return;
+      var isKey = (u8[0] !== 0);
+      var nalu = u8.subarray(1); // strip 1-byte flag
+      var ts = performance.now();
+      try {
+        _vidDecoder.decode(new EncodedVideoChunk({
+          type: isKey ? 'key' : 'delta',
+          timestamp: ts,
+          data: nalu
+        }));
+      } catch(decErr) {
+        // Ignore transient decode errors; the decoder recovers on next keyframe
+      }
+      if (_vidWS && _vidWS.readyState === 1) { try { _vidWS.send('A'); } catch(e){} }
+    };
+
+    _vidWS.onerror = _fallback;
+    _vidWS.onclose = _fallback;
+  } catch(err) {
+    _fallback();
+  }
 }
 
 function _connectWebSocket() {
@@ -991,6 +1106,21 @@ function stopCanvasStream() {
   _fallbackActive = false;
   clearInterval(_fpsTimer);
   clearTimeout(_reconnectTimeout);
+  clearTimeout(_vidReconnectTimer);
+
+  if (_vidDecoder) {
+    try { _vidDecoder.close(); } catch(e){}
+    _vidDecoder = null;
+  }
+  _vidCodecConfigured = false;
+
+  if (_vidWS) {
+    try {
+      _vidWS.onopen = _vidWS.onmessage = _vidWS.onerror = _vidWS.onclose = null;
+      _vidWS.close();
+    } catch(e){}
+    _vidWS = null;
+  }
 
   if (_h264Decoder) {
     try { _h264Decoder.close(); } catch(e){}
@@ -1028,7 +1158,10 @@ function toggleStream() {
 
     if (window.AndroidNativeStream && typeof window.AndroidNativeStream.start === 'function') {
       try {
-        var nativeUrl = window.location.protocol + "//" + window.location.host + "/stream.h264?key=" + KEY;
+        // The native MediaCodec player accepts raw Annex-B H.264 NAL units.
+        // /stream.h264 is fragmented MP4 for browser MSE clients and makes the
+        // native parser hunt for start codes inside container bytes.
+        var nativeUrl = window.location.protocol + "//" + window.location.host + "/stream.annexb?key=" + KEY;
         window.AndroidNativeStream.start(nativeUrl);
         window.AndroidNativeStream.setNativeInput(true);
         if (q) q.textContent = "1080P • 60 FPS";

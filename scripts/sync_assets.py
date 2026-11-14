@@ -20,6 +20,12 @@ if os.path.exists(css_path):
     with open(css_path, 'r', encoding='utf-8') as f:
         css_content = f.read()
 
+ag_css_path = 'android-app/www/css/antigravity-theme.css'
+ag_css_content = ''
+if os.path.exists(ag_css_path):
+    with open(ag_css_path, 'r', encoding='utf-8') as f:
+        ag_css_content = f.read()
+
 js_bundle = ''
 for jf in ['network.js', 'gemini_prompt.js', 'controls.js', 'personas.js', 'gemini_live.js', 'app.js']:
     jp = os.path.join('android-app/www/js', jf)
@@ -46,6 +52,7 @@ gif_byte_array = ', '.join(f'0x{b:02x}' for b in listening_gif_bytes)
 
 # Inlined fallback HTML for C++ single binary
 inlined_html = re.sub(r'<link\s+rel=["\']stylesheet["\']\s+href=["\']css/style\.css(?:\?[^"\']*)?["\']\s*>', f'<style>\n{css_content}\n</style>', html)
+inlined_html = re.sub(r'<link\s+rel=["\']stylesheet["\']\s+href=["\']css/antigravity-theme\.css(?:\?[^"\']*)?["\']\s*>', f'<style>\n{ag_css_content}\n</style>', inlined_html)
 inlined_html = re.sub(r'<script\s+src=["\'](?:js/)?jsqr\.min\.js(?:\?[^"\']*)?["\']\s*></script>', f'<script>\n{jsqr_content}\n</script>', inlined_html)
 for sname in ['network', 'gemini_prompt', 'controls', 'personas', 'gemini_live']:
     inlined_html = re.sub(rf'<script\s+src=["\']js/{sname}\.js(?:\?[^"\']*)?["\']\s*></script>', '', inlined_html)

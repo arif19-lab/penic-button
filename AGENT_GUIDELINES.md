@@ -66,7 +66,7 @@ When making changes, any agent **MUST NOT** violate these 13 rules:
 | **9** | **Tailscale IP Bitmask** | Never match Tailscale adapters by English adapter names. Always check the IANA CGNAT subnet `100.64.0.0/10` via bitmask `(hostOrder & 0xFFC00000UL) == 0x64400000UL`. |
 | **10**| **APK Download Candidate Fallbacks** | When serving `/download/app.apk`, always check `GetProgramDataFolder() + "\\PanicCTRL.apk"`, then `"PanicCTRL.apk"`, then the debug output folder. Never assume a single relative path. |
 | **11**| **NEVER use `SC_MONITORPOWER 2` in `/sleep`** | `SC_MONITORPOWER 2` cuts the DPMS hardware link (D3cold) in Modern Standby. Windows kernel `win32kbase.sys` then strictly ignores all synthetic user-mode input (`LLKHF_INJECTED`), making remote wake impossible! Use the Winlogon blackout window + 0% dimming instead. |
-| **12**| **ALWAYS build & deploy `PanicProvider.dll` with `PanicButton.exe`** | The Credential Provider lives in `C:\ProgramData\PanicButton\PanicProvider.dll`. If you modify `PanicProvider.cpp`, you MUST compile and copy the new DLL to ProgramData while the session is unlocked (`build_release.bat` handles this automatically in step 5). |
+| **12**| **ALWAYS build & deploy `PanicProvider.dll` with `PanicButton.exe`** | The Credential Provider lives in `C:\ProgramData\PanicButton\PanicProvider.dll`. If you modify `PanicProvider.cpp`, you MUST compile and copy the new DLL to ProgramData while the session is unlocked (`PanicCTRL-Build-All.bat` handles this automatically). |
 | **13**| **Never hardcode brightness values on wake** | Never force 80% or 100% on wake. Always capture active user brightness before sleep (`CaptureCurrentBrightness`) and restore that exact level on wake (`RestoreBrightnessAsync`). |
 | **14**| **Port 8085 hybrid ownership (service vs agent)** | `PanicMasterService` owns 8085 ONLY while `PanicButton.exe` is absent (pre-logon lock screen). Agent announces itself via `Global\PanicButtonAgentAlive` mutex; service yields within seconds. Never bind 8085 from both at once; agent retries bind forever. Session 0 service serves ONLY: dashboard page, status, wake, unlock, sleep, lock, APK. Streaming/input/tray/audio stay in the user-session agent. |
 
@@ -93,7 +93,7 @@ This script automatically:
 
 ### A. Compile Windows Executable (`PanicButton.exe`)
 ```powershell
-cmd /c build_release.bat
+cmd /c PanicCTRL-Build-All.bat
 ```
 *(Runs asset sync, windres icon compilation, and MinGW g++ C++17 build).*
 
@@ -117,7 +117,7 @@ Copy-Item "android-app\android\app\build\outputs\apk\debug\app-debug.apk" "Panic
 ## 📋 5. Agent Verification Checklist Before Ending Any Task
 
 Before marking any task complete, every agent must verify:
-- [ ] **Code compiles cleanly:** `build_release.bat` completes with exit code 0.
+- [ ] **Code compiles cleanly:** `PanicCTRL-Build-All.bat` completes with exit code 0.
 - [ ] **Assets are synced:** `python scripts/sync_assets.py` was executed if frontend changed.
 - [ ] **No regression in Inno Setup:** `installer.iss` compiles via `ISCC.exe` without syntax errors.
 - [ ] **APK is bundled:** `PanicCTRL.apk` exists in the repo root and is included in `[Files]` of `installer.iss`.
@@ -134,5 +134,5 @@ Before marking any task complete, every agent must verify:
    ```powershell
    Get-Item "C:\ProgramData\PanicButton\PanicProvider.dll" | Select-Object LastWriteTime
    ```
-   `build_release.bat` (Step 5) compiles `PanicProvider.dll`. When updating it, always copy `PanicProvider.dll` to `C:\ProgramData\PanicButton\` while the machine is unlocked.
+   `PanicCTRL-Build-All.bat` compiles `PanicProvider.dll` and deploys it after the agent is stopped. When updating it, always copy `PanicProvider.dll` to `C:\ProgramData\PanicButton\` while the machine is unlocked.
 

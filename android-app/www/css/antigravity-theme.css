@@ -1,0 +1,1617 @@
+﻿/* Antigravity Voice Assistant - exact dark/light theme port
+   Scoped after the legacy stylesheet. Matches Antigravity Voice Assistant:
+   zinc-50 canvas (light), black canvas (dark), zinc-100/zinc-900 surfaces,
+   zinc-950/white overlays, and white/black inverted active controls. */
+
+:root {
+  --ag-dark-bg: #05070e;
+  --ag-dark-panel: #09090b;
+  --ag-dark-panel-deeper: #050507;
+  --ag-dark-border: rgba(255, 255, 255, 0.10);
+  --ag-dark-border-strong: rgba(255, 255, 255, 0.18);
+  --ag-dark-text: #f4f4f5;
+  --ag-dark-text-muted: #a1a1aa;
+  --ag-light-bg: #fafafa;
+  --ag-light-panel: #ffffff;
+  --ag-light-border: rgba(228, 228, 231, 0.95);
+  --ag-light-border-strong: rgba(212, 212, 216, 0.98);
+  --ag-light-text: #18181b;
+  --ag-light-text-muted: #52525b;
+}
+
+/* Canvas and root layout */
+body.gemini-dark,
+body.gemini-dark #tab-gemini {
+  background: var(--ag-dark-bg) !important;
+  color: var(--ag-dark-text) !important;
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
+  --cg-bg-primary: var(--ag-dark-bg);
+  --cg-bg-card: var(--ag-dark-panel);
+  --cg-border: var(--ag-dark-border);
+  --cg-text-primary: var(--ag-dark-text);
+  --cg-text-muted: var(--ag-dark-text-muted);
+}
+body.gemini-light,
+body.gemini-light #tab-gemini,
+body.gemini-mode:not(.gemini-dark),
+body.gemini-mode:not(.gemini-dark) #tab-gemini {
+  background: var(--ag-light-bg) !important;
+  color: var(--ag-light-text) !important;
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
+  --cg-bg-primary: var(--ag-light-bg);
+  --cg-bg-card: var(--ag-light-panel);
+  --cg-border: var(--ag-light-border);
+  --cg-text-primary: var(--ag-light-text);
+  --cg-text-muted: var(--ag-light-text-muted);
+}
+
+.cg-app-container,
+.cg-main-viewport,
+.cg-main-body,
+#chatgptScrollContainer {
+  background: inherit !important;
+}
+
+/* Sidebar: 96% opaque rounded panel with zinc borders */
+.cg-sidebar-drawer {
+  border: 1px solid var(--ag-dark-border) !important;
+  background: #09090b !important;
+  color: #f4f4f5 !important;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.62), 0 0 0 1px rgba(255, 255, 255, 0.04) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+}
+body.gemini-light .cg-sidebar-drawer,
+body.gemini-mode:not(.gemini-dark) .cg-sidebar-drawer {
+  background: #ffffff !important;
+  border-color: rgba(228, 228, 231, 0.90) !important;
+  color: #18181b !important;
+  box-shadow: 0 28px 58px rgba(212, 212, 216, 0.60), 0 0 0 1px rgba(255, 255, 255, 0.7) !important;
+}
+body.gemini-dark .cg-sidebar-drawer,
+body.gemini-light .cg-sidebar-drawer {
+  border-radius: 18px !important;
+}
+
+/* Sidebar capsule sections and list rows */
+.cg-drawer-top-hud-card,
+.cg-menu-card-group,
+.cg-sidebar-drawer-shell,
+.cg-user-expand-body {
+  background: rgba(24, 24, 27, 0.55) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 16px !important;
+  box-shadow: none !important;
+}
+body.gemini-light .cg-drawer-top-hud-card,
+body.gemini-light .cg-menu-card-group,
+body.gemini-light .cg-sidebar-drawer-shell,
+body.gemini-light .cg-user-expand-body,
+body.gemini-mode:not(.gemini-dark) .cg-drawer-top-hud-card,
+body.gemini-mode:not(.gemini-dark) .cg-menu-card-group,
+body.gemini-mode:not(.gemini-dark) .cg-sidebar-drawer-shell,
+body.gemini-mode:not(.gemini-dark) .cg-user-expand-body {
+  background: #fafafa !important;
+  border-color: rgba(228, 228, 231, 0.9) !important;
+}
+
+.cg-menu-card-row {
+  color: #d4d4d8 !important;
+  border-radius: 11px !important;
+  transition: background .14s ease, color .14s ease, box-shadow .14s ease, transform .14s ease !important;
+}
+body.gemini-dark .cg-menu-card-row:hover {
+  background: rgba(255, 255, 255, 0.04) !important;
+  color: #ffffff !important;
+}
+body.gemini-light .cg-menu-card-row:hover,
+body.gemini-mode:not(.gemini-dark) .cg-menu-card-row:hover {
+  background: #f4f4f5 !important;
+  color: #09090b !important;
+}
+.cg-menu-row-icon { color: inherit !important; }
+.cg-menu-card-row[data-preview="panic"],
+.cg-menu-card-row[data-preview="lock"],
+.cg-menu-card-row[data-preview="unlock"] { color: #f87171 !important; }
+body.gemini-light .cg-menu-card-row[data-preview="panic"],
+body.gemini-light .cg-menu-card-row[data-preview="lock"],
+body.gemini-light .cg-menu-card-row[data-preview="unlock"],
+body.gemini-mode:not(.gemini-dark) .cg-menu-card-row[data-preview="panic"] { color: #e11d48 !important; }
+
+/* Header captions and dropdowns */
+.cg-header {
+  background: #09090b !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  backdrop-filter: blur(18px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(160%) !important;
+}
+body.gemini-light .cg-header,
+body.gemini-mode:not(.gemini-dark) .cg-header {
+  background: rgba(255, 255, 255, 0.90) !important;
+  border-bottom-color: rgba(226, 232, 240, 0.95) !important;
+}
+
+.cg-model-option.active,
+.cg-model-option:hover { background: #18181b !important; color: #fff !important; }
+body.gemini-light .cg-model-option.active,
+body.gemini-light .cg-model-option:hover,
+body.gemini-mode:not(.gemini-dark) .cg-model-option.active,
+body.gemini-mode:not(.gemini-dark) .cg-model-option:hover { background: #fafafa !important; color: #18181b !important; }
+
+/* Hero orb stage - pure reference canvas */
+.antigravity-orb-hero {
+  background: transparent !important;
+}
+.antigravity-orb-container { filter: none !important; }
+
+/* Live transcript: fixed 95/96 opaque control panel */
+.cg-transcript-hud {
+  background: #09090b !important;
+  border: 1px solid rgba(255, 255, 255, 0.10) !important;
+  border-radius: 18px !important;
+  color: #f4f4f5 !important;
+  box-shadow: 0 26px 55px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255,255,255,0.03) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+}
+body.gemini-light .cg-transcript-hud,
+body.gemini-mode:not(.gemini-dark) .cg-transcript-hud {
+  background: #ffffff !important;
+  border-color: rgba(228, 228, 231, 0.90) !important;
+  color: #18181b !important;
+  box-shadow: 0 24px 52px rgba(212, 212, 216, 0.60), 0 0 0 1px rgba(255, 255, 255, 0.8) !important;
+}
+.cg-hud-header,
+body.gemini-mode:not(.gemini-dark) .cg-hud-header,
+body.gemini-dark .cg-hud-header {
+  background: rgba(24, 24, 27, 0.50) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+body.gemini-light .cg-hud-header,
+body.gemini-mode:not(.gemini-dark) .cg-hud-header {
+  background: rgba(244, 244, 245, 0.80) !important;
+  border-bottom-color: rgba(228, 228, 231, 0.90) !important;
+}
+.cg-hud-turn-card {
+  background: rgba(24, 24, 27, 0.55) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 14px !important;
+}
+.cg-hud-turn-card.active-stream {
+  background: rgba(24, 24, 27, 0.95) !important;
+  border-color: rgba(255, 255, 255, 0.23) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45) !important;
+}
+body.gemini-light .cg-hud-turn-card,
+body.gemini-mode:not(.gemini-dark) .cg-hud-turn-card {
+  background: #fafafa !important;
+  border-color: rgba(228, 228, 231, 0.90) !important;
+}
+body.gemini-light .cg-hud-turn-card.active-stream,
+body.gemini-mode:not(.gemini-dark) .cg-hud-turn-card.active-stream {
+  background: #ffffff !important;
+  border-color: rgba(161, 161, 170, 0.35) !important;
+  box-shadow: 0 4px 16px rgba(161, 161, 170, 0.12) !important;
+}
+.cg-hud-role-badge { font-weight: 900 !important; color: #09090b !important; }
+.role-agent .cg-hud-role-badge { background: #ffffff !important; }
+.role-user .cg-hud-role-badge { background: #e4e4e7 !important; }
+body.gemini-light .role-user .cg-hud-role-badge { background: #d4d4d8 !important; }
+
+/* Workstation terminal overlay */
+.cg-hud-terminal-section {
+  background: rgba(5, 7, 14, 0.97) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.60) !important;
+}
+body.gemini-light .cg-hud-terminal-section,
+body.gemini-mode:not(.gemini-dark) .cg-hud-terminal-section {
+  background: rgba(255, 255, 255, 0.97) !important;
+  border-bottom: 1px solid rgba(228, 228, 231, 0.90) !important;
+  box-shadow: 0 14px 30px rgba(161, 161, 170, 0.18) !important;
+}
+
+/* Studio composer: fitted bottom bar, black/white inverted controls */
+.cg-footer-composer {
+  background: transparent !important;
+  display: flex !important;
+  justify-content: center !important;
+  padding-left: 8px !important;
+  padding-right: 8px !important;
+}
+.cg-studio-controls {
+  background: rgba(5, 5, 7, 0.87) !important;
+  border: 1px solid rgba(255, 255, 255, 0.10) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.62) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+}
+body.gemini-light .cg-studio-controls,
+body.gemini-mode:not(.gemini-dark) .cg-studio-controls {
+  background: rgba(255, 255, 255, 0.92) !important;
+  border-color: rgba(228, 228, 231, 0.90) !important;
+  box-shadow: 0 18px 36px rgba(212, 212, 216, 0.58) !important;
+}
+
+.cg-studio-btn {
+  border: 1px solid rgba(255,255,255,0.10) !important;
+  background: #18181b !important;
+  color: #e4e4e7 !important;
+  transition: background .12s ease, color .12s ease, border-color .12s ease, transform .12s ease !important;
+}
+.cg-studio-btn:hover { border-color: rgba(255,255,255,0.24) !important; background: #27272a !important; }
+.cg-studio-btn:active { transform: scale(0.96) !important; }
+body.gemini-light .cg-studio-btn,
+body.gemini-mode:not(.gemini-dark) .cg-studio-btn {
+  background: #f4f4f5 !important;
+  color: #27272a !important;
+  border-color: rgba(228, 228, 231, 0.96) !important;
+}
+body.gemini-light .cg-studio-btn:hover,
+body.gemini-mode:not(.gemini-dark) .cg-studio-btn:hover { background: #e4e4e7 !important; color: #09090b !important; }
+
+.cg-studio-btn-mic {
+  background: #ffffff !important;
+  color: #09090b !important;
+  border-color: #ffffff !important;
+}
+.cg-studio-btn-mic:hover { background: #e4e4e7 !important; border-color: #e4e4e7 !important; }
+body.gemini-light .cg-studio-btn-mic,
+body.gemini-mode:not(.gemini-dark) .cg-studio-btn-mic {
+  background: #18181b !important;
+  color: #ffffff !important;
+  border-color: #18181b !important;
+}
+body.gemini-light .cg-studio-btn-mic:hover { background: #27272a !important; border-color: #27272a !important; }
+
+.cg-studio-btn.active,
+.cg-hud-action-btn:hover,
+.cg-model-option.active {
+  background: #ffffff !important;
+  color: #09090b !important;
+  border-color: #ffffff !important;
+}
+body.gemini-light .cg-studio-btn.active,
+body.gemini-mode:not(.gemini-dark) .cg-studio-btn.active {
+  background: #18181b !important;
+  color: #ffffff !important;
+  border-color: #18181b !important;
+}
+
+.cg-studio-input,
+.manualTerminalInput {
+  background: #18181b !important;
+  color: #f4f4f5 !important;
+  border: 1px solid rgba(255,255,255,0.10) !important;
+  border-radius: 12px !important;
+}
+.cg-studio-input::placeholder { color: #71717a !important; }
+.cg-studio-input:focus { border-color: rgba(255,255,255,0.40) !important; outline: none !important; }
+body.gemini-light .cg-studio-input,
+body.gemini-mode:not(.gemini-dark) .cg-studio-input {
+  background: #fafafa !important;
+  color: #18181b !important;
+  border-color: rgba(228, 228, 231, 0.96) !important;
+}
+body.gemini-light .cg-studio-input::placeholder { color: #a1a1aa !important; }
+body.gemini-light .cg-studio-input:focus { border-color: #d4d4d8 !important; }
+
+.cg-studio-send-btn {
+  background: #ffffff !important;
+  color: #09090b !important;
+  border: none !important;
+}
+.cg-studio-send-btn:hover { background: #e4e4e7 !important; }
+body.gemini-light .cg-studio-send-btn,
+body.gemini-mode:not(.gemini-dark) .cg-studio-send-btn {
+  background: #18181b !important;
+  color: #ffffff !important;
+}
+body.gemini-light .cg-studio-send-btn:hover { background: #27272a !important; }
+
+/* Popovers: voice/emotion model selection */
+.cg-studio-popover {
+  background: rgba(9, 9, 11, 0.96) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  box-shadow: 0 24px 54px rgba(0, 0, 0, 0.70) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+}
+body.gemini-light .cg-studio-popover,
+body.gemini-mode:not(.gemini-dark) .cg-studio-popover {
+  background: rgba(255, 255, 255, 0.96) !important;
+  border-color: rgba(228, 228, 231, 0.95) !important;
+  box-shadow: 0 20px 45px rgba(212, 212, 216, 0.65) !important;
+}
+.cg-popover-card,
+.cg-vcard,
+.cg-ecard {
+  background: #18181b !important;
+  border-color: rgba(255,255,255,0.09) !important;
+  color: #e4e4e7 !important;
+}
+body.gemini-light .cg-popover-card,
+body.gemini-light .cg-vcard,
+body.gemini-light .cg-ecard,
+body.gemini-mode:not(.gemini-dark) .cg-popover-card {
+  background: #ffffff !important;
+  border-color: rgba(228, 228, 231, 0.94) !important;
+  color: #18181b !important;
+}
+.cg-vcard.selected,
+.cg-ecard.selected,
+.voice-card-selected {
+  background: #ffffff !important;
+  border-color: #ffffff !important;
+  color: #09090b !important;
+}
+body.gemini-light .cg-vcard.selected,
+body.gemini-light .cg-ecard.selected,
+body.gemini-mode:not(.gemini-dark) .cg-vcard.selected {
+  background: #18181b !important;
+  border-color: #18181b !important;
+  color: #ffffff !important;
+}
+
+/* Hide legacy gradients/glows so reference canvas is clean */
+.cg-main-viewport,
+.cg-main-body,
+.cg-scroll,
+#chatgptScrollContainer {
+  background-image: none !important;
+}
+.cg-ambient-glow,
+#geminiAmbientGlow,
+.gemini-ambient-glow {
+  opacity: 0 !important;
+}
+
+/* Scrollbars */
+*::-webkit-scrollbar { width: 5px !important; height: 5px !important; }
+*::-webkit-scrollbar-track { background: rgba(255,255,255,0.06) !important; }
+*::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.16) !important; }
+*::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.28) !important; }
+body.gemini-light *::-webkit-scrollbar-track,
+body.gemini-mode:not(.gemini-dark) *::-webkit-scrollbar-track { background: rgba(24,24,27,0.08) !important; }
+body.gemini-light *::-webkit-scrollbar-thumb,
+body.gemini-mode:not(.gemini-dark) *::-webkit-scrollbar-thumb { background: rgba(24,24,27,0.20) !important; }
+
+/* Accessibility */
+:focus-visible {
+  outline: 2px solid rgba(125, 211, 252, 0.9) !important;
+  outline-offset: 2px !important;
+}
+
+/* ========= Sidebar + popover Overhaul: exact Antigravity tokens ========= */
+
+/* Sidebar canvas */
+.cg-sidebar-drawer,
+body.gemini-dark .cg-sidebar-drawer,
+body.gemini-mode:not(.gemini-dark) .cg-sidebar-drawer {
+  border: 1px solid rgba(255, 255, 255, 0.10) !important;
+  border-radius: 20px !important;
+  background: #09090b !important;
+  backdrop-filter: blur(26px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(26px) saturate(180%) !important;
+  box-shadow: 0 30px 64px rgba(0, 0, 0, 0.70), 0 0 0 1px rgba(255,255,255,0.035) !important;
+}
+body.gemini-light .cg-sidebar-drawer,
+body.gemini-mode:not(.gemini-dark) .cg-sidebar-drawer {
+  background: #ffffff !important;
+  border: 1px solid rgba(228, 228, 231, 0.9) !important;
+  box-shadow: 0 26px 56px rgba(212, 212, 216, 0.55), 0 0 0 1px rgba(255,255,255,0.75) !important;
+}
+
+/* Sidebar header / brand card */
+body.gemini-dark .cg-drawer-top-hud-card,
+body.gemini-light .cg-drawer-top-hud-card {
+  border-radius: 16px !important;
+}
+body.gemini-dark .cg-drawer-top-hud-card {
+  background: rgba(24, 24, 27, 0.55) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: none !important;
+}
+body.gemini-light .cg-drawer-top-hud-card {
+  background: #fafafa !important;
+  border: 1px solid rgba(228, 228, 231, 0.90) !important;
+  box-shadow: none !important;
+}
+
+/* Clean title presentation */
+body.gemini-dark .cg-drawer-title-inner-card { background: transparent !important; border: none !important; box-shadow: none !important; }
+body.gemini-dark .cg-drawer-title-inner-card span { color: #fafafa !important; }
+body.gemini-light .cg-drawer-title-inner-card { background: transparent !important; border: none !important; box-shadow: none !important; }
+body.gemini-light .cg-drawer-title-inner-card span { color: #18181b !important; }
+
+/* Group label */
+body.gemini-dark .cg-menu-group-label {
+  color: #a1a1aa !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 10px !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+}
+body.gemini-light .cg-menu-group-label {
+  color: #71717a !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 10px !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+}
+
+/* Menu group panel */
+body.gemini-dark .cg-menu-card-group {
+  background: rgba(24, 24, 27, 0.55) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 16px !important;
+  box-shadow: none !important;
+}
+body.gemini-light .cg-menu-card-group {
+  background: #fafafa !important;
+  border: 1px solid rgba(228, 228, 231, 0.90) !important;
+  border-radius: 16px !important;
+  box-shadow: none !important;
+}
+
+/* Menu rows: transparent zinc, no glow */
+body.gemini-dark .cg-menu-card-row {
+  color: #d4d4d8 !important;
+  background: transparent !important;
+}
+body.gemini-dark .cg-menu-card-row:hover {
+  background: rgba(255, 255, 255, 0.055) !important;
+  color: #fafafa !important;
+}
+body.gemini-dark .cg-menu-card-row.active {
+  background: rgba(255, 255, 255, 0.09) !important;
+  color: #ffffff !important;
+}
+body.gemini-light .cg-menu-card-row {
+  color: #3f3f46 !important;
+  background: transparent !important;
+}
+body.gemini-light .cg-menu-card-row:hover {
+  background: #f4f4f5 !important;
+  color: #09090b !important;
+}
+body.gemini-light .cg-menu-card-row.active {
+  background: #e4e4e7 !important;
+  color: #09090b !important;
+}
+.cg-menu-row-text { font-weight: 500 !important; }
+
+/* Emergency rows stay subtly red but legible */
+body.gemini-dark .cg-menu-card-row[data-preview="panic"] { color: #f87171 !important; }
+body.gemini-light .cg-menu-card-row[data-preview="panic"] { color: #e11d48 !important; }
+
+/* User footer card */
+body.gemini-dark .cg-drawer-user-card {
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  color: #fafafa !important;
+}
+body.gemini-dark .cg-drawer-user-card:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-color: rgba(255, 255, 255, 0.10) !important;
+}
+body.gemini-light .cg-drawer-user-card {
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  color: #18181b !important;
+}
+body.gemini-light .cg-drawer-user-card:hover {
+  background: #fafafa !important;
+  border-color: rgba(228, 228, 231, 0.9) !important;
+}
+
+/* Avatar badge stays inverted "PC" */
+body.gemini-dark .cg-user-avatar-badge {
+  background: #fafafa !important;
+  color: #09090b !important;
+}
+body.gemini-light .cg-user-avatar-badge {
+  background: #18181b !important;
+  color: #fafafa !important;
+}
+
+/* Quick settings rows */
+body.gemini-dark .cg-menu-item-name { color: #fafafa !important; }
+body.gemini-light .cg-menu-item-name { color: #09090b !important; }
+
+/* ========= Voice/emotion popover panel refinement ========= */
+
+.cg-studio-popover {
+  background: rgba(9, 9, 11, 0.96) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 18px !important;
+  backdrop-filter: blur(26px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(26px) saturate(180%) !important;
+  box-shadow: 0 26px 62px rgba(0, 0, 0, 0.72) !important;
+}
+body.gemini-light .cg-studio-popover,
+body.gemini-mode:not(.gemini-dark) .cg-studio-popover {
+  background: rgba(255, 255, 255, 0.96) !important;
+  border-color: rgba(228, 228, 231, 0.95) !important;
+  box-shadow: 0 20px 48px rgba(212, 212, 216, 0.65) !important;
+}
+
+.cg-studio-popover .cg-popover-header {
+  background: transparent !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  padding: 12px 14px !important;
+}
+body.gemini-light .cg-studio-popover .cg-popover-header,
+body.gemini-mode:not(.gemini-dark) .cg-studio-popover .cg-popover-header {
+  border-bottom-color: rgba(228, 228, 231, 0.9) !important;
+}
+.cg-popover-main-title { color: #fafafa !important; font-weight: 700 !important; letter-spacing: -0.01em !important; }
+body.gemini-light .cg-popover-main-title { color: #09090b !important; }
+
+#voiceSearchInput {
+  background: rgba(255,255,255,0.05) !important;
+  border: 1px solid rgba(255,255,255,0.07) !important;
+  color: #fafafa !important;
+  border-radius: 10px !important;
+}
+#voiceSearchInput:focus {
+  background: rgba(255,255,255,0.08) !important;
+  border-color: rgba(255,255,255,0.22) !important;
+}
+body.gemini-light #voiceSearchInput {
+  background: #fafafa !important;
+  border-color: rgba(228, 228, 231, 0.9) !important;
+  color: #09090b !important;
+}
+body.gemini-light #voiceSearchInput:focus { background:#ffffff !important; border-color:#d4d4d8 !important; }
+
+/* Category tabs stay zinc/inverted */
+.cg-popover-tabs { background: transparent !important; }
+body.gemini-dark .cg-tab-btn { background: rgba(255,255,255,0.02) !important; border: 1px solid transparent !important; color:#d4d4d8 !important; }
+body.gemini-dark .cg-tab-btn.active { background:#fafafa !important; color:#09090b !important; border-color:#fafafa !important; }
+body.gemini-light .cg-tab-btn { color: #3f3f46 !important; }
+body.gemini-light .cg-tab-btn.active { background: #18181b !important; color: #fafafa !important; border-color: #18181b !important; }
+
+/* Voice/emotion cards: subtle borders, no neon */
+body.gemini-dark .cg-vcard,
+body.gemini-dark .cg-ecard {
+  background: rgba(24, 24, 27, 0.60) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: #d4d4d8 !important;
+}
+body.gemini-dark .cg-vcard:hover,
+body.gemini-dark .cg-ecard:hover {
+  background: #27272a !important;
+  border-color: rgba(255, 255, 255, 0.18) !important;
+  transform: translateY(-1px) !important;
+}
+body.gemini-light .cg-vcard,
+body.gemini-light .cg-ecard {
+  background: #fafafa !important;
+  border: 1px solid rgba(228, 228, 231, 0.90) !important;
+  color: #3f3f46 !important;
+}
+body.gemini-light .cg-vcard:hover,
+body.gemini-light .cg-ecard:hover { background: #f4f4f5 !important; border-color: #d4d4d8 !important; }
+
+/* Selected card = inverted contrast, like reference */
+body.gemini-dark .cg-vcard.selected,
+body.gemini-dark .cg-ecard.selected {
+  background: #fafafa !important;
+  border-color: #fafafa !important;
+  color: #09090b !important;
+  box-shadow: 0 4px 14px rgba(255,255,255,0.16) !important;
+}
+body.gemini-dark .cg-vcard.selected .cg-vcard-name,
+body.gemini-dark .cg-ecard.selected .cg-ecard-title,
+body.gemini-dark .cg-ecard.selected .cg-ecard-desc { color: #09090b !important; }
+body.gemini-dark .cg-vcard.selected .cg-vcard-style,
+body.gemini-dark .cg-ecard.selected .cg-ecard-desc,
+body.gemini-dark .cg-ecard.selected .cg-ecard-temp { color: #3f3f46 !important; }
+body.gemini-light .cg-vcard.selected,
+body.gemini-light .cg-ecard.selected {
+  background: #18181b !important;
+  border-color: #18181b !important;
+  color: #fafafa !important;
+  box-shadow: 0 4px 14px rgba(9,9,11,0.22) !important;
+}
+body.gemini-light .cg-vcard.selected .cg-vcard-name,
+body.gemini-light .cg-ecard.selected .cg-ecard-title,
+body.gemini-light .cg-ecard.selected .cg-ecard-desc { color: #fafafa !important; }
+body.gemini-light .cg-vcard.selected .cg-vcard-style,
+body.gemini-light .cg-ecard.selected .cg-ecard-desc,
+body.gemini-light .cg-ecard.selected .cg-ecard-temp { color: #d4d4d8 !important; }
+
+/* Popover scrollbars thin/zinc */
+.cg-studio-popover *::-webkit-scrollbar,
+.cg-sidebar-drawer *::-webkit-scrollbar { width: 5px !important; }
+.cg-studio-popover *::-webkit-scrollbar-thumb,
+.cg-sidebar-drawer *::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18) !important; border-radius: 999px !important; }
+body.gemini-light .cg-studio-popover *::-webkit-scrollbar-thumb,
+body.gemini-light .cg-sidebar-drawer *::-webkit-scrollbar-thumb { background: rgba(24,24,27,0.22) !important; border-radius: 999px !important; }
+/* Icon-only theme toggle in Row 1 (reference exact style) */
+.cg-theme-toggle-btn {
+  width: 32px !important;
+  height: 32px !important;
+  padding: 6px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0 !important;
+  border-radius: 8px !important;
+  border: 1px solid rgba(255,255,255,0.10) !important;
+  background: #18181b !important;
+  color: #e4e4e7 !important;
+  cursor: pointer !important;
+  flex-shrink: 0 !important;
+  transition: background .12s ease, border-color .12s ease, color .12s ease !important;
+}
+.cg-theme-toggle-btn:hover {
+  background: #27272a !important;
+  border-color: rgba(255,255,255,0.16) !important;
+}
+body.gemini-light .cg-theme-toggle-btn,
+body.gemini-mode:not(.gemini-dark) .cg-theme-toggle-btn {
+  background: #f4f4f5 !important;
+  border-color: #e4e4e7 !important;
+  color: #3f3f46 !important;
+}
+body.gemini-light .cg-theme-toggle-btn:hover,
+body.gemini-mode:not(.gemini-dark) .cg-theme-toggle-btn:hover {
+  background: #e4e4e7 !important;
+}
+/* Stronger light guarantees for the Row 1 controls (cache-safe) */
+body.gemini-light .cg-studio-btn-panel, body.gemini-mode:not(.gemini-dark) .cg-studio-btn-panel, body.gemini-light .cg-studio-btn-thinking, body.gemini-mode:not(.gemini-dark) .cg-studio-btn-thinking, body.gemini-light .cg-studio-btn-mic.live { background:#f4f4f5 !important; color:#27272a !important; border-color:#e4e4e7 !important; }
+body.gemini-light .cg-studio-btn-panel .cg-meta-val { color:#09090b !important; }
+body.gemini-light .cg-studio-btn-panel .cg-meta-label { color:#71717a !important; }
+body.gemini-light .cg-studio-btn-panel .cg-picon { color:#3f3f46 !important; }
+body.gemini-light .cg-studio-btn-panel .cg-studio-chevron { color:#52525b !important; }
+body.gemini-light .cg-theme-toggle-btn { background:#f4f4f5 !important; color:#3f3f46 !important; border-color:#e4e4e7 !important; }
+
+/* Drawer scrollbar: keep panel visually clean; touch-scrollable but no visible track */
+.cg-sidebar-drawer { scrollbar-width: none !important; -ms-overflow-style: none !important; overscroll-behavior: contain; }
+.cg-sidebar-drawer::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }
+body.sidebar-open { overflow: hidden !important; overscroll-behavior: none !important; }
+/* ============================================================
+   PANIC CTRL — Premium 3D Spring Drawer ("Match look")
+   Mobile only. Hinge-fold 3D slide + spring easing + backdrop
+   blur + staggered child entrance. Desktop unaffected.
+   ============================================================ */
+/* Backdrop: cinematic dim + heavy blur (Universal Overlay) */
+body.sidebar-open .cg-sidebar-backdrop,
+.cg-sidebar-backdrop.open {
+  background: rgba(9, 9, 11, 0.56) !important;
+  backdrop-filter: blur(9px) saturate(150%) !important;
+  -webkit-backdrop-filter: blur(9px) saturate(150%) !important;
+}
+.cg-sidebar-backdrop.backdrop-animating {
+  transition: opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+
+@media (max-width: 859px) {
+  /* Children: staggered 3D entrance on mobile only (header -> nav groups -> footer) */
+  .cg-sidebar-drawer .cg-drawer-top-hud-card,
+  .cg-sidebar-drawer .cg-drawer-nav > *,
+  .cg-sidebar-drawer .cg-drawer-footer {
+    opacity: 0;
+    transform: translate3d(-26px, 0, -40px);
+    transition: opacity 0.38s ease,
+                transform 0.52s cubic-bezier(0.22, 1.3, 0.36, 1);
+    will-change: opacity, transform;
+  }
+  .cg-sidebar-drawer.open:not(.cg-drawer-exiting) .cg-drawer-top-hud-card {
+    opacity: 1; transform: translate3d(0, 0, 0); transition-delay: 0.10s;
+  }
+  .cg-sidebar-drawer.open:not(.cg-drawer-exiting) .cg-drawer-nav > *:nth-child(1)  { opacity: 1; transform: translate3d(0, 0, 0); transition-delay: 0.15s; }
+  .cg-sidebar-drawer.open:not(.cg-drawer-exiting) .cg-drawer-nav > *:nth-child(2)  { opacity: 1; transform: translate3d(0, 0, 0); transition-delay: 0.19s; }
+  .cg-sidebar-drawer.open:not(.cg-drawer-exiting) .cg-drawer-nav > *:nth-child(3)  { opacity: 1; transform: translate3d(0, 0, 0); transition-delay: 0.23s; }
+  .cg-sidebar-drawer.open:not(.cg-drawer-exiting) .cg-drawer-nav > *:nth-child(4)  { opacity: 1; transform: translate3d(0, 0, 0); transition-delay: 0.27s; }
+  .cg-sidebar-drawer.open:not(.cg-drawer-exiting) .cg-drawer-nav > *:nth-child(5)  { opacity: 1; transform: translate3d(0, 0, 0); transition-delay: 0.31s; }
+  .cg-sidebar-drawer.open:not(.cg-drawer-exiting) .cg-drawer-nav > *:nth-child(6)  { opacity: 1; transform: translate3d(0, 0, 0); transition-delay: 0.35s; }
+  .cg-sidebar-drawer.open:not(.cg-drawer-exiting) .cg-drawer-nav > *:nth-child(7)  { opacity: 1; transform: translate3d(0, 0, 0); transition-delay: 0.39s; }
+  .cg-sidebar-drawer.open:not(.cg-drawer-exiting) .cg-drawer-nav > *:nth-child(8)  { opacity: 1; transform: translate3d(0, 0, 0); transition-delay: 0.42s; }
+  .cg-sidebar-drawer.open:not(.cg-drawer-exiting) .cg-drawer-nav > *:nth-child(n+9) { opacity: 1; transform: translate3d(0, 0, 0); transition-delay: 0.45s; }
+  .cg-sidebar-drawer.open:not(.cg-drawer-exiting) .cg-drawer-footer {
+    opacity: 1; transform: translate3d(0, 0, 0); transition-delay: 0.38s;
+  }
+}
+
+/* Accessibility: reduced motion -> simple fade, no 3D/spring */
+@media (max-width: 859px) and (prefers-reduced-motion: reduce) {
+  .cg-sidebar-drawer,
+  .cg-sidebar-drawer.open,
+  .cg-sidebar-drawer.drawer-animating {
+    transform: translate3d(-103%, 0, 0) !important;
+    -webkit-transform: translate3d(-103%, 0, 0) !important;
+    transition: transform 0.15s ease !important;
+  }
+  .cg-sidebar-drawer.open {
+    transform: translate3d(0, 0, 0) !important;
+    -webkit-transform: translate3d(0, 0, 0) !important;
+  }
+  .cg-sidebar-drawer .cg-drawer-top-hud-card,
+  .cg-sidebar-drawer .cg-drawer-nav > *,
+  .cg-sidebar-drawer .cg-drawer-footer {
+    transition: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .cg-sidebar-backdrop.open,
+  body.sidebar-open .cg-sidebar-backdrop {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
+
+/* ============================================================
+   User Quick-Settings Panel ("User panel") — full sidebar width
+   with a LIGHT (8px) gap on both sides when expanded.
+   Extends into the drawer's padding box (safe: no overflow,
+   padding box is the overflow clip edge). Collapsed row and
+   expanded panel stay aligned — single element, no width snap.
+   ============================================================ */
+.cg-drawer-footer .cg-user-accordion-card {
+  left: -8px !important;            /* desktop: drawer padding 10px -> 2px gap */
+  right: -8px !important;
+  width: calc(100% + 16px) !important;
+}
+@media (max-width: 859px) {
+  .cg-drawer-footer .cg-user-accordion-card {
+    left: -10px !important;         /* mobile: drawer padding 18px -> 8px gap */
+    right: -10px !important;
+    width: calc(100% + 20px) !important;
+  }
+}
+
+/* ============================================================
+   Shadow removal (user request) — flat, border-only panels:
+   User quick-settings card, mini-rail popover, Live Transcript HUD
+   ============================================================ */
+.cg-user-accordion-card,
+.cg-user-accordion-card.expanded,
+body.gemini-dark .cg-user-accordion-card,
+body.gemini-dark .cg-user-accordion-card.expanded,
+body.gemini-light .cg-user-accordion-card,
+body.gemini-light .cg-user-accordion-card.expanded,
+.cg-mini-rail-popover,
+.cg-transcript-hud,
+body.gemini-dark .cg-transcript-hud,
+body.gemini-light .cg-transcript-hud,
+body.gemini-mode:not(.gemini-dark) .cg-transcript-hud {
+  box-shadow: none !important;
+}
+
+/* ============================================================
+   User panel corner fusion fix — expanded quick-settings body
+   gets TOP radius only (matches wrapper), BOTTOM square so it
+   fuses flush with the User row (no notched "faka" corners)
+   ============================================================ */
+.cg-user-accordion-card .cg-user-expand-body {
+  border-radius: 17px 17px 0 0 !important;
+}
+.cg-user-accordion-card.expanded .cg-user-expand-body {
+  border-radius: 17px 17px 0 0 !important;
+}
+/* ============================================================
+   Collapsed user panel fix — hide the 0-height expand-body
+   completely so no "extra header line" paints above the User
+   row when collapsed. Uses body.gemini-mode prefix to beat the
+   multi-selector light-theme rule (specificity 0,3,1) -> 0,4,1
+   ============================================================ */
+body.gemini-mode .cg-user-accordion-card:not(.expanded) .cg-user-expand-body,
+body.gemini-mode.gemini-light .cg-user-accordion-card:not(.expanded) .cg-user-expand-body,
+body.gemini-mode.gemini-dark .cg-user-accordion-card:not(.expanded) .cg-user-expand-body {
+  border-color: transparent !important;
+  background: transparent !important;
+}
+
+/* ============================================================
+   Collapsed user card de-duplication — kill the row's 1px
+   rectangular border (style.css light/dark rule, specificity
+   0,3,1) when collapsed so the card renders as ONE clean
+   rounded outline — no double hairline / "extra header line".
+   Hover background stays intact for affordance.
+   ============================================================ */
+body.gemini-mode .cg-user-accordion-card:not(.expanded) .cg-drawer-user-card,
+body.gemini-mode.gemini-light .cg-user-accordion-card:not(.expanded) .cg-drawer-user-card,
+body.gemini-mode.gemini-dark .cg-user-accordion-card:not(.expanded) .cg-drawer-user-card,
+body.gemini-mode:not(.gemini-dark) .cg-user-accordion-card:not(.expanded) .cg-drawer-user-card {
+  border: none !important;
+}
+
+.cg-user-accordion-card:not(.expanded) .cg-user-expand-body {
+  display: none !important;
+}
+
+/* ============================================================
+   Full-bleed sidebar (user request) — every section spans
+   edge-to-edge with ZERO side gap and square corners.
+   Only horizontal dividers separate the stacked sections.
+   Drawer keeps its own rounded outer corners (clips the
+   flush sections), dock/full-height look, aligned header-to-dock.
+   ============================================================ */
+.cg-sidebar-drawer:not(.mini-rail) {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+.cg-sidebar-drawer:not(.mini-rail) .cg-menu-group-label {
+  padding-left: 20px !important;
+}
+
+/* 1) Top HUD card (Panic Control header) — flush + square */
+.cg-sidebar-drawer .cg-drawer-top-hud-card {
+  width: 100% !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-top: none !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* 2) Controls menu card group — flush + square */
+.cg-sidebar-drawer .cg-menu-card-group {
+  border-left: none !important;
+  border-right: none !important;
+  border-top: none !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* 3) Footer + user quick-settings accordion dock — flush + square */
+.cg-drawer-footer {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+.cg-drawer-footer .cg-user-accordion-card {
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-bottom: none !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  box-sizing: border-box !important;
+}
+.cg-drawer-footer .cg-user-accordion-card .cg-user-expand-body {
+  border-left: none !important;
+  border-right: none !important;
+}
+
+/* Expanded quick-settings panel keeps its flush dock look */
+.cg-user-accordion-card.expanded .cg-user-expand-body {
+}
+
+/* Full-bleed radius enforcement — beats the light/dark
+   multi-selector capsule rules (specificity 0,3,1) */
+body.gemini-mode .cg-sidebar-drawer .cg-drawer-top-hud-card,
+body.gemini-mode .cg-sidebar-drawer .cg-menu-card-group,
+body.gemini-mode .cg-sidebar-drawer .cg-menu-group-label {
+}
+body.gemini-mode .cg-sidebar-drawer .cg-drawer-top-hud-card {
+  border-left: none !important;
+  border-right: none !important;
+  border-top: none !important;
+}
+body.gemini-mode .cg-sidebar-drawer .cg-menu-card-group {
+  border-left: none !important;
+  border-right: none !important;
+  border-top: none !important;
+}
+body.gemini-mode .cg-drawer-footer .cg-user-accordion-card,
+body.gemini-mode .cg-drawer-footer .cg-user-accordion-card .cg-user-expand-body {
+  border-left: none !important;
+  border-right: none !important;
+}
+
+/* ============================================================
+   PC Monitor row arrow — double chevron pinned to the right edge
+   ============================================================ */
+.cg-menu-row-arrow {
+  margin-left: auto !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #94a3b8 !important;
+  opacity: 0.75 !important;
+  flex-shrink: 0 !important;
+  transition: color 0.15s ease, opacity 0.15s ease, transform 0.15s ease !important;
+}
+.cg-menu-card-row:hover .cg-menu-row-arrow {
+  color: #0f172a !important;
+  opacity: 1 !important;
+  transform: translateX(2px) !important;
+}
+body.gemini-dark .cg-menu-row-arrow,
+body.gemini-mode.gemini-dark .cg-menu-row-arrow {
+  color: #a1a1aa !important;
+}
+body.gemini-dark .cg-menu-card-row:hover .cg-menu-row-arrow {
+  color: #ffffff !important;
+}
+
+/* ============================================================
+   Controls section background removal (user request) —
+   the card behind the PC Monitor / Gemini AI rows is gone;
+   rows sit directly on the drawer background. Border frame
+   (invisible empty outline) removed with it.
+   ============================================================ */
+.cg-sidebar-drawer .cg-menu-card-group {
+  background: transparent !important;
+  border-color: transparent !important;
+}
+body.gemini-light .cg-sidebar-drawer .cg-menu-card-group,
+body.gemini-mode:not(.gemini-dark) .cg-sidebar-drawer .cg-menu-card-group,
+body.gemini-mode.gemini-light .cg-sidebar-drawer .cg-menu-card-group {
+  background: transparent !important;
+  border-color: transparent !important;
+}
+
+/* Mini-rail / collapsed: hide the PC Monitor row chevron (icon-only rail) */
+.cg-sidebar-drawer.mini-rail .cg-menu-row-arrow,
+.cg-sidebar-drawer.collapsed .cg-menu-row-arrow {
+  display: none !important;
+}
+
+/* ============================================================
+   Flat navigation rows (user request) — restore the CONTROLS
+   section label usage and remove ALL backgrounds from the
+   PC Monitor / Gemini AI buttons (base/hover/active/pill).
+   Active tab is indicated by teal icon + bold text instead.
+   ============================================================ */
+body.gemini-mode .cg-sidebar-drawer .cg-menu-card-row,
+body.gemini-mode .cg-sidebar-drawer .cg-menu-card-row:hover,
+body.gemini-mode .cg-sidebar-drawer .cg-menu-card-row:active,
+body.gemini-mode .cg-sidebar-drawer .cg-menu-card-row.active {
+  background: transparent !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
+}
+
+/* Active state: teal accent on icon + bold text (no capsule) */
+body.gemini-mode .cg-sidebar-drawer .cg-menu-card-row.active {
+  color: #ffffff !important;
+}
+body.gemini-mode .cg-sidebar-drawer .cg-menu-card-row.active .cg-menu-row-text {
+  color: #ffffff !important;
+  font-weight: 800 !important;
+}
+body.gemini-mode.gemini-light .cg-sidebar-drawer .cg-menu-card-row.active {
+  color: #0f172a !important;
+}
+body.gemini-mode.gemini-light .cg-sidebar-drawer .cg-menu-card-row.active .cg-menu-row-text {
+  color: #0f172a !important;
+  font-weight: 800 !important;
+}
+
+/* Dark-theme parity: controls card fully transparent too
+   (beats AG 0,2,1 rule with 0,3,1) */
+body.gemini-mode.gemini-dark .cg-sidebar-drawer .cg-menu-card-group {
+  background: transparent !important;
+  border-color: transparent !important;
+}
+
+/* ============================================================
+   Brand HUD ("Panic Control" card) — flush at the drawer's
+   top edge with EXACTLY matching top corners:
+   drawer padding-top -> only the safe-area inset, card moves
+   to y=0, card top corners inherit the drawer's 20px curve,
+   card top border dropped so the drawer's border arc runs
+   continuously edge-to-edge.
+   ============================================================ */
+.cg-sidebar-drawer {
+  padding-top: env(safe-area-inset-top, 0px) !important;
+}
+.cg-drawer-top-hud-card {
+  margin-top: 0 !important;
+  border-top: none !important;
+  border-radius: 20px 20px 0 0 !important;
+}
+
+/* Brand HUD card top corners — flush match the drawer (specificity fix) */
+body.gemini-mode .cg-drawer-top-hud-card,
+body.gemini-mode.gemini-dark .cg-drawer-top-hud-card,
+body.gemini-mode.gemini-light .cg-drawer-top-hud-card,
+body.gemini-mode:not(.gemini-dark) .cg-drawer-top-hud-card {
+  margin-top: 0 !important;
+  border-top: none !important;
+  border-radius: 20px 20px 0 0 !important;
+}
+
+/* ============================================================
+   User dock (bottom) — flush at the drawer's bottom edge with
+   exactly matching bottom corners (mirror of the top fix):
+   dock padding-bottom removed, card bottom corners inherit
+   the drawer's 20px curve, card bottom border dropped so the
+   drawer's border arc runs continuously edge-to-edge.
+   ============================================================ */
+body.gemini-mode .cg-drawer-footer,
+body.gemini-mode.gemini-dark .cg-drawer-footer,
+body.gemini-mode.gemini-light .cg-drawer-footer {
+  padding-bottom: 0 !important;
+}
+.cg-sidebar-drawer {
+  padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+}
+body.gemini-mode .cg-drawer-footer .cg-user-accordion-card,
+body.gemini-mode.gemini-dark .cg-drawer-footer .cg-user-accordion-card,
+body.gemini-mode.gemini-light .cg-drawer-footer .cg-user-accordion-card,
+body.gemini-mode:not(.gemini-dark) .cg-drawer-footer .cg-user-accordion-card {
+  margin-bottom: 0 !important;
+  border-radius: 0 0 20px 20px !important;
+  border-bottom: none !important;
+}
+
+/* ============================================================
+   Sidebar panel: LEFT corners square (top-left & bottom-left),
+   RIGHT corners stay rounded — drawer is docked at the screen's
+   left edge so the straight edge reads as one continuous seam.
+   Brand HUD card (top) and User dock (bottom) radii updated
+   to stay concentric with the drawer's edges.
+   ============================================================ */
+body.gemini-mode .cg-sidebar-drawer,
+body.gemini-mode.gemini-dark .cg-sidebar-drawer,
+body.gemini-mode.gemini-light .cg-sidebar-drawer,
+body.gemini-mode:not(.gemini-dark) .cg-sidebar-drawer {
+  border-radius: 0 20px 20px 0 !important;
+}
+
+/* Top brand HUD card — left corner square, right corner rounded (matches drawer top) */
+body.gemini-mode .cg-drawer-top-hud-card,
+body.gemini-mode.gemini-dark .cg-drawer-top-hud-card,
+body.gemini-mode.gemini-light .cg-drawer-top-hud-card,
+body.gemini-mode:not(.gemini-dark) .cg-drawer-top-hud-card {
+  border-radius: 0 20px 0 0 !important;
+}
+
+/* Bottom user dock — left corner square, right corner rounded (matches drawer bottom) */
+body.gemini-mode .cg-drawer-footer .cg-user-accordion-card,
+body.gemini-mode.gemini-dark .cg-drawer-footer .cg-user-accordion-card,
+body.gemini-mode.gemini-light .cg-drawer-footer .cg-user-accordion-card,
+body.gemini-mode:not(.gemini-dark) .cg-drawer-footer .cg-user-accordion-card {
+  border-radius: 0 0 20px 0 !important;
+}
+
+/* ============================================================
+   Live Transcript HUD — EXPANDED state only:
+   full height (screen top edge -> bottom edge), flush right
+   edge, mirror corners of the sidebar. Collapsed state
+   (the slim "Live Transcript" pill above the terminal bar)
+   keeps the original compact styling.
+   ============================================================ */
+.cg-transcript-hud.expanded,
+body.gemini-dark .cg-transcript-hud.expanded,
+body.gemini-light .cg-transcript-hud.expanded,
+body.gemini-mode:not(.gemini-dark) .cg-transcript-hud.expanded {
+  position: fixed !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  right: 0 !important;
+  height: 100dvh !important;
+  max-height: none !important;
+  border-radius: 20px 0 0 20px !important;
+  border-right: none !important;
+  z-index: 200 !important;
+  box-shadow: -26px 0 60px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.04) !important;
+}
+
+body.gemini-light .cg-transcript-hud.expanded,
+body.gemini-mode:not(.gemini-dark) .cg-transcript-hud.expanded {
+  box-shadow: -22px 0 52px rgba(203, 213, 225, 0.60), 0 0 0 1px rgba(255, 255, 255, 0.75) !important;
+}
+
+/* Collapsed state — pinned flush at the top edge (same anchoring
+   as the expanded panel), only the slim header + terminal bar show */
+.cg-transcript-hud.collapsed,
+body.gemini-dark .cg-transcript-hud.collapsed,
+body.gemini-light .cg-transcript-hud.collapsed,
+body.gemini-mode:not(.gemini-dark) .cg-transcript-hud.collapsed {
+  position: fixed !important;
+  top: 0 !important;
+  bottom: auto !important;
+  right: 0 !important;
+  left: auto !important;
+  height: auto !important;
+  border-radius: 20px 0 0 20px !important;
+  border-right: none !important;
+}
+
+/* Collapsed pill must sit ABOVE the app's header bar too */
+.cg-transcript-hud.collapsed,
+body.gemini-dark .cg-transcript-hud.collapsed,
+body.gemini-light .cg-transcript-hud.collapsed,
+body.gemini-mode:not(.gemini-dark) .cg-transcript-hud.collapsed {
+  z-index: 200 !important;
+}
+
+/* ============================================================
+   Background shadow removal (user request) — flat panels:
+   sidebar drawer + live transcript HUD (expanded state)
+   ============================================================ */
+.cg-sidebar-drawer,
+.cg-sidebar-drawer.open,
+.cg-sidebar-drawer.drawer-animating,
+body.gemini-light .cg-sidebar-drawer,
+body.gemini-mode:not(.gemini-dark) .cg-sidebar-drawer {
+  box-shadow: none !important;
+}
+
+.cg-transcript-hud,
+.cg-transcript-hud.expanded,
+body.gemini-dark .cg-transcript-hud.expanded,
+body.gemini-light .cg-transcript-hud.expanded,
+body.gemini-mode:not(.gemini-dark) .cg-transcript-hud.expanded {
+  box-shadow: none !important;
+}
+
+/* Flat panels — STRONG specificity version (beats AG 0,2,1) */
+body.gemini-mode.gemini-dark .cg-sidebar-drawer,
+body.gemini-mode.gemini-dark .cg-sidebar-drawer.open,
+body.gemini-mode.gemini-dark .cg-sidebar-drawer.drawer-animating,
+body.gemini-mode.gemini-light .cg-sidebar-drawer,
+body.gemini-mode.gemini-light .cg-sidebar-drawer.open,
+body.gemini-mode.gemini-light .cg-sidebar-drawer.drawer-animating {
+  box-shadow: none !important;
+}
+body.gemini-mode.gemini-dark .cg-transcript-hud,
+body.gemini-mode.gemini-dark .cg-transcript-hud.expanded,
+body.gemini-mode.gemini-light .cg-transcript-hud,
+body.gemini-mode.gemini-light .cg-transcript-hud.expanded {
+  box-shadow: none !important;
+}
+
+/* ============================================================
+   PANIC CTRL — Staged Two-Phase Sidebar Fold & Vertical Collapse
+   "Two distinct choreographed stages":
+   STAGE 1 (0% -> 55%): The panel collapses vertically from the
+     bottom UP towards the top Panic Brand Card (past 50% / all
+     the way to the 68px top card), with inner content sliding up
+     and tucking inside the header. The panel remains pinned on
+     the left edge without folding yet.
+   STAGE 2 (55% -> 100%): Once collapsed up at the top, the top
+     block rotates/folds away to the left into the left hinge
+     (rotateY -42deg + translate3d -105%) and fades to 0.
+   ON OPEN:
+   STAGE 1 (0% -> 45%): Swings in from the left hinge into the
+     top-left corner as a compact unit.
+   STAGE 2 (45% -> 100%): Drops and unrolls smoothly down from
+     the top to full bottom height, with child items cascading in.
+   ============================================================ */
+
+/* ============================================================
+   PANIC CTRL — Left-to-Right / Right-to-Left Mini-Rail Sidebar
+   
+   - OPEN: Expands smoothly from Left to Right (64px -> 260px)
+   - CLOSE: Collapses smoothly from Right to Left (260px -> 64px)
+   - CLOSED STATE: Retains sleek 64px Icon Rail ("halka icon obdi")
+   ============================================================ */
+
+/* Desktop In-Screen Docked Sidebar (width >= 860px) */
+@media (min-width: 860px) {
+  .cg-sidebar-drawer {
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    bottom: auto !important;
+    width: var(--cg-sidebar-width, 260px) !important;
+    min-width: 64px !important;
+    max-width: 650px !important;
+    height: 100% !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    z-index: 10 !important;
+    flex-shrink: 0 !important;
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    transform: none !important;
+    clip-path: none !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    transition: width 0.3s cubic-bezier(0.2, 0.9, 0.3, 1), padding 0.26s ease !important;
+    will-change: width;
+    border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+  }
+
+  /* Expanded / Open State (260px) */
+  .cg-sidebar-drawer.open:not(.mini-rail) {
+    width: var(--cg-sidebar-width, 260px) !important;
+    padding: 12px 10px 10px 10px !important;
+  }
+
+  /* Collapsed / Mini-Rail State (64px - Icon Rail) */
+  .cg-sidebar-drawer.mini-rail,
+  .cg-sidebar-drawer.collapsed {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 64px !important;
+    min-width: 64px !important;
+    max-width: 64px !important;
+    padding: 14px 6px !important;
+    overflow-x: hidden !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    transform: none !important;
+    clip-path: none !important;
+  }
+
+  .cg-sidebar-drawer.mini-rail .cg-drawer-top-hud-card,
+  .cg-sidebar-drawer.collapsed .cg-drawer-top-hud-card,
+  .cg-sidebar-drawer.mini-rail .cg-drawer-nav,
+  .cg-sidebar-drawer.collapsed .cg-drawer-nav,
+  .cg-sidebar-drawer.mini-rail .cg-drawer-nav > *,
+  .cg-sidebar-drawer.collapsed .cg-drawer-nav > *,
+  .cg-sidebar-drawer.mini-rail .cg-drawer-footer,
+  .cg-sidebar-drawer.collapsed .cg-drawer-footer {
+    opacity: 1 !important;
+    transform: none !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+  }
+
+  /* Smooth Text & Label Slide Transition */
+  .cg-sidebar-drawer .cg-drawer-title-inner-card,
+  .cg-sidebar-drawer .cg-menu-group-label,
+  .cg-sidebar-drawer .cg-menu-row-text,
+  .cg-sidebar-drawer .cg-menu-row-arrow,
+  .cg-sidebar-drawer .cg-drawer-footer-version,
+  .cg-sidebar-drawer .cg-user-right {
+    white-space: nowrap !important;
+    transition: opacity 0.22s ease, transform 0.26s cubic-bezier(0.2, 0.9, 0.3, 1) !important;
+  }
+
+  /* In mini-rail: hide text smoothly right-to-left */
+  .cg-sidebar-drawer.mini-rail .cg-drawer-title-inner-card,
+  .cg-sidebar-drawer.mini-rail .cg-menu-group-label,
+  .cg-sidebar-drawer.mini-rail .cg-menu-row-text,
+  .cg-sidebar-drawer.mini-rail .cg-menu-row-arrow,
+  .cg-sidebar-drawer.mini-rail .cg-drawer-footer-version,
+  .cg-sidebar-drawer.mini-rail .cg-user-right,
+  .cg-sidebar-drawer.mini-rail .cg-user-meta,
+  .cg-sidebar-drawer.mini-rail .cg-user-chevron-wrap,
+  .cg-sidebar-drawer.collapsed .cg-drawer-title-inner-card,
+  .cg-sidebar-drawer.collapsed .cg-menu-group-label,
+  .cg-sidebar-drawer.collapsed .cg-menu-row-text,
+  .cg-sidebar-drawer.collapsed .cg-menu-row-arrow,
+  .cg-sidebar-drawer.collapsed .cg-drawer-footer-version,
+  .cg-sidebar-drawer.collapsed .cg-user-right,
+  .cg-sidebar-drawer.collapsed .cg-user-meta,
+  .cg-sidebar-drawer.collapsed .cg-user-chevron-wrap,
+  .cg-sidebar-drawer.mini-rail #cgHistorySection,
+  .cg-sidebar-drawer.collapsed #cgHistorySection {
+    opacity: 0 !important;
+    transform: translateX(-12px) !important;
+    pointer-events: none !important;
+    display: none !important;
+  }
+
+  /* Mini-Rail Icon Layout, Centering & Contrast */
+  .cg-sidebar-drawer.mini-rail .cg-menu-card-group,
+  .cg-sidebar-drawer.collapsed .cg-menu-card-group {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    width: 100% !important;
+    padding: 0 !important;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    gap: 8px !important;
+  }
+
+  .cg-sidebar-drawer.mini-rail .cg-menu-card-row,
+  .cg-sidebar-drawer.collapsed .cg-menu-card-row {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    padding: 0 !important;
+    margin: 0 auto !important;
+    border-radius: 12px !important;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    cursor: pointer !important;
+    transition: background 0.15s ease, transform 0.1s ease !important;
+  }
+
+  .cg-sidebar-drawer.mini-rail .cg-menu-card-row:hover,
+  .cg-sidebar-drawer.collapsed .cg-menu-card-row:hover {
+    background: rgba(255, 255, 255, 0.08) !important;
+  }
+
+  .cg-sidebar-drawer.mini-rail .cg-menu-card-row.active,
+  .cg-sidebar-drawer.collapsed .cg-menu-card-row.active {
+    background: rgba(255, 255, 255, 0.12) !important;
+  }
+
+  .cg-sidebar-drawer.mini-rail .cg-menu-row-icon,
+  .cg-sidebar-drawer.collapsed .cg-menu-row-icon {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 24px !important;
+    height: 24px !important;
+    margin: 0 auto !important;
+    color: #f4f4f5 !important;
+  }
+
+  .cg-sidebar-drawer.mini-rail .cg-menu-row-icon svg,
+  .cg-sidebar-drawer.collapsed .cg-menu-row-icon svg {
+    display: block !important;
+    width: 22px !important;
+    height: 22px !important;
+    stroke: #f4f4f5 !important;
+    color: #f4f4f5 !important;
+  }
+
+  .cg-sidebar-drawer.mini-rail .cg-menu-card-row[data-preview="panic"] .cg-menu-row-icon svg,
+  .cg-sidebar-drawer.collapsed .cg-menu-card-row[data-preview="panic"] .cg-menu-row-icon svg {
+    stroke: #ef4444 !important;
+    color: #ef4444 !important;
+  }
+
+  /* Top Insignia in Mini-Rail */
+  .cg-sidebar-drawer.mini-rail .cg-drawer-avatar-left,
+  .cg-sidebar-drawer.collapsed .cg-drawer-avatar-left {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 44px !important;
+    height: 44px !important;
+    margin: 0 auto 12px auto !important;
+    color: #38bdf8 !important;
+  }
+
+  .cg-sidebar-drawer.mini-rail .cg-drawer-avatar-left svg,
+  .cg-sidebar-drawer.collapsed .cg-drawer-avatar-left svg {
+    display: block !important;
+    width: 28px !important;
+    height: 28px !important;
+    fill: #38bdf8 !important;
+    color: #38bdf8 !important;
+  }
+
+  /* Bottom User Badge in Mini-Rail */
+  .cg-sidebar-drawer.mini-rail .cg-drawer-footer,
+  .cg-sidebar-drawer.collapsed .cg-drawer-footer {
+    margin-top: auto !important;
+    padding: 12px 0 8px !important;
+    width: 100% !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    border: none !important;
+    background: transparent !important;
+  }
+
+  .cg-sidebar-drawer.mini-rail .cg-drawer-user-card,
+  .cg-sidebar-drawer.collapsed .cg-drawer-user-card {
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    justify-content: center !important;
+    padding: 0 !important;
+    margin: 0 auto !important;
+    width: 44px !important;
+    height: 44px !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    cursor: pointer !important;
+  }
+
+  .cg-sidebar-drawer.mini-rail .cg-user-left,
+  .cg-sidebar-drawer.collapsed .cg-user-left {
+    justify-content: center !important;
+    gap: 0 !important;
+    width: 100% !important;
+  }
+
+  .cg-sidebar-drawer.mini-rail .cg-user-avatar-badge,
+  .cg-sidebar-drawer.collapsed .cg-user-avatar-badge {
+    width: 36px !important;
+    height: 36px !important;
+    margin: 0 auto !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 50% !important;
+    background: #fafafa !important;
+    color: #09090b !important;
+    font-weight: 700 !important;
+  }
+
+  /* Light mode contrast adjustments for mini-rail */
+  body.gemini-light .cg-sidebar-drawer.mini-rail .cg-menu-row-icon,
+  body.gemini-light .cg-sidebar-drawer.collapsed .cg-menu-row-icon,
+  body.gemini-light .cg-sidebar-drawer.mini-rail .cg-menu-row-icon svg,
+  body.gemini-light .cg-sidebar-drawer.collapsed .cg-menu-row-icon svg,
+  body.gemini-mode:not(.gemini-dark) .cg-sidebar-drawer.mini-rail .cg-menu-row-icon,
+  body.gemini-mode:not(.gemini-dark) .cg-sidebar-drawer.collapsed .cg-menu-row-icon,
+  body.gemini-mode:not(.gemini-dark) .cg-sidebar-drawer.mini-rail .cg-menu-row-icon svg,
+  body.gemini-mode:not(.gemini-dark) .cg-sidebar-drawer.collapsed .cg-menu-row-icon svg {
+    stroke: #18181b !important;
+    color: #18181b !important;
+  }
+  body.gemini-light .cg-sidebar-drawer.mini-rail .cg-menu-card-row:hover,
+  body.gemini-light .cg-sidebar-drawer.collapsed .cg-menu-card-row:hover,
+  body.gemini-mode:not(.gemini-dark) .cg-sidebar-drawer.mini-rail .cg-menu-card-row:hover,
+  body.gemini-mode:not(.gemini-dark) .cg-sidebar-drawer.collapsed .cg-menu-card-row:hover {
+    background: #f4f4f5 !important;
+  }
+  body.gemini-light .cg-sidebar-drawer.mini-rail .cg-user-avatar-badge,
+  body.gemini-light .cg-sidebar-drawer.collapsed .cg-user-avatar-badge,
+  body.gemini-mode:not(.gemini-dark) .cg-sidebar-drawer.mini-rail .cg-user-avatar-badge,
+  body.gemini-mode:not(.gemini-dark) .cg-sidebar-drawer.collapsed .cg-user-avatar-badge {
+    background: #18181b !important;
+    color: #fafafa !important;
+  }
+
+  .cg-sidebar-drawer.mini-rail .cg-user-upgrade-pill,
+  .cg-sidebar-drawer.mini-rail .cg-mini-settings-btn,
+  .cg-sidebar-drawer.mini-rail .cg-mini-divider,
+  .cg-sidebar-drawer.mini-rail .cg-user-expand-body,
+  .cg-sidebar-drawer.collapsed .cg-user-upgrade-pill,
+  .cg-sidebar-drawer.collapsed .cg-mini-settings-btn,
+  .cg-sidebar-drawer.collapsed .cg-mini-divider,
+  .cg-sidebar-drawer.collapsed .cg-user-expand-body {
+    display: none !important;
+  }
+
+  /* No dark backdrop overlay on desktop — chat stays fully visible and usable */
+  .cg-sidebar-backdrop {
+    display: none !important;
+    pointer-events: none !important;
+  }
+
+  .cg-main-viewport {
+    flex: 1 !important;
+    min-width: 0 !important;
+  }
+}
+
+/* Mobile Off-Canvas Drawer (max-width: 859px) */
+@media (max-width: 859px) {
+  .cg-sidebar-drawer {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    width: 280px !important;
+    max-width: 85vw !important;
+    height: 100% !important;
+    height: 100dvh !important;
+    border-radius: 0 22px 22px 0 !important;
+    box-shadow: 26px 0 70px rgba(0, 0, 0, 0.45) !important;
+    z-index: 1000 !important;
+    box-sizing: border-box !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    transform: translate3d(-100%, 0, 0) !important;
+    transition: transform 0.28s cubic-bezier(0.2, 0.9, 0.3, 1) !important;
+  }
+  .cg-sidebar-drawer.open {
+    transform: translate3d(0, 0, 0) !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+  .cg-sidebar-drawer.collapsed:not(.open) {
+    transform: translate3d(-100%, 0, 0) !important;
+  }
+}
+
+/* Solid child element containment */
+.cg-sidebar-drawer .cg-drawer-top-hud-card,
+.cg-sidebar-drawer .cg-drawer-nav,
+.cg-sidebar-drawer .cg-drawer-footer {
+  width: 100% !important;
+  box-sizing: border-box !important;
+  flex-shrink: 0 !important;
+}
+
+/* Container & Main Viewport Layout */
+.cg-app-container {
+  display: flex !important;
+  width: 100% !important;
+  height: 100% !important;
+  overflow: hidden !important;
+  position: relative !important;
+}
+.cg-main-viewport {
+  flex: 1 !important;
+  min-width: 0 !important;
+  height: 100% !important;
+  position: relative !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+
+/* ============================================================
+   PANIC CTRL — Sidebar Toggle Button (Mobile Only)
+   On Desktop (>=860px), clicking the mini-rail Cyber Vortex Panic logo
+   opens the sidebar, so the duplicate header toggle button is removed.
+   ============================================================ */
+@media (min-width: 860px) {
+  .cg-viewport-toggle-btn,
+  body.gemini-mode .cg-viewport-toggle-btn,
+  body.gemini-dark .cg-viewport-toggle-btn,
+  body.gemini-light .cg-viewport-toggle-btn {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
+}
+
+@media (max-width: 859px) {
+  .cg-viewport-toggle-btn,
+  body.gemini-mode .cg-viewport-toggle-btn,
+  body.gemini-dark .cg-viewport-toggle-btn,
+  body.gemini-light .cg-viewport-toggle-btn {
+    display: inline-flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 12px !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    flex-shrink: 0 !important;
+    z-index: 120 !important;
+    margin-right: 6px !important;
+    transition: all 0.16s ease !important;
+  }
+
+  body.gemini-dark .cg-viewport-toggle-btn {
+    background: rgba(24, 24, 27, 0.75) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    color: #f4f4f5 !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.08) !important;
+  }
+  body.gemini-dark .cg-viewport-toggle-btn:hover {
+    background: rgba(39, 39, 42, 0.95) !important;
+    color: #ffffff !important;
+    border-color: rgba(255, 255, 255, 0.22) !important;
+    transform: translateY(-1px) !important;
+  }
+  body.gemini-dark .cg-viewport-toggle-btn:active {
+    transform: scale(0.94) !important;
+    background: #18181b !important;
+  }
+  body.gemini-dark .cg-viewport-toggle-btn svg {
+    stroke: #f4f4f5 !important;
+  }
+
+  body.gemini-light .cg-viewport-toggle-btn,
+  body.gemini-mode:not(.gemini-dark) .cg-viewport-toggle-btn {
+    background: #ffffff !important;
+    border: 1px solid rgba(228, 228, 231, 0.95) !important;
+    color: #18181b !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+  }
+  body.gemini-light .cg-viewport-toggle-btn:hover,
+  body.gemini-mode:not(.gemini-dark) .cg-viewport-toggle-btn:hover {
+    background: #f4f4f5 !important;
+    border-color: rgba(212, 212, 216, 0.98) !important;
+    color: #09090b !important;
+    transform: translateY(-1px) !important;
+  }
+  body.gemini-light .cg-viewport-toggle-btn:active,
+  body.gemini-mode:not(.gemini-dark) .cg-viewport-toggle-btn:active {
+    transform: scale(0.94) !important;
+    background: #e4e4e7 !important;
+  }
+  body.gemini-light .cg-viewport-toggle-btn svg,
+  body.gemini-mode:not(.gemini-dark) .cg-viewport-toggle-btn svg {
+    stroke: #18181b !important;
+  }
+}

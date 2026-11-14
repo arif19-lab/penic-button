@@ -282,7 +282,7 @@ private:
         if (idr) m_batchHasIDR = true;
         m_batch.push_back(lp);
         m_batchSync.push_back(idr);
-        m_batchDur.push_back(3000); // 90000/30 fps
+        m_batchDur.push_back(1500); // 90000/60 fps
     }
 
     void BuildInit() {

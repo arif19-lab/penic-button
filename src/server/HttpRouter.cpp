@@ -3967,7 +3967,12 @@ showMode(currentMode);
 
             setsockopt(clientSocket, IPPROTO_TCP, TCP_NODELAY, (char*)&flag, sizeof(int));
 
-            g_jpegBcast.ServeWebSocketClient(clientSocket);
+            // ⚡ /ws/vid = dedicated Annex-B WebSocket (WebCodecs hardware path)
+            if (request.find("GET /ws/vid") != std::string::npos) {
+                g_live.ServeAnnexBWebSocketClient(clientSocket);
+            } else {
+                g_jpegBcast.ServeWebSocketClient(clientSocket);
+            }
 
             return;
 
@@ -5160,6 +5165,41 @@ showMode(currentMode);
             shutdown(clientSocket, SD_SEND);
 
             closesocket(clientSocket);
+
+            return;
+
+
+
+                } else if (request.find("GET /stream.annexb") != std::string::npos) {
+
+            // 🚀 RAW ANNEX-B H.264 for the Android native MediaCodec player.
+            // Concatenated NAL units, no MP4 container — exactly what the
+            // APK's start-code splitter expects.
+
+            int streamW = 1280, streamH = 720;
+            g_live.GetStreamDimensions(streamW, streamH);
+
+            std::string header =
+
+                "HTTP/1.1 200 OK\r\n"
+
+                "Content-Type: video/h264\r\n"
+
+                "Cache-Control: no-cache, no-store\r\n"
+
+                "Pragma: no-cache\r\n"
+
+                "Access-Control-Allow-Origin: *\r\n"
+
+                "X-Video-Width: " + std::to_string(streamW) + "\r\n"
+
+                "X-Video-Height: " + std::to_string(streamH) + "\r\n"
+
+                "Connection: close\r\n\r\n";
+
+            send(clientSocket, header.c_str(), (int)header.size(), 0);
+
+            g_live.ServeAnnexBClient(clientSocket);
 
             return;
 

@@ -17,6 +17,94 @@
 #include "../server/WebSocket.h"
 #include "../input/TouchInjector.h"
 #include "../core/Logger.h"
+#include <mmsystem.h>
+
+// Shared in-socket input parser (T:/M:/K: + ACK).  Both stream sockets (the
+// JPEG broadcaster and the Annex-B WebSocket) accept touch/mouse/keyboard
+// events, so the parsing lives in one place.  Returns false when the client
+// asked to close the socket.
+inline bool HandleStreamInputMessage(const std::string& msg, int screenW, int screenH) {
+    if (msg == "CLOSE") return false;
+    if (msg.empty() || msg == "A") return true;
+
+    if (msg[0] == 'T' && msg.size() > 5) {
+        char act[16] = {0};
+        int px = -1, py = -1, tid = 0;
+        if (sscanf(msg.c_str(), "T:%15[^:]:%d:%d:%d", act, &px, &py, &tid) >= 3 && px >= 0 && py >= 0) {
+            int targetX = (px * screenW) / 10000;
+            int targetY = (py * screenH) / 10000;
+            bool touchHandled = false;
+            if (g_touchInitialized && g_pfnInjectTouch) {
+                POINTER_TOUCH_INFO_CUSTOM contact;
+                memset(&contact, 0, sizeof(POINTER_TOUCH_INFO_CUSTOM));
+                contact.pointerInfo.pointerType = PT_TOUCH;
+                contact.pointerInfo.pointerId = tid;
+                contact.pointerInfo.ptPixelLocation.x = targetX;
+                contact.pointerInfo.ptPixelLocation.y = targetY;
+                contact.touchFlags = TOUCH_FLAG_NONE;
+                contact.touchMask = TOUCH_MASK_CONTACTAREA | TOUCH_MASK_PRESSURE;
+                contact.pressure = 32000;
+                contact.rcContact.left   = targetX - 4;
+                contact.rcContact.right  = targetX + 4;
+                contact.rcContact.top    = targetY - 4;
+                contact.rcContact.bottom = targetY + 4;
+                std::string actStr = act;
+                if (actStr == "down") {
+                    contact.pointerInfo.pointerFlags = POINTER_FLAG_DOWN | POINTER_FLAG_INRANGE | POINTER_FLAG_INCONTACT;
+                    touchHandled = (g_pfnInjectTouch(1, &contact) == TRUE);
+                } else if (actStr == "move") {
+                    contact.pointerInfo.pointerFlags = POINTER_FLAG_UPDATE | POINTER_FLAG_INRANGE | POINTER_FLAG_INCONTACT;
+                    touchHandled = (g_pfnInjectTouch(1, &contact) == TRUE);
+                } else if (actStr == "up") {
+                    contact.pointerInfo.pointerFlags = POINTER_FLAG_UP;
+                    touchHandled = (g_pfnInjectTouch(1, &contact) == TRUE);
+                } else if (actStr == "tap") {
+                    contact.pointerInfo.pointerFlags = POINTER_FLAG_DOWN | POINTER_FLAG_INRANGE | POINTER_FLAG_INCONTACT;
+                    if (g_pfnInjectTouch(1, &contact)) {
+                        contact.pointerInfo.pointerFlags = POINTER_FLAG_UP;
+                        g_pfnInjectTouch(1, &contact);
+                        touchHandled = true;
+                    }
+                }
+            }
+            if (!touchHandled) {
+                SetCursorPos(targetX, targetY);
+                std::string actStr = act;
+                if (actStr == "down") mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
+                else if (actStr == "up") mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
+                else if (actStr == "tap") {
+                    mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
+                    mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
+                }
+            }
+        }
+    } else if (msg[0] == 'M' && msg.size() > 3) {
+        int dx = 0, dy = 0, sc = 0, clk = 0;
+        sscanf(msg.c_str(), "M:%d:%d:%d:%d", &dx, &dy, &sc, &clk);
+        if (dx != 0 || dy != 0) {
+            POINT cur; GetCursorPos(&cur);
+            SetCursorPos(cur.x + dx, cur.y + dy);
+            mouse_event(MOUSEEVENTF_MOVE, dx, dy, 0, 0);
+        }
+        if (sc != 0) mouse_event(MOUSEEVENTF_WHEEL, 0, 0, (DWORD)sc, 0);
+        if (clk == 1) {
+            mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
+            Sleep(15);
+            mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
+        } else if (clk == 2) {
+            mouse_event(MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, 0);
+            Sleep(15);
+            mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0);
+        } else if (clk == 3) mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
+        else if (clk == 4) mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
+    } else if (msg[0] == 'K' && msg.size() > 3) {
+        int vk = 0, down = 0;
+        if (sscanf(msg.c_str(), "K:%d:%d", &vk, &down) >= 2 && vk > 0) {
+            keybd_event((BYTE)vk, 0, down ? 0 : KEYEVENTF_KEYUP, 0);
+        }
+    }
+    return true;
+}
 
 // ============================================================
 // 🎬 LIVE BROADCASTER — ONE persistent encoder, MANY viewers.
@@ -61,6 +149,14 @@ public:
         // Cap at 1920 wide for sane tunnel bandwidth (keeps native aspect)
         if (width > 1920) { height = (height * 1920) / width; width = 1920; }
         width &= ~1; height &= ~1;
+    }
+
+    // The native Android decoder must be configured with the exact encoded
+    // dimensions before the first Annex-B NAL arrives.
+    void GetStreamDimensions(int& outWidth, int& outHeight) {
+        std::lock_guard<std::mutex> lk(mtx);
+        outWidth = width;
+        outHeight = height;
     }
 
     // Ensure the persistent encoder thread exists (idempotent, race-free).
@@ -110,6 +206,13 @@ private:
         }
         AppLog("[live] encoder ready, entering loop");
 
+        // Attach once at startup — the per-frame desktop switch used to run on
+        // EVERY frame (OpenInputDesktop + SetThreadDesktop), which serialized
+        // capture and was a large source of jitter.  CaptureDXGIFrame already
+        // re-attaches when it loses access to the screen.
+        SwitchToActiveDesktop();
+        timeBeginPeriod(1); // sharper sleep granularity for the 60 FPS loop
+
         while (true) {
             bool work = false;
             {
@@ -126,7 +229,8 @@ private:
             }
             if (!work) continue;
 
-            SwitchToActiveDesktop();
+            auto tStart = std::chrono::steady_clock::now();
+
             int screenW = GetSystemMetrics(SM_CXSCREEN);
             int screenH = GetSystemMetrics(SM_CYSCREEN);
             if (!CaptureDXGIFrame(hDC, w, h)) {
@@ -178,8 +282,17 @@ private:
                 annexb.clear();
             }
 
-            Sleep(16); // ⚡ 60 FPS True Hardware Refresh Sync!
+            // ⚡ Frame-accurate pacing: measure real frame time and only sleep
+            // the remainder to hit ~60 FPS.  A fixed Sleep(16) always over- or
+            // under-shoots after capture+encode work, which caused micro-stutter.
+            auto tEnd = std::chrono::steady_clock::now();
+            int elapsedMs = (int)std::chrono::duration_cast<std::chrono::milliseconds>(tEnd - tStart).count();
+            int sleepMs = 16 - elapsedMs;
+            if (sleepMs > 0) Sleep((DWORD)sleepMs);
+            else Sleep(1);
         }
+
+        timeEndPeriod(1);
 
         SelectObject(hDC, oldBm);
         DeleteObject(hBitmap);
@@ -318,89 +431,11 @@ public:
             int br = recv(sock, (char*)rxBuf, sizeof(rxBuf), 0);
             if (br > 0) {
                 std::string msg = ReadWebSocketTextMessage(rxBuf, br);
-                if (msg == "CLOSE") break;
                 if (msg == "A") {
                     if (inFlight > 0) inFlight--;
                     continue;
                 }
-                if (!msg.empty()) {
-                    if (msg[0] == 'T' && msg.size() > 5) {
-                        char act[16] = {0};
-                        int px = -1, py = -1, tid = 0;
-                        if (sscanf(msg.c_str(), "T:%15[^:]:%d:%d:%d", act, &px, &py, &tid) >= 3 && px >= 0 && py >= 0) {
-                            int targetX = (px * screenW) / 10000;
-                            int targetY = (py * screenH) / 10000;
-                            bool touchHandled = false;
-                            if (g_touchInitialized && g_pfnInjectTouch) {
-                                POINTER_TOUCH_INFO_CUSTOM contact;
-                                memset(&contact, 0, sizeof(POINTER_TOUCH_INFO_CUSTOM));
-                                contact.pointerInfo.pointerType = PT_TOUCH;
-                                contact.pointerInfo.pointerId = tid;
-                                contact.pointerInfo.ptPixelLocation.x = targetX;
-                                contact.pointerInfo.ptPixelLocation.y = targetY;
-                                contact.touchFlags = TOUCH_FLAG_NONE;
-                                contact.touchMask = TOUCH_MASK_CONTACTAREA | TOUCH_MASK_PRESSURE;
-                                contact.pressure = 32000;
-                                contact.rcContact.left   = targetX - 4;
-                                contact.rcContact.right  = targetX + 4;
-                                contact.rcContact.top    = targetY - 4;
-                                contact.rcContact.bottom = targetY + 4;
-                                std::string actStr = act;
-                                if (actStr == "down") {
-                                    contact.pointerInfo.pointerFlags = POINTER_FLAG_DOWN | POINTER_FLAG_INRANGE | POINTER_FLAG_INCONTACT;
-                                    touchHandled = (g_pfnInjectTouch(1, &contact) == TRUE);
-                                } else if (actStr == "move") {
-                                    contact.pointerInfo.pointerFlags = POINTER_FLAG_UPDATE | POINTER_FLAG_INRANGE | POINTER_FLAG_INCONTACT;
-                                    touchHandled = (g_pfnInjectTouch(1, &contact) == TRUE);
-                                } else if (actStr == "up") {
-                                    contact.pointerInfo.pointerFlags = POINTER_FLAG_UP;
-                                    touchHandled = (g_pfnInjectTouch(1, &contact) == TRUE);
-                                } else if (actStr == "tap") {
-                                    contact.pointerInfo.pointerFlags = POINTER_FLAG_DOWN | POINTER_FLAG_INRANGE | POINTER_FLAG_INCONTACT;
-                                    if (g_pfnInjectTouch(1, &contact)) {
-                                        contact.pointerInfo.pointerFlags = POINTER_FLAG_UP;
-                                        g_pfnInjectTouch(1, &contact);
-                                        touchHandled = true;
-                                    }
-                                }
-                            }
-                            if (!touchHandled) {
-                                SetCursorPos(targetX, targetY);
-                                std::string actStr = act;
-                                if (actStr == "down") mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
-                                else if (actStr == "up") mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
-                                else if (actStr == "tap") {
-                                    mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
-                                    mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
-                                }
-                            }
-                        }
-                    } else if (msg[0] == 'M' && msg.size() > 3) {
-                        int dx = 0, dy = 0, sc = 0, clk = 0;
-                        sscanf(msg.c_str(), "M:%d:%d:%d:%d", &dx, &dy, &sc, &clk);
-                        if (dx != 0 || dy != 0) {
-                            POINT cur; GetCursorPos(&cur);
-                            SetCursorPos(cur.x + dx, cur.y + dy);
-                            mouse_event(MOUSEEVENTF_MOVE, dx, dy, 0, 0);
-                        }
-                        if (sc != 0) mouse_event(MOUSEEVENTF_WHEEL, 0, 0, (DWORD)sc, 0);
-                        if (clk == 1) {
-                            mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
-                            Sleep(15);
-                            mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
-                        } else if (clk == 2) {
-                            mouse_event(MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, 0);
-                            Sleep(15);
-                            mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0);
-                        } else if (clk == 3) mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
-                        else if (clk == 4) mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
-                    } else if (msg[0] == 'K' && msg.size() > 3) {
-                        int vk = 0, down = 0;
-                        if (sscanf(msg.c_str(), "K:%d:%d", &vk, &down) >= 2 && vk > 0) {
-                            keybd_event((BYTE)vk, 0, down ? 0 : KEYEVENTF_KEYUP, 0);
-                        }
-                    }
-                }
+                if (!HandleStreamInputMessage(msg, screenW, screenH)) break;
             } else if (br == 0) {
                 break;
             } else {
@@ -451,6 +486,229 @@ public:
 
             // 4. Send binary WebSocket frame (100% atomic)
             std::vector<char> payload(toSend.begin(), toSend.end());
+            if (!SendWebSocketBinaryFrame(sock, payload)) break;
+            inFlight++;
+            lastSentTick = GetTickCount();
+        }
+
+        {
+            std::lock_guard<std::mutex> lk(mtx);
+            subscriberCount--;
+            if (subscriberCount <= 0) cv.notify_all();
+        }
+        closesocket(sock);
+    }
+
+    // ⚡ Raw Annex-B over plain HTTP for the Android native MediaCodec player.
+    // The old /stream.h264 endpoint sends fragmented MP4 (ftyp/moov/moof), which
+    // the APK's NAL splitter cannot parse — it hunts for 00 00 01 start codes
+    // inside length-prefixed MP4 boxes and feeds the decoder garbage.  This
+    // endpoint emits exactly what MediaCodec wants: concatenated Annex-B NALs.
+    void ServeAnnexBClient(SOCKET sock) {
+        EnsureEncoder();
+        {
+            std::lock_guard<std::mutex> lk(mtx);
+            subscriberCount++;
+            cv.notify_all();
+        }
+
+        int flag = 1;
+        setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (char*)&flag, sizeof(int));
+        int sndbuf = 65536;
+        setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (char*)&sndbuf, sizeof(int));
+        u_long mode = 1;
+        ioctlsocket(sock, FIONBIO, &mode);
+
+        uint64_t catchUpSeq = 0;
+        bool catchUpSet = false;
+        int stall = 0;
+        bool alive = true;
+
+        while (alive) {
+            std::vector<uint8_t> toSend;
+            {
+                std::unique_lock<std::mutex> lk(mtx);
+                cv.wait_for(lk, std::chrono::milliseconds(250), [&]() {
+                    if (stopRequested) return true;
+                    for (auto& p : annexbRing) if (p.seq > catchUpSeq) return true;
+                    return false;
+                });
+                if (stopRequested) break;
+
+                // Tune in at the newest IDR so the decoder can start immediately.
+                if (!catchUpSet) {
+                    for (auto it = annexbRing.rbegin(); it != annexbRing.rend(); ++it) {
+                        if (it->sync) { catchUpSeq = it->seq - 1; catchUpSet = true; break; }
+                    }
+                    if (!catchUpSet) continue;
+                }
+                for (auto& p : annexbRing) {
+                    if (p.seq > catchUpSeq) { toSend = p.data; catchUpSeq = p.seq; break; }
+                }
+            }
+
+            if (toSend.empty()) {
+                if (++stall > 60) break; // ~15s without a frame -> drop, client reconnects
+                continue;
+            }
+            stall = 0;
+
+            // Only write when the socket accepts more data: never queue stale
+            // frames in the kernel buffer (that is what produced the lag).
+            fd_set wfds; FD_ZERO(&wfds); FD_SET(sock, &wfds);
+            timeval tv = {0, 0};
+            int sel = select(0, NULL, &wfds, NULL, &tv);
+            if (sel < 0) break;
+            if (sel == 0) { Sleep(4); continue; } // socket busy -> drop this frame
+
+            int total = (int)toSend.size();
+            int sent = 0;
+            while (sent < total) {
+                int n = send(sock, (const char*)toSend.data() + sent, total - sent, 0);
+                if (n == SOCKET_ERROR) {
+                    if (WSAGetLastError() == WSAEWOULDBLOCK) { Sleep(1); continue; }
+                    alive = false;
+                    break;
+                }
+                if (n <= 0) { alive = false; break; }
+                sent += n;
+            }
+        }
+        {
+            std::lock_guard<std::mutex> lk(mtx);
+            subscriberCount--;
+            if (subscriberCount <= 0) cv.notify_all();
+        }
+        closesocket(sock);
+    }
+
+    // ⚡ Dedicated /ws/vid WebSocket: pure Annex-B H.264 frames for browser
+    // WebCodecs VideoDecoder hardware decode (lowest latency path). Sends a
+    // tiny text config frame first (codec + size) then binary frames.
+    // inputOnly: accept touch/mouse/keyboard but never send video (used by the
+    // native Android SurfaceView player, which draws the video itself).
+    void ServeAnnexBWebSocketClient(SOCKET sock, bool inputOnly = false) {
+        EnsureEncoder();
+        if (!inputOnly) {
+            std::lock_guard<std::mutex> lk(mtx);
+            subscriberCount++;
+            cv.notify_all();
+        }
+
+        u_long mode = 1;
+        ioctlsocket(sock, FIONBIO, &mode);
+        int nodelay = 1;
+        setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (char*)&nodelay, sizeof(int));
+        int sndbuf = 65536;
+        setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (char*)&sndbuf, sizeof(int));
+
+        EnsureTouchInjectionInit();
+        int screenW = GetSystemMetrics(SM_CXSCREEN);
+        int screenH = GetSystemMetrics(SM_CYSCREEN);
+
+        if (inputOnly) {
+            while (true) {
+                fd_set rfds; FD_ZERO(&rfds); FD_SET(sock, &rfds);
+                timeval tv = {5, 0};
+                int sel = select(0, &rfds, NULL, NULL, &tv);
+                if (sel < 0) break;
+                if (sel == 0) continue;
+                uint8_t rxBuf[512];
+                int br = recv(sock, (char*)rxBuf, sizeof(rxBuf), 0);
+                if (br > 0) {
+                    std::string msg = ReadWebSocketTextMessage(rxBuf, br);
+                    if (msg == "A") continue;
+                    if (!HandleStreamInputMessage(msg, screenW, screenH)) break;
+                } else if (br == 0) {
+                    break;
+                } else if (WSAGetLastError() != WSAEWOULDBLOCK) {
+                    break;
+                }
+            }
+            closesocket(sock);
+            return;
+        }
+
+        // 1. Send codec/size config frame so the client can configure its
+        //    VideoDecoder before the first IDR arrives.
+        {
+            std::string cfg;
+            {
+                std::lock_guard<std::mutex> lk(mtx);
+                cfg = std::string("C:") + codec + ":" + std::to_string(width) + "x" + std::to_string(height);
+            }
+            SendWebSocketTextMessage(sock, cfg);
+        }
+
+        uint64_t catchUpSeq = 0;
+        bool catchUpSet = false;
+        int inFlight = 0;
+        DWORD lastSentTick = 0;
+
+        while (true) {
+            // 1. Read client commands (ACK or in-socket input)
+            uint8_t rxBuf[512];
+            int br = recv(sock, (char*)rxBuf, sizeof(rxBuf), 0);
+            if (br > 0) {
+                std::string msg = ReadWebSocketTextMessage(rxBuf, br);
+                if (msg == "A") {
+                    if (inFlight > 0) inFlight--;
+                    continue;
+                }
+                if (!HandleStreamInputMessage(msg, screenW, screenH)) break;
+            } else if (br == 0) {
+                break;
+            } else {
+                int err = WSAGetLastError();
+                if (err != WSAEWOULDBLOCK) break;
+            }
+
+            // 2. Zero-lag flow control: keep at most 2 frames in flight
+            DWORD nowTick = GetTickCount();
+            if (inFlight >= 2 && (nowTick - lastSentTick) < 250) {
+                Sleep(2);
+                continue;
+            }
+
+            // 3. Grab next Annex-B frame (newest first — drop stale ones)
+            std::vector<uint8_t> toSend;
+            {
+                std::unique_lock<std::mutex> lk(mtx);
+                cv.wait_for(lk, std::chrono::milliseconds(25), [&]() {
+                    if (stopRequested) return true;
+                    for (auto& p : annexbRing) if (p.seq > catchUpSeq) return true;
+                    return false;
+                });
+                if (stopRequested) break;
+
+                if (!catchUpSet) {
+                    for (auto it = annexbRing.rbegin(); it != annexbRing.rend(); ++it) {
+                        if (it->sync) {
+                            catchUpSeq = it->seq - 1;
+                            catchUpSet = true;
+                            break;
+                        }
+                    }
+                    if (!catchUpSet) continue;
+                }
+                for (auto& p : annexbRing) {
+                    if (p.seq > catchUpSeq) { toSend = p.data; catchUpSeq = p.seq; break; }
+                }
+            }
+            if (toSend.empty()) continue;
+
+            // 4. Frame tag: first byte tells client if this is a keyframe
+            std::vector<char> payload;
+            payload.reserve(toSend.size() + 1);
+            // Look up whether this packet started an IDR (cheap: the first NAL
+            // after the start code has type 7/8/5 when IDR)
+            bool key = false;
+            if (toSend.size() > 4 && toSend[0]==0 && toSend[1]==0) {
+                if (toSend[2]==0 && toSend[3]==1) key = ((toSend[4] & 0x1F) == 5) || ((toSend[4] & 0x1F) == 7);
+                else if (toSend[2]==1) key = ((toSend[3] & 0x1F) == 5) || ((toSend[3] & 0x1F) == 7);
+            }
+            payload.push_back(key ? 0x01 : 0x00);
+            payload.insert(payload.end(), toSend.begin(), toSend.end());
             if (!SendWebSocketBinaryFrame(sock, payload)) break;
             inFlight++;
             lastSentTick = GetTickCount();

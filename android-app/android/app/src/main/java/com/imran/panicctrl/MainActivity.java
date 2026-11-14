@@ -40,6 +40,9 @@ public class MainActivity extends BridgeActivity {
     private MediaCodec mDecoder;
     private Thread mStreamThread;
     private final AtomicBoolean mIsStreaming = new AtomicBoolean(false);
+    // Once the decoder cannot accept a frame, keep only fresh keyframe data.
+    // This prevents a slow phone from displaying an ever-growing backlog.
+    private volatile boolean mDropUntilKeyframe = false;
 
     // ⚡ Ultra-Fast Native UDP Input Dispatcher (<0.05ms)
     private DatagramSocket mInputSocket;
@@ -310,9 +313,21 @@ public class MainActivity extends BridgeActivity {
                     mHostPort = url.getPort() > 0 ? url.getPort() : 8080;
                     if (mInputSocket == null) mInputSocket = new DatagramSocket();
 
-                    // Init Low-Latency MediaCodec
+                    conn = (HttpURLConnection) url.openConnection();
+                    conn.setConnectTimeout(3000);
+                    conn.setReadTimeout(5000);
+                    conn.setRequestProperty("User-Agent", "PanicCTRL-Native/2.0");
+                    conn.connect();
+
+                    // The server describes the actual capture size. Hardcoding
+                    // 1280x720 while the PC encodes 1080p causes device-specific
+                    // frame drops and unstable decoder pacing.
+                    int streamWidth = parseStreamDimension(conn.getHeaderField("X-Video-Width"), 1280);
+                    int streamHeight = parseStreamDimension(conn.getHeaderField("X-Video-Height"), 720);
+
+                    // Init Low-Latency MediaCodec only after stream metadata is known.
                     mDecoder = MediaCodec.createDecoderByType("video/avc");
-                    MediaFormat format = MediaFormat.createVideoFormat("video/avc", 1280, 720);
+                    MediaFormat format = MediaFormat.createVideoFormat("video/avc", streamWidth, streamHeight);
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                         format.setInteger(MediaFormat.KEY_LOW_LATENCY, 1);
                     }
@@ -331,41 +346,48 @@ public class MainActivity extends BridgeActivity {
                         return;
                     }
 
-                    conn = (HttpURLConnection) url.openConnection();
-                    conn.setConnectTimeout(3000);
-                    conn.setReadTimeout(5000);
-                    conn.setRequestProperty("User-Agent", "PanicCTRL-Native/2.0");
-                    conn.connect();
                     is = conn.getInputStream();
 
-                    byte[] buffer = new byte[32768];
-                    ByteArrayOutputStream nalAccumulator = new ByteArrayOutputStream(131072);
+                    byte[] buffer = new byte[65536];
+                    // ⚡ Single growable buffer, reused — the old code called
+                    // nalAccumulator.toByteArray() on every socket read, which
+                    // allocated a fresh copy of the whole backlog each time.
+                    byte[] pending = new byte[262144];
+                    int pendingLen = 0;
                     MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
+                    mDropUntilKeyframe = false;
 
                     while (mIsStreaming.get()) {
                         int len = is.read(buffer);
-                        if (len <= 0) break;
+                        if (len < 0) break; // true EOF; len == 0 is just a short read
+                        if (len == 0) continue;
 
-                        nalAccumulator.write(buffer, 0, len);
-                        byte[] all = nalAccumulator.toByteArray();
+                        // Append, growing only when genuinely needed.
+                        if (pendingLen + len > pending.length) {
+                            int newCap = Math.max(pending.length * 2, pendingLen + len);
+                            byte[] grown = new byte[newCap];
+                            System.arraycopy(pending, 0, grown, 0, pendingLen);
+                            pending = grown;
+                        }
+                        System.arraycopy(buffer, 0, pending, pendingLen, len);
+                        pendingLen += len;
 
-                        // 🔍 Parse Discrete Annex-B NAL Units (0x00000001)
+                        // 🔍 Walk complete Annex-B NAL units (00 00 01 / 00 00 00 01)
                         int start = 0;
-                        int nextSc = findStartCode(all, 4);
-
-                        while (nextSc > 0) {
+                        int nextSc = findStartCode(pending, start, pendingLen);
+                        while (nextSc >= 0) {
                             int nalLen = nextSc - start;
                             if (nalLen > 4) {
-                                feedNalToDecoder(all, start, nalLen, info);
+                                feedNalToDecoder(pending, start, nalLen, info);
                             }
                             start = nextSc;
-                            nextSc = findStartCode(all, start + 4);
+                            nextSc = findStartCode(pending, start + 4, pendingLen);
                         }
 
-                        // Retain unconsumed tail bytes
-                        nalAccumulator.reset();
-                        if (start < all.length) {
-                            nalAccumulator.write(all, start, all.length - start);
+                        // Retain the unconsumed tail (usually a partial NAL).
+                        if (start > 0) {
+                            System.arraycopy(pending, start, pending, 0, pendingLen - start);
+                            pendingLen -= start;
                         }
                     }
                 } catch (Exception e) {
@@ -386,8 +408,8 @@ public class MainActivity extends BridgeActivity {
         mStreamThread.start();
     }
 
-    private int findStartCode(byte[] data, int offset) {
-        for (int i = offset; i + 3 < data.length; i++) {
+    private int findStartCode(byte[] data, int offset, int end) {
+        for (int i = offset; i + 3 < end; i++) {
             if (data[i] == 0 && data[i + 1] == 0) {
                 if (data[i + 2] == 1) return i;
                 if (data[i + 2] == 0 && data[i + 3] == 1) return i;
@@ -396,10 +418,28 @@ public class MainActivity extends BridgeActivity {
         return -1;
     }
 
+    private int parseStreamDimension(String value, int fallback) {
+        try {
+            int parsed = Integer.parseInt(value);
+            // Reject malformed or unreasonable headers before configuring MediaCodec.
+            return parsed >= 16 && parsed <= 7680 ? parsed : fallback;
+        } catch (Exception ignored) {
+            return fallback;
+        }
+    }
+
     private void feedNalToDecoder(byte[] data, int offset, int length, MediaCodec.BufferInfo info) {
         if (mDecoder == null) return;
         try {
-            int inIndex = mDecoder.dequeueInputBuffer(4000);
+            // Drain output first, then use a non-blocking input dequeue. Waiting
+            // here lets TCP accumulate old video when a phone briefly stalls.
+            drainDecoderOutput(info);
+
+            int hdr = (offset + 2 < data.length && data[offset + 2] == 1) ? offset + 3 : offset + 4;
+            int nalType = (hdr < data.length) ? (data[hdr] & 0x1F) : 0;
+            if (mDropUntilKeyframe && nalType != 7 && nalType != 8 && nalType != 5) return;
+
+            int inIndex = mDecoder.dequeueInputBuffer(0);
             if (inIndex >= 0) {
                 ByteBuffer inputBuffer;
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -407,25 +447,36 @@ public class MainActivity extends BridgeActivity {
                 } else {
                     inputBuffer = mDecoder.getInputBuffers()[inIndex];
                 }
-                if (inputBuffer != null) {
+                if (inputBuffer != null && length <= inputBuffer.capacity()) {
                     inputBuffer.clear();
                     inputBuffer.put(data, offset, length);
 
-                    int nalType = (offset + 4 < data.length) ? (data[offset + 4] & 0x1F) : 0;
                     int flags = 0;
                     if (nalType == 7 || nalType == 8) flags = MediaCodec.BUFFER_FLAG_CODEC_CONFIG;
-                    else if (nalType == 5) flags = MediaCodec.BUFFER_FLAG_KEY_FRAME;
+                    else if (nalType == 5) {
+                        flags = MediaCodec.BUFFER_FLAG_KEY_FRAME;
+                        mDropUntilKeyframe = false;
+                    }
 
                     mDecoder.queueInputBuffer(inIndex, 0, length, System.nanoTime() / 1000, flags);
+                } else {
+                    mDecoder.queueInputBuffer(inIndex, 0, 0, 0, 0);
                 }
+            } else {
+                // Discard deltas until the next IDR rather than showing stale video.
+                mDropUntilKeyframe = true;
             }
-
-            int outIndex = mDecoder.dequeueOutputBuffer(info, 0);
-            while (outIndex >= 0) {
-                mDecoder.releaseOutputBuffer(outIndex, true);
-                outIndex = mDecoder.dequeueOutputBuffer(info, 0);
-            }
+            drainDecoderOutput(info);
         } catch (Exception e) {}
+    }
+
+    private void drainDecoderOutput(MediaCodec.BufferInfo info) {
+        if (mDecoder == null) return;
+        int outIndex = mDecoder.dequeueOutputBuffer(info, 0);
+        while (outIndex >= 0) {
+            mDecoder.releaseOutputBuffer(outIndex, true);
+            outIndex = mDecoder.dequeueOutputBuffer(info, 0);
+        }
     }
 
     private void stopNativeStream() {

@@ -54,5 +54,5 @@
 //   * version.txt           (the build script verifies this)
 //   * installer.iss         AppVersion=
 //   * PanicButton.manifest  assemblyIdentity version=
-// build_release.bat refuses to build when they disagree.
+// PanicCTRL-Build-All.bat refuses to build when they disagree.
 #define PANIC_CTRL_VERSION "2.7.0"

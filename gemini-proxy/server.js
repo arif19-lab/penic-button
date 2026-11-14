@@ -206,6 +206,7 @@ function getGeminiClient(keyOverride) {
   return new GoogleGenAI({
     apiKey: key || "",
     httpOptions: {
+      apiVersion: "v1beta",
       headers: {
         "User-Agent": "panicctrl-live-build",
       },
@@ -722,7 +723,6 @@ const EMOTION_INSTRUCTIONS = {
 
   const cleanupSession = async () => {
     isSessionActive = false;
-    taskRunner.off("task_completed", handleTaskCompleted);
     if (liveSession) {
       try {
         if (typeof liveSession.close === "function") {
@@ -846,21 +846,11 @@ const EMOTION_INSTRUCTIONS = {
         },
         systemInstruction: effectiveInstruction,
         // 🎙️ Enable word-by-word streaming transcriptions for both Agent and User
+        // No "mode" — matches Antigravity reference: sends interim chunks while
+        // the user is still speaking, not just the final text after they pause.
         outputAudioTranscription: {},
-        inputAudioTranscription: {
-          mode: "smart",
-        },
-        // Real-time VAD: Low false-positive sensitivity, balanced silence threshold
-        realtimeInputConfig: {
-          activityHandling: "START_OF_ACTIVITY_INTERRUPTS",
-          automaticActivityDetection: {
-            disabled: false,
-            startOfSpeechSensitivity: "START_SENSITIVITY_LOW",
-            endOfSpeechSensitivity: "END_SENSITIVITY_LOW",
-            silenceDurationMs: 650,
-            prefixPaddingMs: 300,
-          },
-        },
+        inputAudioTranscription: {},
+        // Native Gemini Live VAD (matches Antigravity server.ts — no LOW/650ms throttle)
         // Prevent context window from filling up during long sessions
         contextWindowCompression: {
           triggerTokens: 100000,
@@ -954,33 +944,29 @@ const EMOTION_INSTRUCTIONS = {
               }
             }
 
-            // 3. Input Audio Transcription (User speech text)
-            // A) Low-latency speculative interim hypothesis (streams word-by-word dynamically while speaking)
+            // 3. Input Audio Transcription (User speech text — single delta/final emit matching Antigravity server.ts)
             const interimInput =
               serverContent?.interimInputTranscription ||
               serverContent?.interim_input_transcription ||
               message?.interimInputTranscription;
 
-            if (interimInput && interimInput.text) {
-              safeSend(clientWs, {
-                type: "user_transcript",
-                text: interimInput.text,
-                isFinal: false,
-              });
-            }
-
-            // B) Finalized authoritative transcript (committed when speaker pauses / turn completes)
             const finalInput =
               serverContent?.inputTranscription ||
               serverContent?.input_transcription ||
               serverContent?.inputAudioTranscription ||
               message?.inputTranscription;
 
-            if (finalInput && finalInput.text) {
+            const inputTxText = interimInput?.text ?? finalInput?.text;
+            if (inputTxText) {
+              const isTurnInputDone = Boolean(
+                !interimInput?.text &&
+                finalInput &&
+                (finalInput.finished === true || finalInput.isFinal === true)
+              );
               safeSend(clientWs, {
                 type: "user_transcript",
-                text: finalInput.text,
-                isFinal: true,
+                text: inputTxText,
+                isFinal: isTurnInputDone,
               });
             }
 
@@ -1333,6 +1319,7 @@ const EMOTION_INSTRUCTIONS = {
 
   clientWs.on("close", async () => {
     console.log("[Proxy] Client disconnected from /ws/live");
+    taskRunner.off("task_completed", handleTaskCompleted);
     await cleanupSession();
   });
 });
@@ -1375,7 +1362,7 @@ fetchKeyFromCppServer().finally(() => {
           wss.handleUpgrade(req, socket, head, (ws) => {
             wss.emit("connection", ws, req);
           });
-        } else if (pathname === "/ws" || pathname === "/cmd-ws") {
+        } else if (pathname === "/ws" || pathname === "/ws/vid" || pathname === "/cmd-ws") {
           const proxyWs = http.request({
             hostname: "127.0.0.1",
             port: 8085,

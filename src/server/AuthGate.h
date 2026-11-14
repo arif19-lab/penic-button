@@ -129,6 +129,7 @@ inline bool IsPublicRequest(const std::string& request) {
     if (PathStartsWith(path, "/css/")) return true;
     if (PathStartsWith(path, "/js/")) return true;
     if (PathStartsWith(path, "/assets/")) return true;
+    if (PathStartsWith(path, "/vendor/")) return true;
 
     // Pairing pages (the router applies its own extra check for these).
     if (PathEquals(path, "/qr")) return true;

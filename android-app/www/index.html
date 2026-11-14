@@ -23,32 +23,32 @@
   <title>PANIC CTRL - CYBER REMOTE NODE</title>
 
 
-
-  <!-- 🔤 GOOGLE FONTS (Exact Match to Antigravity Voice Assistant) -->
+  <!-- ðŸ”¤ GOOGLE FONTS (Exact Match to Antigravity Voice Assistant) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
-  <!-- 🌑 PURE BLACK THEME LOCK (Antigravity Voice Assistant Match) -->
+  <!-- ðŸŒ‘ PURE BLACK THEME LOCK (Antigravity Voice Assistant Match) -->
   <script>
     try {
-      localStorage.setItem('gemini_theme', 'dark');
-    } catch(e) {}
-    document.documentElement.classList.add('dark');
+      const preferred = localStorage.getItem('gemini_theme') || 'dark';
+      document.documentElement.classList.toggle('dark', preferred === 'dark');
+    } catch(e) {
+      document.documentElement.classList.add('dark');
+    }
   </script>
 
-  <!-- 🎨 1. MODULAR CYBERPUNK STYLESHEET -->
-  <link rel="stylesheet" href="css/style.css?v=2.8.0">
+  <!-- MODULAR CYBERPUNK STYLESHEET + Antigravity override -->
+  <link rel="stylesheet" href="css/style.css?v=2.9.3">
+  <link rel="stylesheet" href="css/antigravity-theme.css?v=2.9.3">
 
 
-
-  <!-- 📦 2. EXTERNAL QR & AUDIO CDN -->
+  <!-- ðŸ“¦ 2. EXTERNAL QR & AUDIO CDN -->
 
   <script src="jsqr.min.js"></script>
 
 
-
-  <!-- 🌐 3. HOST DISCOVERY & LAN ROUTING -->
+  <!-- ðŸŒ 3. HOST DISCOVERY & LAN ROUTING -->
 
   <script src="js/network.js"></script>
 
@@ -57,8 +57,7 @@
 <body class="gemini-dark">
 
 
-
-<!-- 🔑 DEDICATED CHANGE PASSWORD MODAL -->
+<!-- ðŸ”‘ DEDICATED CHANGE PASSWORD MODAL -->
 
 <div id="changePasswordModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeChangePasswordModal()">
 
@@ -66,7 +65,7 @@
 
     <div class="modal-header">
 
-      <span class="modal-icon">🔑</span>
+      <span class="modal-icon">ðŸ”‘</span>
 
       <span class="modal-title">WINDOWS PASSWORD</span>
 
@@ -78,39 +77,36 @@
 
     <div id="passStatusIndicator" style="margin-bottom: 12px; padding: 8px 12px; background: rgba(0, 240, 255, 0.08); border: 1px solid rgba(0, 240, 255, 0.25); border-radius: 8px; font-size: 11px; font-family: 'Share Tech Mono', monospace; display: flex; align-items: center; justify-content: space-between;">
 
-      <span id="passStatusText">🔍 Checking password status...</span>
+      <span id="passStatusText">ðŸ” Checking password status...</span>
 
       <span id="passStatusBadge" style="background: rgba(0, 255, 65, 0.2); color: #00ff41; padding: 2px 6px; border-radius: 4px; font-weight: bold;">ACTIVE</span>
 
     </div>
 
 
-
     <div class="input-wrapper">
 
       <input type="password" id="newPasswordInput" placeholder="Enter new Windows password" autocomplete="off" onkeydown="if(event.key==='Enter')saveNewPassword()">
 
-      <button class="toggle-pass" type="button" onclick="toggleNewPassVisibility()">👁️</button>
+      <button class="toggle-pass" type="button" onclick="toggleNewPassVisibility()">ðŸ‘ï¸</button>
 
     </div>
 
 
-
     <p style="font-size: 10px; color: #8a99ad; margin: 8px 0 14px 0; line-height: 1.4;">
 
-      ℹ️ This password is saved permanently on your PC. Whenever you change your Windows login password, update it here to keep 1-Tap Unlock working directly.
+      â„¹ï¸ This password is saved permanently on your PC. Whenever you change your Windows login password, update it here to keep 1-Tap Unlock working directly.
 
     </p>
-
 
 
     <div class="modal-actions" style="display: flex; gap: 8px; justify-content: flex-end;">
 
       <button class="modal-btn btn-cancel" type="button" onclick="closeChangePasswordModal()">CANCEL</button>
 
-      <button id="btnForgetPassword" class="modal-btn" style="background: rgba(255, 0, 60, 0.15); color: #ff003c; border: 1px solid rgba(255, 0, 60, 0.4); display: none;" type="button" onclick="clearSavedPassword()">FORGET 🗑️</button>
+      <button id="btnForgetPassword" class="modal-btn" style="background: rgba(255, 0, 60, 0.15); color: #ff003c; border: 1px solid rgba(255, 0, 60, 0.4); display: none;" type="button" onclick="clearSavedPassword()">FORGET ðŸ—‘ï¸</button>
 
-      <button class="modal-btn btn-confirm" type="button" onclick="saveNewPassword()">SAVE PASSWORD 💾</button>
+      <button class="modal-btn btn-confirm" type="button" onclick="saveNewPassword()">SAVE PASSWORD ðŸ’¾</button>
 
     </div>
 
@@ -119,57 +115,52 @@
 </div>
 
 
-
 <div class="fullscreen-overlay" id="fsOverlay">
 
-  <!-- ⚡ PARSEC FLOATING DRAGGABLE BUBBLE -->
+  <!-- âš¡ PARSEC FLOATING DRAGGABLE BUBBLE -->
 
   <div id="parsecBubble" class="parsec-bubble" onclick="toggleParsecMenu(event)">
 
-    <span class="bubble-icon">⚡</span>
+    <span class="bubble-icon">âš¡</span>
 
   </div>
 
 
-
-  <!-- 🎮 PARSEC QUICK HUD MENU -->
+  <!-- ðŸŽ® PARSEC QUICK HUD MENU -->
 
   <div id="parsecMenu" class="parsec-menu" style="display:none;">
 
     <div class="parsec-menu-header">
 
-      <span>🎮 PARSEC MONITOR HUD</span>
+      <span>ðŸŽ® PARSEC MONITOR HUD</span>
 
-      <span class="parsec-menu-close" onclick="toggleParsecMenu(event)">✖</span>
+      <span class="parsec-menu-close" onclick="toggleParsecMenu(event)">âœ–</span>
 
     </div>
 
     <div class="parsec-menu-grid">
 
-      <button class="parsec-btn" onclick="toggleVirtualKeyboard()"><span class="btn-ic">⌨️</span> KEYBOARD</button>
+      <button class="parsec-btn" onclick="toggleVirtualKeyboard()"><span class="btn-ic">âŒ¨ï¸</span> KEYBOARD</button>
 
-      <button class="parsec-btn" id="btnMouseMode" onclick="toggleMouseMode()"><span class="btn-ic">🖱️</span> TOUCH CLICK: ON</button>
+      <button class="parsec-btn" id="btnMouseMode" onclick="toggleMouseMode()"><span class="btn-ic">ðŸ–±ï¸</span> TOUCH CLICK: ON</button>
 
-      <button class="parsec-btn danger" onclick="closeFS()"><span class="btn-ic">🚪</span> EXIT TO DASHBOARD</button>
+      <button class="parsec-btn danger" onclick="closeFS()"><span class="btn-ic">ðŸšª</span> EXIT TO DASHBOARD</button>
 
     </div>
 
   </div>
 
 
-
-  <!-- ⌨️ INVISIBLE KEYBOARD INPUT PROXY -->
+  <!-- âŒ¨ï¸ INVISIBLE KEYBOARD INPUT PROXY -->
 
   <input type="text" id="fsKeyProxy" style="position:fixed; opacity:0; pointer-events:none; top:-100px; left:-100px;" oninput="handleFsType(event)" onkeydown="handleFsKeydown(event)">
 
 
-
-  <!-- 🖼️ PARSEC FULLSCREEN GPU CANVAS -->
+  <!-- ðŸ–¼ï¸ PARSEC FULLSCREEN GPU CANVAS -->
 
   <canvas id="fsCanvas" style="width:100vw; height:100vh; object-fit:contain; background:#000; display:block; touch-action:none;"></canvas>
 
 </div>
-
 
 
 <div class="container">
@@ -182,7 +173,7 @@
 
       <div style="font-family:'Orbitron',sans-serif; font-size:20px; font-weight:900; color:var(--neon-cyan); letter-spacing:2.5px; text-shadow:0 0 15px rgba(0,240,255,0.4);">PANIC</div>
 
-      <!-- 🌐 Active Network Indicator Badge (Tailscale vs Local Wi-Fi) -->
+      <!-- ðŸŒ Active Network Indicator Badge (Tailscale vs Local Wi-Fi) -->
 
       <div id="activeNetworkBadge" onclick="openPairingModal()" title="Click to view network & pairing options" style="display:inline-flex; align-items:center; gap:6px; background:rgba(0,0,0,0.65); border:1px solid rgba(0,240,255,0.35); border-radius:14px; padding:3px 8px; cursor:pointer; font-family:'Share Tech Mono',monospace; font-size:10px; letter-spacing:0.3px; transition:all 0.2s;">
 
@@ -194,23 +185,22 @@
 
     </div>
 
-    <a id="pwaInstallBtn" href="/download/app.apk" style="display:none; text-decoration:none; background:linear-gradient(135deg, #00ff41, #00f0ff); color:#000; border:none; border-radius:6px; font-family:'Orbitron',sans-serif; font-size:10px; font-weight:800; padding:6px 12px; cursor:pointer; box-shadow:0 0 15px rgba(0,255,65,0.4); letter-spacing:0.5px;">📥 GET APK</a>
+    <a id="pwaInstallBtn" href="/download/app.apk" style="display:none; text-decoration:none; background:linear-gradient(135deg, #00ff41, #00f0ff); color:#000; border:none; border-radius:6px; font-family:'Orbitron',sans-serif; font-size:10px; font-weight:800; padding:6px 12px; cursor:pointer; box-shadow:0 0 15px rgba(0,255,65,0.4); letter-spacing:0.5px;">ðŸ“¥ GET APK</a>
 
   </div>
 
 
-
-  <!-- ==================== TAB 1: 🖥️ MONITOR (PIXEL-PERFECT BENTO GRID) ==================== -->
+  <!-- ==================== TAB 1: ðŸ–¥ï¸ MONITOR (PIXEL-PERFECT BENTO GRID) ==================== -->
 
   <div id="tab-home" class="tab-content active">
 
-    <!-- 🖼️ BENTO DASHBOARD MOCKUP CONTAINER (Reference: @bee_ui.ux) -->
+    <!-- ðŸ–¼ï¸ BENTO DASHBOARD MOCKUP CONTAINER (Reference: @bee_ui.ux) -->
 
     <div class="bento-mockup-wrapper">
 
       <div class="bento-frame">
 
-        <!-- 🧭 LEFT PRIMARY NAVIGATION RAIL -->
+        <!-- ðŸ§­ LEFT PRIMARY NAVIGATION RAIL -->
 
         <aside class="bento-rail" aria-label="Primary Navigation">
 
@@ -239,7 +229,6 @@
             </button>
 
 
-
             <!-- 2. GEMINI AI TAB -->
 
             <button id="bento-nav-gemini" class="bento-rail-tab" onclick="switchTab('gemini')" title="Gemini AI Assistant">
@@ -257,7 +246,6 @@
               <span class="bento-rail-tab-label">GEMINI AI</span>
 
             </button>
-
 
 
             <!-- 3. QR PAIRING MODAL -->
@@ -291,7 +279,6 @@
               <span class="bento-rail-tab-label">QR</span>
 
             </button>
-
 
 
             <!-- 4. CONTROLS TAB -->
@@ -333,8 +320,7 @@
         </aside>
 
 
-
-        <!-- 🍱 MAIN BENTO GRID CANVAS -->
+        <!-- ðŸ± MAIN BENTO GRID CANVAS -->
 
         <main class="bento-main">
 
@@ -348,7 +334,7 @@
 
               <div class="bento-card-header">
 
-                <!-- 🖥️ PC MONITOR PURE TEXT TITLE -->
+                <!-- ðŸ–¥ï¸ PC MONITOR PURE TEXT TITLE -->
 
                 <div class="bento-clean-title-group">
 
@@ -359,18 +345,16 @@
                 </div>
 
 
-
-                <!-- ⚡ REAL-TIME FPS PURE TEXT -->
+                <!-- âš¡ REAL-TIME FPS PURE TEXT -->
 
                 <div class="bento-fps-clean" id="bentoStreamStats" title="Real-time measured frame rate vs 60 FPS target">
 
-                  <span id="bentoStatsText"><span class="fps-target">60 FPS</span> <span class="fps-arrow">›</span> <span class="fps-current zero">0 FPS</span></span>
+                  <span id="bentoStatsText"><span class="fps-target">60 FPS</span> <span class="fps-arrow">â€º</span> <span class="fps-current zero">0 FPS</span></span>
 
                 </div>
 
 
-
-                <!-- ⚙️ MONITOR CONTROLS MENU TRIGGER & POPUP PANEL -->
+                <!-- âš™ï¸ MONITOR CONTROLS MENU TRIGGER & POPUP PANEL -->
 
                 <div class="bento-header-menu-wrap">
 
@@ -389,8 +373,7 @@
                   </button>
 
 
-
-                  <!-- 📱 SMALL FLOATING MENU PANEL -->
+                  <!-- ðŸ“± SMALL FLOATING MENU PANEL -->
 
                   <div id="bentoMonitorMenuPanel" class="bento-menu-dropdown" style="display:none;" onclick="event.stopPropagation()">
 
@@ -406,31 +389,29 @@
 
                     <button class="bento-dropdown-item" id="bentoToggleBtn" onclick="toggleStream(); closeMonitorMenu();" title="Play / Pause Live Stream">
 
-                      <span class="bento-dd-icon" id="bentoToggleIcon">▶</span>
+                      <span class="bento-dd-icon" id="bentoToggleIcon">â–¶</span>
 
                       <span class="bento-dd-label" id="bentoToggleText">LIVE</span>
 
                     </button>
 
 
-
                     <!-- 2. Codec Switch (H.264 / JPEG) -->
 
                     <button class="bento-dropdown-item" id="bentoCodecBtn" onclick="toggleStreamCodec(); closeMonitorMenu();" title="Switch Codec (H.264 / JPEG)">
 
-                      <span class="bento-dd-icon">⚡</span>
+                      <span class="bento-dd-icon">âš¡</span>
 
                       <span class="bento-dd-label" id="bentoCodecText">H.264</span>
 
                     </button>
 
 
-
                     <!-- 3. Fullscreen -->
 
                     <button class="bento-dropdown-item" onclick="openFS(); closeMonitorMenu();" title="Open Fullscreen Display">
 
-                      <span class="bento-dd-icon">⛶</span>
+                      <span class="bento-dd-icon">â›¶</span>
 
                       <span class="bento-dd-label">FULLSCREEN</span>
 
@@ -443,14 +424,13 @@
               </div>
 
 
-
               <!-- STREAM VIEWPORT -->
 
               <div class="bento-viewport" onclick="openFS()">
 
                 <div id="mirrorPlaceholder" class="bento-viewport-placeholder">
 
-                  <div class="bento-vp-icon">🛡️</div>
+                  <div class="bento-vp-icon">ðŸ›¡ï¸</div>
 
                   <div class="bento-vp-title">PC MONITOR STANDBY</div>
 
@@ -463,7 +443,6 @@
               </div>
 
             </div>
-
 
 
             <!-- CARD B: SYSTEM CONTROLS & ACTIONS -->
@@ -481,21 +460,19 @@
                 </div>
 
 
-
-                <!-- ⚙️ DEVICE PAIRING & SECURITY CONTROLS -->
+                <!-- âš™ï¸ DEVICE PAIRING & SECURITY CONTROLS -->
 
                 <div class="bento-header-menu-wrap" style="display:flex; align-items:center; gap:8px;">
 
-                  <!-- 🔑 DEDICATED CHANGE PASSWORD BUTTON -->
+                  <!-- ðŸ”‘ DEDICATED CHANGE PASSWORD BUTTON -->
 
                   <button id="bentoChangePassBtn" class="bento-pass-action-btn" onclick="openChangePasswordModal()" title="Set or Change Windows PC Password">
 
-                    <span class="bento-pass-btn-ic">🔑</span>
+                    <span class="bento-pass-btn-ic">ðŸ”‘</span>
 
                     <span class="bento-pass-btn-txt">CHANGE PASSWORD</span>
 
                   </button>
-
 
 
                   <button id="bentoActionsMenuBtn" class="bento-icon-btn" onclick="toggleActionsMenu(event)" title="Device Pairing &amp; Security">
@@ -513,8 +490,7 @@
                   </button>
 
 
-
-                  <!-- 📱 DROPDOWN MENU FOR SECURITY & PAIRING -->
+                  <!-- ðŸ“± DROPDOWN MENU FOR SECURITY & PAIRING -->
 
                   <div id="bentoActionsMenuPanel" class="bento-menu-dropdown" style="display:none;" onclick="event.stopPropagation()">
 
@@ -526,7 +502,7 @@
 
                     <button class="bento-dropdown-item" onclick="openChangePasswordModal(); closeActionsMenu();" title="Set or Change Windows PC Password">
 
-                      <span class="bento-dd-icon">🔑</span>
+                      <span class="bento-dd-icon">ðŸ”‘</span>
 
                       <span class="bento-dd-label">CHANGE PC PASSWORD</span>
 
@@ -534,7 +510,7 @@
 
                     <button class="bento-dropdown-item" onclick="openPairingModal(); closeActionsMenu();" title="Scan QR Code to Pair Mobile Device">
 
-                      <span class="bento-dd-icon">📱</span>
+                      <span class="bento-dd-icon">ðŸ“±</span>
 
                       <span class="bento-dd-label">PAIR NEW DEVICE (QR)</span>
 
@@ -547,8 +523,7 @@
               </div>
 
 
-
-              <!-- 🎛️ 7-COMMAND CYBERPUNK SUITE (PURE CORE ACTIONS) -->
+              <!-- ðŸŽ›ï¸ 7-COMMAND CYBERPUNK SUITE (PURE CORE ACTIONS) -->
 
               <div class="bento-suite-wrap">
 
@@ -579,7 +554,6 @@
                   </button>
 
 
-
                   <!-- 2. UNLOCK WORKSTATION -->
 
                   <button class="bento-c-tile bento-c-unlock" onclick="unlockPC()" title="Instant 1-Tap Session Unlock">
@@ -594,14 +568,13 @@
 
                       <div class="bento-c-title">UNLOCK</div>
 
-                      <div class="bento-c-sub" id="bentoUnlockSub">1-Tap Ready ⚡</div>
+                      <div class="bento-c-sub" id="bentoUnlockSub">1-Tap Ready âš¡</div>
 
                     </div>
 
                     <span class="bento-c-pill"></span>
 
                   </button>
-
 
 
                   <!-- 3. WAKE UP -->
@@ -627,7 +600,6 @@
                   </button>
 
 
-
                   <!-- 4. SLEEP MODE -->
 
                   <button class="bento-c-tile bento-c-sleep" onclick="sleepPC()" title="Put PC into Sleep Mode (Blackout + Low Power)">
@@ -649,7 +621,6 @@
                     <span class="bento-c-pill"></span>
 
                   </button>
-
 
 
                   <!-- 5. RESTART PC -->
@@ -675,7 +646,6 @@
                   </button>
 
 
-
                   <!-- 6. SHUTDOWN PC -->
 
                   <button class="bento-c-tile bento-c-shutdown" onclick="if(confirm('Shutdown PC?'))shutdownPC()" title="Shutdown Windows PC">
@@ -699,7 +669,6 @@
                   </button>
 
                 </div>
-
 
 
                 <!-- BOTTOM: TACTICAL EMERGENCY PANIC ACTUATOR -->
@@ -742,7 +711,7 @@
 
                   <div class="bento-panic-hero-badge">
 
-                    <span class="panic-badge-icon">⚡</span>
+                    <span class="panic-badge-icon">âš¡</span>
 
                     <span class="panic-badge-txt">ARMED</span>
 
@@ -755,7 +724,6 @@
             </div>
 
           </div>
-
 
 
           <!-- BOTTOM ROW: 2 INPUT HUDS (CARD C: PRECISION TRACKPAD, CARD E: KEYBOARD CONSOLE) -->
@@ -787,21 +755,19 @@
               </div>
 
 
-
               <!-- Gliding Touchpad Glass Surface -->
 
               <div id="touchpadPad" class="bento-touchpad-surface">
 
                 <div class="bento-touchpad-crosshair">
 
-                  <span>⊹</span>
+                  <span>âŠ¹</span>
 
                 </div>
 
                 <div class="bento-touchpad-hint">Touch &amp; glide mouse &bull; Two fingers scroll &bull; Tap to click</div>
 
               </div>
-
 
 
               <!-- Left / Right Click Controls -->
@@ -827,19 +793,17 @@
               </div>
 
 
-
-              <!-- 🔒 Dynamic Lock Screen Overlay for Trackpad -->
+              <!-- ðŸ”’ Dynamic Lock Screen Overlay for Trackpad -->
 
               <div id="trackpadLockedOverlay" class="hud-locked-overlay" style="display:none;">
 
-                <div class="hud-locked-badge">🔒 PC IS LOCKED</div>
+                <div class="hud-locked-badge">ðŸ”’ PC IS LOCKED</div>
 
                 <div class="hud-locked-sub">Tap UNLOCK to enable trackpad</div>
 
               </div>
 
             </div>
-
 
 
             <!-- CARD E: HIGH-TECH LIVE KEYBOARD HUD (Directly below System Controls) -->
@@ -867,7 +831,6 @@
               </div>
 
 
-
               <!-- Live Text Input Stream -->
 
               <div class="bento-keyboard-input-wrap">
@@ -885,28 +848,27 @@
               </div>
 
 
-
               <!-- Tactical Shortcut Matrix (2 Rows of Sleek Cyber Keys) -->
 
               <div class="bento-kbd-matrix">
 
                 <div class="bento-kbd-row">
 
-                  <button class="bento-key-tile kbd-hero" onclick="sendSpecialKey('{ENTER}')">ENTER ↵</button>
+                  <button class="bento-key-tile kbd-hero" onclick="sendSpecialKey('{ENTER}')">ENTER â†µ</button>
 
-                  <button class="bento-key-tile" onclick="sendSpecialKey('{BACKSPACE}')">⌫ BACK</button>
+                  <button class="bento-key-tile" onclick="sendSpecialKey('{BACKSPACE}')">âŒ« BACK</button>
 
                   <button class="bento-key-tile" onclick="sendSpecialKey('{ESC}')">ESC</button>
 
-                  <button class="bento-key-tile" onclick="sendSpecialKey('{TAB}')">TAB ⇥</button>
+                  <button class="bento-key-tile" onclick="sendSpecialKey('{TAB}')">TAB â‡¥</button>
 
-                  <button class="bento-key-tile kbd-space" onclick="sendSpecialKey(' ')">SPACE ␣</button>
+                  <button class="bento-key-tile kbd-space" onclick="sendSpecialKey(' ')">SPACE â£</button>
 
                 </div>
 
                 <div class="bento-kbd-row">
 
-                  <button class="bento-key-tile" onclick="sendSpecialKey('{WIN}')">WIN ⊞</button>
+                  <button class="bento-key-tile" onclick="sendSpecialKey('{WIN}')">WIN âŠž</button>
 
                   <button class="bento-key-tile" onclick="sendSpecialKey('^c')">CTRL+C</button>
 
@@ -921,12 +883,11 @@
               </div>
 
 
-
-              <!-- 🔒 Dynamic Lock Screen Overlay for Keyboard -->
+              <!-- ðŸ”’ Dynamic Lock Screen Overlay for Keyboard -->
 
               <div id="keyboardLockedOverlay" class="hud-locked-overlay" style="display:none;">
 
-                <div class="hud-locked-badge">🔒 PC IS LOCKED</div>
+                <div class="hud-locked-badge">ðŸ”’ PC IS LOCKED</div>
 
                 <div class="hud-locked-sub">Tap UNLOCK to enable keyboard</div>
 
@@ -938,7 +899,6 @@
 
         </main>
       </div>
-
 
 
       <!-- Minimalist author watermark tribute -->
@@ -956,8 +916,7 @@
   </div>
 
 
-
-    <!-- ==================== TAB 2: 🧠 GEMINI AI (PIXEL-PERFECT CHATGPT DESIGN) ==================== -->
+    <!-- ==================== TAB 2: ðŸ§  GEMINI AI (PIXEL-PERFECT CHATGPT DESIGN) ==================== -->
 
   <div id="tab-gemini" class="tab-content">
 
@@ -965,13 +924,13 @@
 
       
 
-      <!-- 🗂️ SLIDE-OUT SIDEBAR DRAWER (ChatGPT Mobile Style) -->
+      <!-- ðŸ—‚ï¸ SLIDE-OUT SIDEBAR DRAWER (ChatGPT Mobile Style) -->
 
       <div id="cgSidebarBackdrop" class="cg-sidebar-backdrop" onclick="closeCgSidebar()"></div>
 
-      <!-- 🗂️ CHATGPT / MESS-MANAGER STYLE SLIDE-OUT SIDEBAR DRAWER -->
+      <!-- ðŸ—‚ï¸ CHATGPT / MESS-MANAGER STYLE SLIDE-OUT SIDEBAR DRAWER -->
 
-      <aside id="cgSidebarDrawer" class="cg-sidebar-drawer">
+      <aside id="cgSidebarDrawer" class="cg-sidebar-drawer open">
 
         <!-- 👤 TOP HUD CARD: Contains Avatar (Top-Left), Close/Collapse Button (Top-Right), and Panic Control Title Pill -->
 
@@ -992,7 +951,6 @@
           </button>
 
 
-
           <!-- 🗂️ Desktop Antigravity Sidebar Collapse Icon [ | ] (Shows only on desktop) -->
 
           <button type="button" class="cg-drawer-toggle-btn cg-desktop-only" onclick="toggleCgSidebar()" title="Collapse Sidebar (Ctrl+B)">
@@ -1006,7 +964,6 @@
             </svg>
 
           </button>
-
 
 
           <!-- 🌀 CYBER VORTEX INSIGNIA (User-Selected Design) -->
@@ -1024,7 +981,6 @@
           </div>
 
 
-
           <!-- 🏷️ Panic Control Inner Title Pill Box -->
 
           <div class="cg-drawer-title-inner-card">
@@ -1035,125 +991,35 @@
 
         </div>
 
+<div class="cg-drawer-nav">
 
+          <!-- ðŸ“‚ SECTION: CONTROLS -->
 
-        <div class="cg-drawer-nav">
+                    <div class="cg-menu-group-label">Controls</div>
 
-          <!-- 📂 SECTION: CONTROLS -->
-
-          <div class="cg-menu-group-label">Controls</div>
-
-          <div class="cg-menu-card-group">
-
+<div class="cg-menu-card-group">
             <button type="button" class="cg-menu-card-row active" data-preview="monitor" onclick="switchTab('home'); if(window.innerWidth < 860) closeCgSidebar();" title="PC Monitor">
-
               <span class="cg-menu-row-icon">
-
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-
                   <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-
                   <line x1="8" y1="21" x2="16" y2="21"></line>
-
                   <line x1="12" y1="17" x2="12" y2="21"></line>
-
                 </svg>
-
               </span>
-
               <span class="cg-menu-row-text">PC Monitor</span>
-
-            </button>
-
-
-
-            <button type="button" class="cg-menu-card-row" data-preview="gemini" onclick="switchTab('gemini'); if(window.innerWidth < 860) closeCgSidebar();" title="Gemini AI Assistant">
-
-              <span class="cg-menu-row-icon">
-
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-
-                  <path d="M12 2a10 10 0 0 1 10 10c0 5.523-4.477 10-10 10a9.96 9.96 0 0 1-5.016-1.345L2 22l1.345-4.984A9.96 9.96 0 0 1 2 12C2 6.477 6.477 2 12 2z"></path>
-
+              <span class="cg-menu-row-arrow" aria-hidden="true">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="m7 8 4.5 4L7 16"/>
+                  <path d="m12.5 8 4.5 4-4.5 4"/>
                 </svg>
-
               </span>
-
-              <span class="cg-menu-row-text">Gemini AI</span>
-
             </button>
-
-
-
-            <button type="button" class="cg-menu-card-row" data-preview="controls" onclick="switchTab('controls'); if(window.innerWidth < 860) closeCgSidebar();" title="System Controls">
-
-              <span class="cg-menu-row-icon">
-
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-
-                  <circle cx="12" cy="12" r="3"></circle>
-
-                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-
-                </svg>
-
-              </span>
-
-              <span class="cg-menu-row-text">Controls</span>
-
-            </button>
-
-
-
-            <button type="button" class="cg-menu-card-row" data-preview="panic" onclick="triggerPanic(); if(window.innerWidth < 860) closeCgSidebar();" title="Emergency Panic">
-
-              <span class="cg-menu-row-icon">
-
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-
-                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-
-                  <line x1="12" y1="9" x2="12" y2="13"></line>
-
-                  <line x1="12" y1="17" x2="12.01" y2="17"></line>
-
-                </svg>
-
-              </span>
-
-              <span class="cg-menu-row-text" style="color:#ef4444; font-weight:600;">Emergency Panic</span>
-
-            </button>
-
-
-
-            <button type="button" id="sidebarApkBtn" class="cg-menu-card-row" data-preview="apk" style="display:none;" onclick="window.open('/download/app.apk', '_blank'); if(window.innerWidth < 860) closeCgSidebar();" title="Download Android App">
-
-              <span class="cg-menu-row-icon">
-
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-
-                  <polyline points="7 10 12 15 17 10"></polyline>
-
-                  <line x1="12" y1="15" x2="12" y2="3"></line>
-
-                </svg>
-
-              </span>
-
-              <span class="cg-menu-row-text">Mobile APK</span>
-
-            </button>
-
           </div>
 
         </div>
 
 
-
-        <!-- 👤 CHATGPT-STYLE BOTTOM USER CARD (GROWS BIGGER UPWARDS ON TOP OF PANEL) -->
+        <!-- ðŸ‘¤ CHATGPT-STYLE BOTTOM USER CARD (GROWS BIGGER UPWARDS ON TOP OF PANEL) -->
 
         <div class="cg-drawer-footer" id="cgDrawerFooter">
 
@@ -1161,7 +1027,7 @@
 
             
 
-            <!-- 📂 EXPANDABLE SETTINGS BODY (Expands inside the card upwards) -->
+            <!-- ðŸ“‚ EXPANDABLE SETTINGS BODY (Expands inside the card upwards) -->
 
             <div id="cgUserExpandBody" class="cg-user-expand-body">
 
@@ -1182,10 +1048,9 @@
                 </div>
 
 
-
                 <div class="cg-menu-items-group">
 
-                  <!-- 🔑 Gemini API Key -->
+                  <!-- ðŸ”‘ Gemini API Key -->
 
                   <div class="cg-menu-item" data-preview="key" onclick="toggleGeminiKeyModal(); closeUserCard();">
 
@@ -1218,8 +1083,7 @@
                   </div>
 
 
-
-                  <!-- 🎭 AI Persona -->
+                  <!-- ðŸŽ­ AI Persona -->
 
                   <div class="cg-menu-item" data-preview="persona" onclick="togglePersonaPicker(event); closeUserCard();">
 
@@ -1241,7 +1105,7 @@
 
                       <div class="cg-menu-item-name">AI Persona</div>
 
-                      <div id="cgActivePersonaSubtitleBottom" class="cg-menu-item-desc">Default • Smart Assistant</div>
+                      <div id="cgActivePersonaSubtitleBottom" class="cg-menu-item-desc">Default â€¢ Smart Assistant</div>
 
                     </div>
 
@@ -1250,8 +1114,7 @@
                   </div>
 
 
-
-                  <!-- 📱 Mobile QR Pairing -->
+                  <!-- ðŸ“± Mobile QR Pairing -->
 
                   <div class="cg-menu-item" data-preview="pairing" onclick="openPairingModal(); closeUserCard();">
 
@@ -1282,12 +1145,10 @@
                   </div>
 
 
-
                   <div class="cg-menu-divider"></div>
 
 
-
-                  <!-- 🗑️ Clear Chat -->
+                  <!-- ðŸ—‘ï¸ Clear Chat -->
 
                   <div class="cg-menu-item cg-danger-item" data-preview="clear" onclick="clearGeminiTerminal(); closeUserCard();">
 
@@ -1328,8 +1189,7 @@
             </div>
 
 
-
-            <!-- 👤 BOTTOM USER ROW (Anchored at the bottom of the card) -->
+            <!-- ðŸ‘¤ BOTTOM USER ROW (Anchored at the bottom of the card) -->
 
             <div class="cg-drawer-user-card" id="cgDrawerUserBtn" onclick="toggleUserCard(event)">
 
@@ -1364,7 +1224,6 @@
             </div>
 
 
-
           </div>
 
         </div>
@@ -1373,25 +1232,19 @@
 
 
 
-      <!-- ↔️ ANTIGRAVITY DRAGGABLE RESIZE DIVIDER -->
-
-      <div id="cgSidebarResizer" class="cg-sidebar-resizer" title="Drag to resize sidebar width"></div>
-
-
-
-      <!-- 🖥️ MAIN CHAT VIEWPORT (Right side on Desktop, Full screen on Mobile) -->
+      <!-- ðŸ–¥ï¸ MAIN CHAT VIEWPORT (Right side on Desktop, Full screen on Mobile) -->
 
       <div class="cg-main-viewport">
 
-        <!-- 🌟 TOP MINIMAL HEADER -->
+        <!-- ðŸŒŸ TOP MINIMAL HEADER -->
 
         <header class="cg-header">
 
         <div class="cg-header-left" style="display:flex; align-items:center; gap:8px; position:relative;">
 
-          <!-- 🗂️ ChatGPT Mobile-Style Sidebar Toggle Icon (2-line staggered menu) -->
+          <!-- ðŸ—‚ï¸ ChatGPT Mobile-Style Sidebar Toggle Icon (2-line staggered menu) -->
 
-          <button class="cg-icon-btn cg-viewport-toggle-btn" onclick="toggleCgSidebar()" title="Open Sidebar (Ctrl+B)">
+          <button class="cg-icon-btn cg-viewport-toggle-btn cg-mobile-only" onclick="toggleCgSidebar()" title="Open Sidebar">
 
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
 
@@ -1419,7 +1272,7 @@
 
           
 
-          <!-- 🧠 AI MODEL SELECTION MENU -->
+          <!-- ðŸ§  AI MODEL SELECTION MENU -->
 
           <div id="geminiModelDropdown" class="cg-menu-dropdown cg-model-dropdown" style="display:none;">
 
@@ -1448,13 +1301,11 @@
             </div>
 
 
-
             <div class="cg-model-section-title">
 
-              <span>⚡ REALTIME LIVE (VOICE & MULTIMODAL)</span>
+              <span>âš¡ REALTIME LIVE (VOICE & MULTIMODAL)</span>
 
             </div>
-
 
 
             <!-- Gemini 3.8 Live -->
@@ -1474,163 +1325,33 @@
                 <div class="cg-model-desc">Sub-second speech-to-speech, real-time live voice & PC tools</div>
               </div>
               <div class="cg-model-radio">
-                <span class="cg-model-check">✓</span>
+                <span class="cg-model-check">âœ“</span>
               </div>
-            </div>
-
-            <!-- Gemini 3.8 Live Extended Thinking -->
-            <div class="cg-model-option" data-model="models/gemini-3.8-live-thinking" onclick="selectGeminiModel('models/gemini-3.8-live-thinking', 'Gemini 3.8 Live Thinking', true)">
-              <div class="cg-model-icon cg-model-icon-indigo">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 4.44-2.04z"/>
-                  <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-4.44-2.04z"/>
-                </svg>
-              </div>
-              <div class="cg-model-info">
-                <div class="cg-model-row">
-                  <span class="cg-model-label">Gemini 3.8 Live Thinking</span>
-                  <span class="cg-model-pill cg-pill-pro">THINKING</span>
-                </div>
-                <div class="cg-model-desc">Deep background reasoning with natural conversational fillers</div>
-              </div>
-              <div class="cg-model-radio">
-                <span class="cg-model-check"></span>
-              </div>
-            </div>
-          </div>
-
-        </div>
-
-
-
-        <!-- 💊 ChatGPT Mobile Action Capsule (New Chat + 3-Dot Options) -->
-
-        <div class="cg-header-right" style="display:flex; align-items:center; position:relative;">
-
-          <div class="cg-header-action-capsule">
-
-            <!-- New Chat Compose Button -->
-
-            <button type="button" class="cg-capsule-btn" onclick="clearGeminiTerminal()" title="New Chat">
-
-              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-
-                <path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-
-                <path d="M18.375 2.625a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4Z"></path>
-
-              </svg>
-
-            </button>
-
-            <span class="cg-capsule-divider"></span>
-
-            <!-- 3-Dot More Options Button -->
-
-            <button type="button" class="cg-capsule-btn cg-3dot-trigger" onclick="toggleGemini3DotMenu(event)" title="More Options">
-
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-
-                <circle cx="12" cy="5" r="1.75"></circle>
-
-                <circle cx="12" cy="12" r="1.75"></circle>
-
-                <circle cx="12" cy="19" r="1.75"></circle>
-
-              </svg>
-
-            </button>
-
-          </div>
-
-
-
-          <!-- ⚙️ 3-DOT QUICK ACTION MENU -->
-
-          <div id="gemini3DotDropdown" class="cg-menu-dropdown cg-options-dropdown" style="display:none;">
-
-            <div class="cg-option-item" onclick="toggleGeminiModelMenu(event); closeGemini3DotMenu();">
-
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-
-                <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/>
-
-              </svg>
-
-              <span>Switch AI Model</span>
-
-            </div>
-
-            <div class="cg-option-item" onclick="clearGeminiTerminal(); closeGemini3DotMenu();">
-
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-
-                <path d="M3 6h18"></path>
-
-                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-
-                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-
-              </svg>
-
-              <span>Clear Conversation</span>
-
-            </div>
-
-            <div class="cg-option-item" onclick="toggleVoicePicker(event); closeGemini3DotMenu();">
-
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-
-                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
-
-                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-
-                <line x1="12" y1="19" x2="12" y2="22"></line>
-
-              </svg>
-
-              <span>Voice Settings</span>
-
-            </div>
-
-            <div class="cg-option-divider"></div>
-
-            <div class="cg-option-item" id="cgThemeToggleOption" onclick="toggleGeminiTheme(); closeGemini3DotMenu();">
-
-              <span id="cgThemeToggleIcon" style="display:inline-flex; align-items:center;">
-
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-
-                  <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
-
-                </svg>
-
-              </span>
-
-              <span id="cgThemeToggleLabel">Dark Theme</span>
-
             </div>
 
           </div>
 
         </div>
 
-      </header>
+
+</header>
 
 
-
-      <!-- 📜 MAIN CHAT & HERO BODY -->
+      <!-- ðŸ“œ MAIN CHAT & HERO BODY -->
 
       <main class="cg-main-body" id="chatgptScrollContainer">
 
+        <!-- Antigravity Live Orb (exact GLSL/particle port from Live Studio) -->
+        <section id="antigravityOrbHero" class="antigravity-orb-hero" aria-label="Antigravity interactive live orb">
+          <div id="antigravityOrbContainer" class="antigravity-orb-container" role="button" tabindex="0" title="Tap Orb to toggle microphone"></div>
+        </section>
         
 
-        <!-- 🎯 HERO GREETING (Suggestions & Title Removed) -->
+        <!-- ðŸŽ¯ HERO GREETING (Suggestions & Title Removed) -->
         <div id="geminiHeroGreeting" class="cg-hero" style="display: none !important;"></div>
 
 
-
-        <!-- 💬 DYNAMIC MESSAGE STREAM -->
+        <!-- ðŸ’¬ DYNAMIC MESSAGE STREAM -->
 
         <div id="geminiTerminalLogs" class="cg-messages-stream">
 
@@ -1640,15 +1361,13 @@
 
       </main>
 
-      <!-- 🎙️ REAL-TIME LIVE TRANSCRIPT HUD (Exact Match to Antigravity Voice Assistant) -->
+      <!-- ðŸŽ™ï¸ REAL-TIME LIVE TRANSCRIPT HUD (Exact Match to Antigravity Voice Assistant) -->
       <aside id="cgLiveTranscriptHUD" class="cg-transcript-hud expanded" aria-label="Live Transcript HUD">
         <!-- Top Studio Header Bar with Collapse/Expand Arrow & Action Controls -->
         <div class="cg-hud-header">
           <button type="button" id="btnToggleHudExpand" class="cg-hud-expand-btn" onclick="LiveTranscriptHUD.toggleExpand()" title="Collapse Live Transcript HUD">
             <span class="cg-hud-chevron-wrap" id="hudChevronWrap">
-              <svg class="cg-hud-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="18 15 12 9 6 15"></polyline>
-              </svg>
+              <svg class="cg-hud-chevron hud-chevron-double" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l6 6-6 6"/><path d="M12 6l6 6-6 6"/></svg>
             </span>
             <div class="cg-hud-title-meta">
               <span class="cg-hud-title">Live Transcript</span>
@@ -1699,7 +1418,23 @@
             </svg>
             <span>Audio Word Sync</span>
           </div>
-          <span id="cgHudSyncStats" class="cg-hud-sync-stats">0/0 · 0%</span>
+          <span id="cgHudSyncStats" class="cg-hud-sync-stats">0/0 Â· 0%</span>
+        </div>
+
+        <!-- Collapsed-by-default Workstation Terminal log section -->
+        <div id="cgHudTerminalSection" class="cg-hud-terminal-section collapsed">
+          <button type="button" id="btnToggleHudTerminal" class="cg-hud-terminal-toggle" onclick="toggleHudTerminal()" aria-expanded="false" aria-controls="cgHudTerminalContent" title="Expand Workstation Terminal logs">
+            <span class="cg-hud-terminal-title-wrap">
+              <svg class="cg-hud-terminal-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+              <span class="cg-hud-terminal-title">Workstation Terminal</span>
+            </span>
+            <span id="cgHudTerminalBadge" class="cg-hud-terminal-badge">LOGS</span>
+            <span id="cgHudTerminalCount" class="cg-hud-terminal-count" style="display: none;">0</span>
+            <svg class="cg-hud-terminal-chevron terminal-chevron-double" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6l-6 6 6 6"/><path d="M12 6l-6 6 6 6"/></svg>
+          </button>
+          <div id="cgHudTerminalContent" class="cg-hud-terminal-content" aria-hidden="true">
+            <div id="cgHudTerminalLogs" class="cg-hud-terminal-logs" role="log" aria-label="Workstation Terminal output"></div>
+          </div>
         </div>
 
         <!-- Continuous Scrolling Multi-Turn Word-by-Word Stream Body -->
@@ -1721,14 +1456,13 @@
       </aside>
 
 
+      <!-- ðŸš€ FLOATING COMPOSER CAPSULE (Exact from Screenshot) -->
 
-      <!-- 🚀 FLOATING COMPOSER CAPSULE (Exact from Screenshot) -->
-
-            <!-- 🚀 STUDIO CHAT COMPOSER & CONTROLS (Exact Match to Antigravity Voice Assistant) -->
+            <!-- ðŸš€ STUDIO CHAT COMPOSER & CONTROLS (Exact Match to Antigravity Voice Assistant) -->
       <footer class="cg-footer-composer">
         <div id="cgStudioContainer" class="cg-studio-controls">
 
-          <!-- 🎙️ Custom Studio Popover Panel: 30 Google Live Voice Models -->
+          <!-- ðŸŽ™ï¸ Custom Studio Popover Panel: 30 Google Live Voice Models -->
           <div id="cgVoicePopover" class="cg-studio-popover" style="display: none;" onclick="event.stopPropagation();">
             <!-- Header & Search -->
             <div class="cg-popover-header">
@@ -1758,7 +1492,7 @@
             </div>
           </div>
 
-          <!-- 🎭 Custom Studio Popover Panel: 8 Human-Like Emotion & Vocal Acting Setup -->
+          <!-- ðŸŽ­ Custom Studio Popover Panel: 8 Human-Like Emotion & Vocal Acting Setup -->
           <div id="cgEmotionPopover" class="cg-studio-popover" style="display: none;" onclick="event.stopPropagation();">
             <div class="cg-popover-header">
               <div class="cg-popover-header-title">
@@ -1781,13 +1515,13 @@
 
           <!-- Row 1: Tightly Fitted Controls Bar (Enable Mic -> Voice -> Emotion -> Deep Thinking) -->
           <div class="cg-studio-controls-bar">
-            <!-- 🎙️ Primary Mic Button -->
+            <!-- ðŸŽ™ï¸ Primary Mic Button -->
             <button type="button" id="btnStudioMic" class="cg-studio-btn cg-studio-btn-mic" onclick="handleStudioMicClick()" title="Enable / Toggle Live Mic">
               <svg class="cg-icon-mic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
               <span id="studioMicLabel">Enable Mic</span>
             </button>
 
-            <!-- 🎙️ Voice Model Selection Panel Trigger Button -->
+            <!-- ðŸŽ™ï¸ Voice Model Selection Panel Trigger Button -->
             <button type="button" id="btnStudioVoice" class="cg-studio-btn cg-studio-btn-panel" onclick="toggleStudioPopover('voice')" title="Open 30 Google Gemini Live Voice Models Panel">
               <svg class="cg-picon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/>
@@ -1801,7 +1535,7 @@
               <svg class="cg-studio-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
             </button>
 
-            <!-- ✨ Emotion & Vocal Acting Panel Trigger Button -->
+            <!-- âœ¨ Emotion & Vocal Acting Panel Trigger Button -->
             <button type="button" id="btnStudioEmotion" class="cg-studio-btn cg-studio-btn-panel" onclick="toggleStudioPopover('emotion')" title="Open Human-Like Emotion & Vocal Prosody Panel">
               <svg class="cg-picon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/>
@@ -1816,10 +1550,14 @@
               <svg class="cg-studio-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
             </button>
 
-            <!-- ⚡ Extended Thinking Mode Toggle Button -->
+            <!-- âš¡ Extended Thinking Mode Toggle Button -->
             <button type="button" id="btnStudioThinking" class="cg-studio-btn cg-studio-btn-thinking" onclick="toggleStudioThinking()" title="Toggle Gemini 3.8 Live Extended Thinking">
               <svg class="cg-icon-zap" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
               <span>Deep Thinking</span>
+            </button>
+            <!-- ðŸŒ— Light / Dark Theme Toggle Button (reference exact: icon-only, zinc palette) -->
+            <button type="button" id="btnThemeToggle" class="cg-theme-toggle-btn" onclick="toggleGeminiTheme()" title="Switch to Light Theme" aria-label="Toggle theme">
+              <svg id="btnThemeToggleIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg>
             </button>
           </div>
 
@@ -1839,16 +1577,14 @@
       </footer>
 
 
-
       </div> <!-- End cg-main-viewport -->
 
     </div> <!-- End cg-app-container -->
 
 
+    <!-- ðŸŽ­ MODERN AI PERSONA SELECTOR MODAL -->
 
-    <!-- 🎭 MODERN AI PERSONA SELECTOR MODAL -->
-
-    <!-- 🎭 MODERN AI PERSONA SELECTOR MODAL (Apple iOS 18 / Frosted Acrylic Style) -->
+    <!-- ðŸŽ­ MODERN AI PERSONA SELECTOR MODAL (Apple iOS 18 / Frosted Acrylic Style) -->
 
     <div id="geminiPersonaPickerPanel" class="cg-persona-modal-overlay" style="display: none;" onclick="if(event.target === this) closePersonaPicker();">
 
@@ -1891,10 +1627,9 @@
         </div>
 
 
-
         <div class="cg-persona-list">
 
-          <!-- ⚡ Default Assistant -->
+          <!-- âš¡ Default Assistant -->
 
           <div class="cg-persona-item active" data-persona="default" onclick="selectPersona('default')">
 
@@ -1912,7 +1647,7 @@
 
                   <span class="cg-persona-name">Default Assistant</span>
 
-                  <span class="cg-persona-voice-badge">⚡ Puck</span>
+                  <span class="cg-persona-voice-badge">âš¡ Puck</span>
 
                 </div>
 
@@ -1922,13 +1657,12 @@
 
             </div>
 
-            <span class="cg-persona-check">✓</span>
+            <span class="cg-persona-check">âœ“</span>
 
           </div>
 
 
-
-          <!-- 💖 Girlfriend -->
+          <!-- ðŸ’– Girlfriend -->
 
           <div class="cg-persona-item" data-persona="girlfriend" onclick="selectPersona('girlfriend')">
 
@@ -1946,7 +1680,7 @@
 
                   <span class="cg-persona-name">Girlfriend</span>
 
-                  <span class="cg-persona-voice-badge">💖 Kore</span>
+                  <span class="cg-persona-voice-badge">ðŸ’– Kore</span>
 
                 </div>
 
@@ -1961,8 +1695,7 @@
           </div>
 
 
-
-          <!-- 🤖 J.A.R.V.I.S. -->
+          <!-- ðŸ¤– J.A.R.V.I.S. -->
 
           <div class="cg-persona-item" data-persona="jarvis" onclick="selectPersona('jarvis')">
 
@@ -1980,7 +1713,7 @@
 
                   <span class="cg-persona-name">J.A.R.V.I.S.</span>
 
-                  <span class="cg-persona-voice-badge">🤖 Fenrir</span>
+                  <span class="cg-persona-voice-badge">ðŸ¤– Fenrir</span>
 
                 </div>
 
@@ -1995,8 +1728,7 @@
           </div>
 
 
-
-          <!-- 💻 Code Master -->
+          <!-- ðŸ’» Code Master -->
 
           <div class="cg-persona-item" data-persona="coder" onclick="selectPersona('coder')">
 
@@ -2014,7 +1746,7 @@
 
                   <span class="cg-persona-name">Code Master</span>
 
-                  <span class="cg-persona-voice-badge">💻 Aoede</span>
+                  <span class="cg-persona-voice-badge">ðŸ’» Aoede</span>
 
                 </div>
 
@@ -2029,8 +1761,7 @@
           </div>
 
 
-
-          <!-- 🦉 Wise Mentor -->
+          <!-- ðŸ¦‰ Wise Mentor -->
 
           <div class="cg-persona-item" data-persona="mentor" onclick="selectPersona('mentor')">
 
@@ -2048,7 +1779,7 @@
 
                   <span class="cg-persona-name">Wise Mentor</span>
 
-                  <span class="cg-persona-voice-badge">🦉 Charon</span>
+                  <span class="cg-persona-voice-badge">ðŸ¦‰ Charon</span>
 
                 </div>
 
@@ -2063,8 +1794,7 @@
           </div>
 
 
-
-          <!-- 😎 Sarcastic Buddy -->
+          <!-- ðŸ˜Ž Sarcastic Buddy -->
 
           <div class="cg-persona-item" data-persona="buddy" onclick="selectPersona('buddy')">
 
@@ -2082,7 +1812,7 @@
 
                   <span class="cg-persona-name">Sarcastic Buddy</span>
 
-                  <span class="cg-persona-voice-badge">😎 Puck</span>
+                  <span class="cg-persona-voice-badge">ðŸ˜Ž Puck</span>
 
                 </div>
 
@@ -2103,8 +1833,7 @@
     </div>
 
 
-
-    <!-- 🔑 GEMINI API KEY CONFIGURATION MODAL (Apple iOS 18 / Frosted Acrylic Style) -->
+    <!-- ðŸ”‘ GEMINI API KEY CONFIGURATION MODAL (Apple iOS 18 / Frosted Acrylic Style) -->
 
     <div id="geminiKeyModal" class="cg-modal-overlay" style="display: none;" onclick="if(event.target === this) closeGeminiKeyModal();">
 
@@ -2136,7 +1865,7 @@
 
               <h3 class="cg-modal-title">Gemini API Key</h3>
 
-              <p class="cg-modal-subtitle">Google AI Studio • Realtime Voice &amp; Tools</p>
+              <p class="cg-modal-subtitle">Google AI Studio â€¢ Realtime Voice &amp; Tools</p>
 
             </div>
 
@@ -2149,7 +1878,6 @@
           </button>
 
         </div>
-
 
 
         <!-- Body -->
@@ -2169,7 +1897,6 @@
             </span>
 
           </div>
-
 
 
           <form class="cg-modal-input-wrapper" onsubmit="event.preventDefault(); saveGeminiApiKey(); return false;" autocomplete="off">
@@ -2203,9 +1930,7 @@
           </form>
 
 
-
           <div id="geminiKeyValidationStatus" class="cg-modal-status-box" style="display: none;"></div>
-
 
 
           <div class="cg-modal-info-box">
@@ -2243,7 +1968,6 @@
           </div>
 
         </div>
-
 
 
         <!-- Footer -->
@@ -2287,8 +2011,7 @@
   </div> <!-- End tab-gemini -->
 
 
-
-  <!-- ==================== TAB 3: ⚡ CONTROLS (TACTICAL CYBERPUNK CONTROL CENTER) ==================== -->
+  <!-- ==================== TAB 3: âš¡ CONTROLS (TACTICAL CYBERPUNK CONTROL CENTER) ==================== -->
 
   <div id="tab-controls" class="tab-content">
 
@@ -2296,7 +2019,7 @@
 
       
 
-      <!-- 🧭 TOP NAVIGATION HEADER & LIVE PILL -->
+      <!-- ðŸ§­ TOP NAVIGATION HEADER & LIVE PILL -->
 
       <div class="ctrl-nav-header">
 
@@ -2319,7 +2042,6 @@
         </div>
 
 
-
         <button onclick="openPairingModal()" class="ctrl-nav-btn ctrl-qr-btn" title="Open QR Device Pairing">
 
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect></svg>
@@ -2331,8 +2053,7 @@
       </div>
 
 
-
-      <!-- 🛡️ ORIGINAL SYSTEM STATUS CARD -->
+      <!-- ðŸ›¡ï¸ ORIGINAL SYSTEM STATUS CARD -->
 
       <div class="status-card" id="statusBox" style="margin-bottom:12px;">
 
@@ -2340,17 +2061,16 @@
 
           <div class="status-title">SYSTEM DEFENSE STATUS</div>
 
-          <div class="status-text" id="statusText">🟢 SYSTEM SECURE</div>
+          <div class="status-text" id="statusText">ðŸŸ¢ SYSTEM SECURE</div>
 
         </div>
 
-        <div style="font-size: 22px;" id="statusIcon">🟢</div>
+        <div style="font-size: 22px;" id="statusIcon">ðŸŸ¢</div>
 
       </div>
 
 
-
-      <!-- 🌐 LIVE NETWORK ROUTING CARD -->
+      <!-- ðŸŒ LIVE NETWORK ROUTING CARD -->
 
       <div id="networkDetailCard" style="background:rgba(18,22,30,0.7); border:1px solid rgba(0,240,255,0.25); border-radius:14px; padding:12px 14px; margin-bottom:16px; font-family:'Share Tech Mono',monospace; font-size:11px;">
 
@@ -2381,8 +2101,7 @@
       </div>
 
 
-
-      <!-- ⚡ TACTICAL COMMAND CENTER (2-COLUMN ARCHITECTURE) -->
+      <!-- âš¡ TACTICAL COMMAND CENTER (2-COLUMN ARCHITECTURE) -->
 
       <!-- 1. HERO EMERGENCY PANIC BAR -->
 
@@ -2422,19 +2141,18 @@
 
         </div>
 
-        <div class="ctrl-panic-hero-badge">ARMED ⚡</div>
+        <div class="ctrl-panic-hero-badge">ARMED âš¡</div>
 
       </button>
 
 
-
-      <!-- 🔑 CHANGE WINDOWS PASSWORD HERO BAR -->
+      <!-- ðŸ”‘ CHANGE WINDOWS PASSWORD HERO BAR -->
 
       <button class="ctrl-change-pass-hero" onclick="openChangePasswordModal()" title="Set or Change Windows PC Password">
 
         <div class="ctrl-pass-hero-left">
 
-          <span class="ctrl-pass-ic">🔑</span>
+          <span class="ctrl-pass-ic">ðŸ”‘</span>
 
           <div class="ctrl-pass-text-col">
 
@@ -2446,10 +2164,9 @@
 
         </div>
 
-        <span class="ctrl-pass-badge" id="ctrlPassBadge">READY ⚡</span>
+        <span class="ctrl-pass-badge" id="ctrlPassBadge">READY âš¡</span>
 
       </button>
-
 
 
       <!-- 2. 6-TILE CYBER TACTICAL GRID (2 COLUMNS) -->
@@ -2479,7 +2196,6 @@
         </button>
 
 
-
         <!-- 2. UNLOCK WORKSTATION -->
 
         <button class="ctrl-tile ctrl-tile-unlock" onclick="unlockPC()" title="Instant 1-Tap Session Unlock">
@@ -2494,14 +2210,13 @@
 
             <div class="ctrl-tile-title">UNLOCK</div>
 
-            <div class="ctrl-tile-sub" id="ctrlUnlockSub">1-Tap Ready ⚡</div>
+            <div class="ctrl-tile-sub" id="ctrlUnlockSub">1-Tap Ready âš¡</div>
 
           </div>
 
           <span class="ctrl-tile-pill"></span>
 
         </button>
-
 
 
         <!-- 3. WAKE UP -->
@@ -2527,7 +2242,6 @@
         </button>
 
 
-
         <!-- 4. SLEEP -->
 
         <button class="ctrl-tile ctrl-tile-sleep" onclick="sleepPC()" title="Put PC into Sleep Mode">
@@ -2551,7 +2265,6 @@
         </button>
 
 
-
         <!-- 5. RESTART -->
 
         <button class="ctrl-tile ctrl-tile-restart" onclick="if(confirm('Restart PC?'))restartPC()" title="Restart Windows PC">
@@ -2573,7 +2286,6 @@
           <span class="ctrl-tile-pill"></span>
 
         </button>
-
 
 
         <!-- 6. SHUTDOWN -->
@@ -2601,7 +2313,6 @@
       </div>
 
 
-
     </div>
 
   </div>
@@ -2609,8 +2320,7 @@
 </div>
 
 
-
-<!-- 📱 FROSTED GLASS 4-TAB BOTTOM NAVIGATION BAR -->
+<!-- ðŸ“± FROSTED GLASS 4-TAB BOTTOM NAVIGATION BAR -->
 
 <nav id="mainBottomNav" class="cyber-bottom-nav">
 
@@ -2649,8 +2359,7 @@
 </nav>
 
 
-
-<!-- 📱 MOBILE DEVICE PAIRING MODAL (Apple iOS 18 / Frosted Acrylic Style) -->
+<!-- ðŸ“± MOBILE DEVICE PAIRING MODAL (Apple iOS 18 / Frosted Acrylic Style) -->
 
 <div id="cyberPairingModal" class="cg-modal-overlay" style="display:none;" onclick="if(event.target === this) closePairingModal();">
 
@@ -2695,7 +2404,6 @@
     </div>
 
 
-
     <!-- Body -->
 
     <div class="cg-modal-body cg-pairing-body">
@@ -2726,7 +2434,7 @@
 
           <span class="cg-hero-btn-title">Scan PC QR Code (Live)</span>
 
-          <span class="cg-hero-btn-desc">Camera viewfinder • Instant pairing in 1s</span>
+          <span class="cg-hero-btn-desc">Camera viewfinder â€¢ Instant pairing in 1s</span>
 
         </div>
 
@@ -2735,13 +2443,11 @@
       </button>
 
 
-
       <!-- 2. Dual Camera Photo / Gallery Fallbacks -->
 
       <input type="file" id="qrCameraInput" accept="image/*" capture="environment" style="display:none;" onchange="processQrImageFile(event)">
 
       <input type="file" id="qrGalleryInput" accept="image/*" style="display:none;" onchange="processQrImageFile(event)">
-
 
 
       <div class="cg-pairing-dual-row">
@@ -2765,7 +2471,6 @@
       </div>
 
 
-
       <!-- 3. Auto-Detect Wi-Fi PC -->
 
       <button type="button" onclick="triggerAutoDetectPc()" id="autoDetectBtn" class="cg-pairing-detect-btn">
@@ -2787,7 +2492,6 @@
       </button>
 
       </div>
-
 
 
       <!-- 4. Quick Connect Options List -->
@@ -2825,7 +2529,6 @@
         </button>
 
 
-
         <!-- Local Wi-Fi HTTPS (Browser) -->
 
         <button type="button" id="btnQuickHttps" onclick="quickConnectHttps()" class="cg-quick-conn-row" style="display:none;">
@@ -2853,7 +2556,6 @@
         </button>
 
 
-
         <!-- Tailscale (Worldwide) -->
 
         <button type="button" id="btnQuickTailscale" onclick="quickConnectTailscale()" class="cg-quick-conn-row">
@@ -2879,7 +2581,6 @@
           <span class="cg-conn-badge cg-badge-cyan">CONNECT</span>
 
         </button>
-
 
 
         <!-- Local Wi-Fi (LAN) -->
@@ -2919,7 +2620,6 @@
       </div>
 
 
-
       <!-- 5. Manual IP Accordion -->
 
       <div class="cg-manual-setup-wrap">
@@ -2957,8 +2657,7 @@
 </div>
 
 
-
-<!-- 📷 IN-APP LIVE CAMERA QR SCANNER MODAL -->
+<!-- ðŸ“· IN-APP LIVE CAMERA QR SCANNER MODAL -->
 
 <div id="qrCameraScannerModal" class="modal-overlay" style="display:none; z-index:100000; background:#000;">
 
@@ -2972,18 +2671,17 @@
 
       <span style="font-family:'Orbitron',sans-serif; font-size:14px; font-weight:900; color:#00f0ff; letter-spacing:2px; text-shadow:0 0 10px rgba(0,240,255,0.8);">
 
-        📷 SCAN PC QR CODE
+        ðŸ“· SCAN PC QR CODE
 
       </span>
 
       <button onclick="stopInAppQrScanner()" style="background:rgba(255,0,85,0.2); border:1px solid rgba(255,0,85,0.5); color:#ff0055; width:36px; height:36px; border-radius:50%; font-size:18px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center;">
 
-        ✕
+        âœ•
 
       </button>
 
     </div>
-
 
 
     <!-- Live Video Viewport Container -->
@@ -3003,49 +2701,45 @@
     </div>
 
 
-
     <!-- Camera Fallback Box -->
 
     <div id="qrCameraFallback" style="display:none; width:100%; max-width:300px; text-align:center; margin-bottom:12px; background:rgba(7,9,14,0.9); border:1px solid rgba(0,240,255,0.3); border-radius:12px; padding:12px;">
 
       <p style="font-family:'Share Tech Mono',monospace; font-size:11px; color:#ffcc00; margin-bottom:8px;">
 
-        💡 Live camera unavailable on insecure context. Tap below:
+        ðŸ’¡ Live camera unavailable on insecure context. Tap below:
 
       </p>
 
       <button onclick="document.getElementById('qrCameraInput').click()" style="width:100%; padding:10px; background:var(--neon-cyan); color:#000; border:none; border-radius:8px; font-family:'Orbitron',sans-serif; font-size:11px; font-weight:bold; cursor:pointer; margin-bottom:6px;">
 
-        📸 TAKE PHOTO OF QR CODE
+        ðŸ“¸ TAKE PHOTO OF QR CODE
 
       </button>
 
       <button onclick="triggerAutoDetectPc()" style="width:100%; padding:9px; background:rgba(0,255,65,0.15); color:#00ff41; border:1px solid rgba(0,255,65,0.4); border-radius:8px; font-family:'Share Tech Mono',monospace; font-size:11px; font-weight:bold; cursor:pointer;">
 
-        📡 AUTO-DETECT WI-FI PC
+        ðŸ“¡ AUTO-DETECT WI-FI PC
 
       </button>
 
     </div>
 
 
-
     <p style="font-family:'Share Tech Mono',monospace; font-size:11px; color:#8892b0; text-align:center; margin-bottom:16px;">
 
-      Point camera at PC tray icon:<br><span style="color:#00ff41;">"📱 Scan in Mobile (QR)"</span>
+      Point camera at PC tray icon:<br><span style="color:#00ff41;">"ðŸ“± Scan in Mobile (QR)"</span>
 
     </p>
-
 
 
     <!-- Bottom Cancel Button -->
 
     <button onclick="stopInAppQrScanner()" style="padding:10px 24px; background:rgba(255,255,255,0.1); color:#fff; border:1px solid rgba(255,255,255,0.25); border-radius:20px; font-family:'Share Tech Mono',monospace; font-size:12px; cursor:pointer;">
 
-      ✕ CANCEL & RETURN
+      âœ• CANCEL & RETURN
 
     </button>
-
 
 
   </div>
@@ -3053,14 +2747,12 @@
 </div>
 
 
-
-<!-- 🪟 FLOATING OPTION HOVER PREVIEW / DEMO FLYOUT -->
+<!-- ðŸªŸ FLOATING OPTION HOVER PREVIEW / DEMO FLYOUT -->
 
 <div id="cgOptionHoverFlyout" class="cg-option-flyout-panel" aria-hidden="true"></div>
 
 
-
-<!-- 👤 MINI-RAIL DOCKED FLOATING QUICK SETTINGS POPOVER (Positioned on <body> to avoid drawer overflow-x clipping) -->
+<!-- ðŸ‘¤ MINI-RAIL DOCKED FLOATING QUICK SETTINGS POPOVER (Positioned on <body> to avoid drawer overflow-x clipping) -->
 
 <div id="cgMiniRailUserPopover" class="cg-mini-rail-popover" aria-hidden="true">
 
@@ -3079,10 +2771,9 @@
   </div>
 
 
-
   <div class="cg-menu-items-group">
 
-    <!-- 🔑 Gemini API Key -->
+    <!-- ðŸ”‘ Gemini API Key -->
 
     <div class="cg-menu-item" onclick="toggleGeminiKeyModal(); closeMiniRailUserPopover();">
 
@@ -3115,8 +2806,7 @@
     </div>
 
 
-
-    <!-- 🎭 AI Persona -->
+    <!-- ðŸŽ­ AI Persona -->
 
     <div class="cg-menu-item" onclick="togglePersonaPicker(event); closeMiniRailUserPopover();">
 
@@ -3138,7 +2828,7 @@
 
         <div class="cg-menu-item-name">AI Persona</div>
 
-        <div id="cgActivePersonaSubtitleMiniRail" class="cg-menu-item-desc">Default • Smart Assistant</div>
+        <div id="cgActivePersonaSubtitleMiniRail" class="cg-menu-item-desc">Default â€¢ Smart Assistant</div>
 
       </div>
 
@@ -3147,8 +2837,7 @@
     </div>
 
 
-
-    <!-- 📱 Mobile QR Pairing -->
+    <!-- ðŸ“± Mobile QR Pairing -->
 
     <div class="cg-menu-item" onclick="openPairingModal(); closeMiniRailUserPopover();">
 
@@ -3179,12 +2868,10 @@
     </div>
 
 
-
     <div class="cg-menu-divider"></div>
 
 
-
-    <!-- 🗑️ Clear Chat -->
+    <!-- ðŸ—‘ï¸ Clear Chat -->
 
     <div class="cg-menu-item cg-danger-item" onclick="clearGeminiTerminal(); closeMiniRailUserPopover();">
 
@@ -3223,41 +2910,34 @@
 </div>
 
 
-
-  <!-- 🧠 4. GEMINI AI PROMPTS & PC TOOLS DEFINITION -->
+  <!-- ðŸ§  4. GEMINI AI PROMPTS & PC TOOLS DEFINITION -->
 
   <script src="js/gemini_prompt.js"></script>
 
 
-
-  <!-- ⚡ 5. WORKSTATION CONTROLS & DEFENSE ENGINE -->
+  <!-- âš¡ 5. WORKSTATION CONTROLS & DEFENSE ENGINE -->
 
   <script src="js/controls.js"></script>
 
 
-
-  <!-- 🖥️ 6. ULTRA-LOW LATENCY STREAMER & TRACKPAD -->
-
+  <!-- ðŸ–¥ï¸ 6. ULTRA-LOW LATENCY STREAMER & TRACKPAD -->
 
 
-  <!-- 🎭 6.5 AI PERSONA ENGINE & PROMPTS -->
+  <!-- ðŸŽ­ 6.5 AI PERSONA ENGINE & PROMPTS -->
 
   <script src="js/personas.js"></script>
 
 
+  <!-- ðŸŽ™ï¸ 7. GEMINI MULTIMODAL LIVE AI ENGINE -->
 
-  <!-- 🎙️ 7. GEMINI MULTIMODAL LIVE AI ENGINE -->
-
+  <script src="vendor/antigravity-orb.js?v=2.8.0"></script>
   <script src="js/gemini_live.js?v=2.8.0"></script>
 
 
 
-
-
-  <!-- 📱 9. ONBOARDING, QR SCANNER, PWA & NAVIGATION -->
+  <!-- ðŸ“± 9. ONBOARDING, QR SCANNER, PWA & NAVIGATION -->
 
   <script src="js/app.js?v=2.8.0"></script>
-
 
 
 </body>
